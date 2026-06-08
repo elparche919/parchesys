@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PARCHE SYS · Portal Móvil</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800;900&family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-auth-compat.js"></script>
+<style>
+/* ══════════════════════════════════
+   TOKENS & RESET (THEME FOOD)
+══════════════════════════════════ */
+:root {
+  --m-blue:#1B4E8B; --m-blue-mid:#2563AA; --m-amber:#e8820c;
+  --m-green:#10b981; --m-red:#ef4444;
+  --text:#0f2240; --muted:#4a6080; --subtle:#94a3b8;
+  --border:#cbd5e8; --bg:#f3f6fa; --surface:#ffffff;
+  --shadow-sm:0 1px 3px rgba(0,0,0,.08);
+  --shadow-md:0 4px 16px rgba(0,0,0,.1);
+  --font-main: 'Outfit', sans-serif;
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+  --safe-top:env(safe-area-inset-top, 0px);
+  --nav-h:66px;
+}
+*{box-sizing:border-box;-webkit-user-select: none;user-select: none;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{
+  height:100%;width:100%;overflow:hidden;
+  font-family:var(--font-main);background:var(--bg);
+  color:var(--text);-webkit-font-smoothing:antialiased;
+}
+
+/* ══════════════════════════════════
+   APP SHELL
+══════════════════════════════════ */
+#app{
+  position:fixed;inset:0;
+  display:flex;flex-direction:column;
+  background:var(--bg);
+  padding-top:var(--safe-top);
+}
+
+/* ══════════════════════════════════
+   TOP HEADER
+══════════════════════════════════ */
+#top-header{
+  background:var(--m-blue);
+  padding:14px 18px 16px;
+  flex-shrink:0;
+  position:relative;
+  overflow:hidden;
+}
+.hdr-row{display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1}
+.hdr-logo{display:flex;align-items:center;gap:9px}
+.hdr-logo-box{
+  width:34px;height:34px;border-radius:10px;
+  background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:900;color:white;
+}
+.hdr-logo-text{font-size:17px;font-weight:900;color:white;letter-spacing:-.02em}
+.hdr-logo-sub{font-size:9px;color:rgba(255,255,255,.6);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+
+/* Quick stats strip */
+.hdr-stats{
+  display:flex;gap:8px;margin-top:14px;
+  position:relative;z-index:1;
+  overflow-x:auto;scrollbar-width:none;
+}
+.hdr-stats::-webkit-scrollbar{display:none}
+.hdr-stat{
+  background:rgba(255,255,255,.14);
+  border-radius:12px;padding:10px 14px;
+  min-width:80px;text-align:center;flex-shrink:0;
+  backdrop-filter:blur(8px);
+}
+.hdr-stat-val{font-size:16px;font-weight:900;color:white;line-height:1}
+.hdr-stat-lbl{font-size:8px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.1em;margin-top:3px}
+
+/* ══════════════════════════════════
+   SCROLL CONTENT AREA
+══════════════════════════════════ */
+#scroll-area{
+  flex:1;overflow-y:auto;overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--nav-h) + 16px + var(--safe-bottom));
+}
+
+/* ══════════════════════════════════
+   PAGES
+══════════════════════════════════ */
+.page{display:none;padding:16px 14px;animation:fadeSlide .2s ease}
+.page.active{display:block}
+@keyframes fadeSlide{ from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+.sec-label{
+  font-size:9px;font-weight:800;color:var(--subtle);
+  text-transform:uppercase;letter-spacing:.18em;
+  margin-bottom:10px;margin-top:4px;
+}
+
+/* ══════════════════════════════════
+   MODULE CARDS
+══════════════════════════════════ */
+.mod-grid{ display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px; }
+.mod-card{
+  border-radius:18px;padding:16px 12px;
+  cursor:pointer;text-decoration:none;
+  display:block;position:relative;overflow:hidden;
+  transition:transform .18s; color:white;
+}
+.mod-card:active{transform:scale(.96)}
+.mod-icon{
+  width:38px;height:38px;border-radius:11px;
+  background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;
+  font-size:17px;margin-bottom:10px;
+}
+.mod-name{font-size:13px;font-weight:900;}
+.mod-sub{font-size:9px;opacity:.7;margin-top:3px;font-weight:600}
+
+.mc-pos{background:linear-gradient(140deg,#1B4E8B,#2563AA);box-shadow:0 6px 20px rgba(27,78,139,.3)}
+.mc-kds{background:linear-gradient(140deg,#ef4444,#dc2626);box-shadow:0 6px 20px rgba(239,68,68,.3)}
+.mc-map{background:linear-gradient(140deg,#f59e0b,#ea580c);box-shadow:0 6px 20px rgba(245,158,11,.3)}
+.mc-del{background:linear-gradient(140deg,#8b5cf6,#6d28d9);box-shadow:0 6px 20px rgba(139,92,246,.3)}
+.mc-inv{background:linear-gradient(140deg,#10b981,#059669);box-shadow:0 6px 20px rgba(16,185,129,.3)}
+.mc-eqp{background:linear-gradient(140deg,#334155,#1e293b);box-shadow:0 6px 20px rgba(51,65,85,.3)}
+
+/* ══════════════════════════════════
+   BOTTOM NAV
+══════════════════════════════════ */
+#bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:white; border-top:1.5px solid var(--border);
+  display:flex; padding:6px 4px; padding-bottom:calc(6px + var(--safe-bottom));
+  z-index:200; box-shadow:0 -4px 24px rgba(0,0,0,.07); height:var(--nav-h);
+}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  background:none;border:none;cursor:pointer;
+  font-family:inherit;font-size:9px;font-weight:600;
+  color:var(--subtle);transition:all .15s;
+}
+.bn-item i{font-size:19px;}
+.bn-item.active{color:var(--m-blue)}
+
+/* ══════════════════════════════════
+   TOAST
+══════════════════════════════════ */
+#toast{
+  position:fixed;bottom:calc(var(--nav-h) + 16px + var(--safe-bottom));left:50%;
+  transform:translateX(-50%) translateY(20px);
+  background:var(--text);color:white;border-radius:14px;
+  padding:11px 20px;font-size:12px;font-weight:700;
+  z-index:9999;opacity:0;transition:all .3s;
+  pointer-events:none;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* LISTS */
+.list-card{ background:white; border:1px solid var(--border); border-radius:18px; margin-bottom:12px; overflow:hidden; }
+.list-item{
+  display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid #f1f5f9;
+  text-decoration:none; color:var(--text); transition:background .1s;
+}
+.list-item:active{ background:#f8fafc; }
+.list-item:last-child{ border-bottom:none; }
+.list-icon{ width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+.list-info{ flex:1; min-width:0; }
+.list-name{ font-size:13px; font-weight:800; }
+.list-sub{ font-size:10px; color:var(--muted); font-weight:600; margin-top:1px; }
+
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- TOP HEADER -->
+  <div id="top-header">
+    <div class="hdr-row">
+      <div class="hdr-logo">
+        <div class="hdr-logo-box">F</div>
+        <div>
+          <div class="hdr-logo-text" id="hdr-biz-name">PARCHE SYS</div>
+          <div class="hdr-logo-sub">Portal Gerencial</div>
+        </div>
+      </div>
+      <div style="color:white; font-size:18px">
+        <i class="fa-solid fa-circle-user"></i>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="hdr-stats">
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="stat-ventas">$0</div>
+        <div class="hdr-stat-lbl">Hoy</div>
+      </div>
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="stat-pedidos">0</div>
+        <div class="hdr-stat-lbl">Órdenes</div>
+      </div>
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="stat-mesas">0</div>
+        <div class="hdr-stat-lbl">Mesas</div>
+      </div>
+      <div class="hdr-stat">
+        <div class="hdr-stat-val" id="stat-reparto">0</div>
+        <div class="hdr-stat-lbl">Ruta</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCROLL AREA -->
+  <div id="scroll-area">
+
+    <!-- PAGE: RESUMEN -->
+    <div class="page active" id="page-resumen">
+      <div class="sec-label">Operaciones móviles</div>
+      
+      <div class="mod-grid">
+        <a class="mod-card mc-pos" id="card-pos" href="#" onclick="irAPOS();return false">
+          <div class="mod-icon"><i class="fa-solid fa-cash-register"></i></div>
+          <div class="mod-name">POS Mesero</div>
+          <div class="mod-sub">Órdenes en Mesa</div>
+        </a>
+        <a class="mod-card mc-del" id="card-delivery" href="#" onclick="irAPOSDelivery();return false">
+          <div class="mod-icon"><i class="fa-solid fa-motorcycle"></i></div>
+          <div class="mod-name">POS Delivery</div>
+          <div class="mod-sub">Pedidos Domicilio</div>
+        </a>
+        <a class="mod-card mc-eqp" id="card-perfil" href="#" onclick="irAEmpleado();return false">
+          <div class="mod-icon"><i class="fa-solid fa-user-tie"></i></div>
+          <div class="mod-name">Mi Perfil</div>
+          <div class="mod-sub">Portal Empleado</div>
+        </a>
+        <a class="mod-card mc-inv" id="card-seguimiento" href="#" onclick="irADeliveryTrack();return false">
+          <div class="mod-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
+          <div class="mod-name">Seguimiento</div>
+          <div class="mod-sub">Control Entregas</div>
+        </a>
+      </div>
+
+      <div class="sec-label">Gestión administrativa</div>
+      <div class="list-card">
+        <a class="list-item" id="item-inventario" href="#" onclick="showPage('inventario')">
+          <div class="list-icon" style="background:#ecfdf5;color:#059669"><i class="fa-solid fa-box-open"></i></div>
+          <div class="list-info">
+            <div class="list-name">Menú e Inventario</div>
+            <div class="list-sub">Platillos · Extras · Stock</div>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="font-size:10px;color:var(--subtle)"></i>
+        </a>
+        <a class="list-item" id="item-conta" href="#" onclick="showPage('finanzas')">
+          <div class="list-icon" style="background:#fffbeb;color:#d97706"><i class="fa-solid fa-landmark"></i></div>
+          <div class="list-info">
+            <div class="list-name">Contabilidad y DTE</div>
+            <div class="list-sub">Ventas · Libros · Facturas</div>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="font-size:10px;color:var(--subtle)"></i>
+        </a>
+        <a class="list-item" id="item-empleados" href="empleados.html">
+          <div class="list-icon" style="background:#f1f5f9;color:#334155"><i class="fa-solid fa-users"></i></div>
+          <div class="list-info">
+            <div class="list-name">Equipo / Meseros</div>
+            <div class="list-sub">Planilla · Accesos · PINs</div>
+          </div>
+          <i class="fa-solid fa-chevron-right" style="font-size:10px;color:var(--subtle)"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- PAGE: VENTAS -->
+    <div class="page" id="page-ventas">
+      <div class="sec-label">Ventas del día</div>
+      <div id="lista-ventas-hoy">
+        <div style="text-align:center;padding:40px;color:var(--subtle);font-size:12px">Buscando transacciones...</div>
+      </div>
+    </div>
+
+    <!-- PAGE: CONFIG -->
+    <div class="page" id="page-config">
+        <div class="sec-label">Configuración del Negocio</div>
+        <div class="list-card">
+            <div class="list-item" onclick="cerrarSesion()">
+                <div class="list-icon" style="background:#fef2f2;color:#ef4444"><i class="fa-solid fa-right-from-bracket"></i></div>
+                <div class="list-info">
+                  <div class="list-name">Cerrar Sesión</div>
+                  <div class="list-sub">Salir del portal actual</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="bn-item active" id="bn-resumen" onclick="showPage('resumen')">
+      <i class="fa-solid fa-house"></i>
+      <span>Inicio</span>
+    </button>
+    <button class="bn-item" id="bn-ventas" onclick="showPage('ventas')">
+      <i class="fa-solid fa-receipt"></i>
+      <span>Ventas</span>
+    </button>
+    <button class="bn-item" id="bn-config" onclick="showPage('config')">
+      <i class="fa-solid fa-gear"></i>
+      <span>Ajustes</span>
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// CONFIG FIREBASE
+/* Firebase centralizado en firebase-config.js */
+if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
+/* Firebase centralizado en firebase-config.js */
+
+const urlParams = new URLSearchParams(window.location.search);
+const negocioID = urlParams.get('negocio') || localStorage.getItem('modus_food_negocio');
+
+if(!negocioID) {
+    location.href = '../index.html';
+} else {
+    localStorage.setItem('modus_food_negocio', negocioID);
+}
+
+function showPage(p) {
+    document.querySelectorAll('.page').forEach(pg => pg.classList.remove('active'));
+    document.getElementById('page-' + p).classList.add('active');
+    
+    document.querySelectorAll('.bn-item').forEach(bn => bn.classList.remove('active'));
+    document.getElementById('bn-' + p).classList.add('active');
+}
+
+function initPortal() {
+    // ── SESIÓN DE OPERADOR (reutiliza la verificada en index.html) ──
+    var opSession = null;
+    try { opSession = JSON.parse(localStorage.getItem('food_operador_' + negocioID) || 'null'); } catch(e){}
+
+    window._foodOperadorNombre = opSession ? (opSession.nombre || 'Operador') : 'Operador';
+    window._foodOperadorRol    = opSession ? (opSession.rol    || 'empleado') : 'empleado';
+    window._foodOperadorEmpKey = opSession ? (opSession.empKey || null)       : null;
+
+    // Mostrar nombre de operador en header
+    var hdrSub = document.querySelector('.hdr-logo-sub');
+    if (hdrSub && opSession) {
+      hdrSub.textContent = window._foodOperadorNombre + ' · ' + window._foodOperadorRol.charAt(0).toUpperCase() + window._foodOperadorRol.slice(1);
+    }
+
+    // Cargar empleados para listas de meseros/cajeros/delivery
+    window._foodEmpleados = {};
+    db.ref('negocios/' + negocioID + '/empleados').on('value', function(snap) {
+      window._foodEmpleados = snap.val() || {};
+      window._foodMeseros  = Object.entries(window._foodEmpleados).filter(([k,v]) => v.rol==='mesero'  || v.puesto==='Mesero').map(([k,v])=>({key:k,nombre:v.nombre}));
+      window._foodCajeros  = Object.entries(window._foodEmpleados).filter(([k,v]) => v.rol==='cajero'  || v.puesto==='Cajero').map(([k,v])=>({key:k,nombre:v.nombre}));
+      window._foodDelivery = Object.entries(window._foodEmpleados).filter(([k,v]) => v.rol==='delivery'|| v.acceso_campo===true).map(([k,v])=>({key:k,nombre:v.nombre}));
+    });
+
+    // Aplicar permisos de módulos en portal móvil
+    if (opSession && opSession.modulos) {
+      aplicarPermisosMovil(opSession.modulos, opSession.rol);
+    }
+
+    // Info Negocio
+    db.ref(`negocios/${negocioID}/info`).on('value', s => {
+        const inf = s.val() || {};
+        document.getElementById('hdr-biz-name').textContent = inf.nombre || 'PARCHE SYS';
+    });
+
+    // Stats Hoy
+    const hoy = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    db.ref(`negocios/${negocioID}/ventas`).on('value', s => {
+        let totalHoy = 0;
+        s.forEach(c => {
+            const v = c.val();
+            if(v.fecha_iso && v.fecha_iso.substring(0,10) === hoy) {
+                totalHoy += parseFloat(v.total || 0);
+            } else if(v.fecha === hoy || v.fecha === new Date().toLocaleDateString()) {
+                totalHoy += parseFloat(v.total || 0);
+            }
+        });
+        document.getElementById('stat-ventas').textContent = '$' + totalHoy.toFixed(2);
+        renderVentasHoy(s);
+    });
+
+    db.ref(`negocios/${negocioID}/pedidos`).on('value', s => {
+        let activos = 0;
+        s.forEach(c => { if(c.val().estado !== 'pagado') activos++; });
+        document.getElementById('stat-pedidos').textContent = activos;
+    });
+
+    db.ref(`negocios/${negocioID}/mesas`).on('value', s => {
+        let ocupadas = 0;
+        s.forEach(c => { if(c.val().estado === 'ocupada' || c.val().estado === 'cuenta') ocupadas++; });
+        document.getElementById('stat-mesas').textContent = ocupadas;
+    });
+
+    db.ref(`negocios/${negocioID}/repartidores`).on('value', s => {
+        let enRuta = 0;
+        s.forEach(c => { if(c.val().estado === 'en_ruta') enRuta++; });
+        document.getElementById('stat-reparto').textContent = enRuta;
+    });
+}
+
+function renderVentasHoy(snap) {
+    const cont = document.getElementById('lista-ventas-hoy');
+    let html = '';
+    const ventas = [];
+    snap.forEach(c => ventas.push(c.val()));
+    ventas.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+    if(ventas.length === 0) {
+        cont.innerHTML = '<div style="text-align:center;padding:40px;color:var(--subtle)">No hay ventas registradas.</div>';
+        return;
+    }
+
+    ventas.slice(0, 50).forEach(v => {
+        html += `
+        <div class="list-card" style="padding:12px 16px; display:flex; justify-content:space-between; align-items:center">
+          <div>
+            <div style="font-weight:900; font-size:14px">${v.orden || 'ORDEN'}</div>
+            <div style="font-size:11px; color:var(--muted)">${v.cliente || 'Público'} • ${v.pago || 'Efectivo'}</div>
+          </div>
+          <div style="font-weight:900; color:var(--m-blue); font-size:16px">$${parseFloat(v.total||0).toFixed(2)}</div>
+        </div>`;
+    });
+    cont.innerHTML = html;
+}
+
+function irAPOS()         { location.href = 'pos-food-movil.html?negocio='    + negocioID + (window._foodOperadorEmpKey ? '&emp=' + window._foodOperadorEmpKey : ''); }
+function irAPOSDelivery() { location.href = 'pos-delivery-movil.html?negocio=' + negocioID + (window._foodOperadorEmpKey ? '&emp=' + window._foodOperadorEmpKey : ''); }
+function irADeliveryTrack(){ location.href = 'app-delivery.html?negocio='      + negocioID + (window._foodOperadorEmpKey ? '&emp=' + window._foodOperadorEmpKey : ''); }
+function irAEmpleado()    { location.href = 'app-empleado-food.html?negocio='  + negocioID + (window._foodOperadorEmpKey ? '&emp=' + window._foodOperadorEmpKey : '') + '&from=portal'; }
+
+function cerrarSesion() {
+    if(confirm('¿Cerrar sesión del portal móvil?')) {
+        localStorage.removeItem('modus_food_negocio');
+        localStorage.removeItem('food_operador_' + negocioID);
+        localStorage.removeItem('modus_emp');
+        location.href = '../index.html';
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Aplicar permisos de módulos en Portal Móvil
+══════════════════════════════════════════════════════════ */
+function aplicarPermisosMovil(modulos, rol) {
+  var isManager = (rol === 'propietario' || rol === 'admin' || rol === 'supervisor');
+  if (isManager) return;
+
+  // Tarjetas del grid de operaciones
+  var mapCards = {
+    pos:       'card-pos',
+    delivery:  'card-delivery',
+    mi_perfil: 'card-perfil',
+  };
+  Object.entries(mapCards).forEach(function([key, id]) {
+    var tieneAcceso = modulos[key] === true;
+    var card = document.getElementById(id);
+    if (card && !tieneAcceso) {
+      card.style.opacity = '0.4';
+      card.style.pointerEvents = 'none';
+      card.title = '🔒 Sin acceso';
+    }
+  });
+
+  // Ítems de la lista administrativa
+  var mapItems = {
+    inventario:   'item-inventario',
+    contabilidad: 'item-conta',
+    empleados:    'item-empleados',
+  };
+  Object.entries(mapItems).forEach(function([key, id]) {
+    var tieneAcceso = modulos[key] === true || modulos[key.replace('_','-')] === true;
+    var item = document.getElementById(id);
+    if (item && !tieneAcceso) {
+      item.style.opacity = '0.4';
+      item.style.pointerEvents = 'none';
+    }
+  });
+}
+
+function toast(m) {
+    const t = document.getElementById('toast');
+    t.textContent = m;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+document.addEventListener('DOMContentLoaded', initPortal);
+</script>
+</body>
+</html>

@@ -1,0 +1,2871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin | CrediListo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.10.0/firebase-storage-compat.js"></script>
+    <!-- SheetJS -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+
+    <style>
+        :root {
+            --m-blue:#059669; /* Emerald Override */
+            --m-amber:#f97316; /* Orange Override */
+            --m-blue-light:#ecfdf5;
+            --m-blue-soft:#d1fae5;
+            --m-blue-mid:#047857;
+            --m-bg:#f8fafc;
+            --m-text:#1e293b;
+
+            --bg: var(--m-bg);
+            --surface: #ffffff;
+            --surface2: #f1f5f9;
+            --border: #e2e8f0;
+            --border2: #cbd5e1;
+            --text: var(--m-text);
+            --muted: #94a3b8;
+            --muted2: #64748b;
+            --accent: var(--m-blue);
+            --accent-dim: rgba(5,150,105,0.08);
+            --accent-border: rgba(5,150,105,0.3);
+            --danger: #ef4444;
+            --danger-dim: rgba(239,68,68,0.08);
+            --warn: var(--m-amber);
+            --warn-dim: rgba(249,115,22,0.1);
+            --blue: var(--m-blue);
+            --blue-dim: rgba(5,150,105,0.08);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Instrument Sans', sans-serif;
+            min-height: 100vh;
+            line-height: 1.5;
+        }
+
+        #lock {
+            position: fixed; inset: 0; z-index: 9999;
+            background: #0ea5e9;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lock-card {
+            width: min(90vw, 340px);
+            text-align: center;
+        }
+        .lock-logo {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 2rem;
+            letter-spacing: -0.04em;
+            color: #ffffff;
+            margin-bottom: 0.25rem;
+        }
+        .lock-logo em { color: #0f172a; font-style: normal; }
+        .lock-sub {
+            font-size: 0.6rem; font-weight: 600; letter-spacing: 0.2em;
+            text-transform: uppercase; color: rgba(255,255,255,0.7);
+            margin-bottom: 2.5rem;
+        }
+        .lock-input {
+            width: 100%;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            border-radius: 0.75rem;
+            padding: 1rem;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 0.4em;
+            outline: none;
+            transition: border-color 0.2s;
+            margin-bottom: 0.75rem;
+        }
+        .lock-input::placeholder { color: rgba(255,255,255,0.5); }
+        .lock-input:focus { border-color: #ffffff; background: rgba(255,255,255,0.3); }
+        .lock-btn {
+            width: 100%;
+            background: #ffffff;
+            color: #0ea5e9;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.85rem;
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 0.7rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .lock-btn:hover { opacity: 0.9; }
+        #lock-err {
+            color: #fef08a; font-size: 0.65rem; font-weight: 600;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            margin-top: 0.5rem; display: none;
+        }
+
+        /* ─── MAIN LAYOUT ──────────────────────────────── */
+        #app { display: none; }
+
+        /* HEADER */
+        .header {
+            background: var(--surface);
+            border-bottom: 3px solid var(--accent);
+            padding: 0.85rem 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 200;
+            box-shadow: 0 1px 8px rgba(14,165,233,0.08);
+        }
+        .header-brand {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800;
+            font-size: 1.1rem;
+            letter-spacing: -0.03em;
+            color: var(--text);
+        }
+        .header-brand em { color: var(--accent); font-style: normal; }
+        .header-nav { display: flex; gap: 0.5rem; align-items: center; }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.35rem;
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.5rem;
+            font-family: 'Instrument Sans', sans-serif;
+            font-weight: 700; font-size: 0.65rem;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            cursor: pointer; border: none; transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .btn-accent { background: var(--accent); color: #ffffff; }
+        .btn-accent:hover { opacity: 0.85; }
+        .btn-ghost { background: transparent; color: var(--muted2); border: 1px solid var(--border2); }
+        .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+        .btn-danger { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(239,68,68,0.2); }
+        .btn-danger:hover { background: rgba(239,68,68,0.15); }
+        .btn-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(14,165,233,0.25); }
+        .btn-blue:hover { background: rgba(14,165,233,0.15); }
+        .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.6rem; }
+        .btn-lg { padding: 0.7rem 1.4rem; font-size: 0.7rem; }
+        .btn-full { width: 100%; justify-content: center; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* BODY LAYOUT */
+        .body-wrap {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            height: calc(100vh - 48px);
+        }
+
+        /* ─── SIDEBAR ──────────────────────────────────── */
+        .sidebar {
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .sidebar-top {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 0.5rem;
+            background: var(--surface2);
+        }
+        .sidebar-search {
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text);
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 0.8rem;
+            outline: none; width: 100%;
+            transition: border-color 0.2s;
+        }
+        .sidebar-search:focus { border-color: var(--accent); }
+        .sidebar-stat {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.5rem 0;
+        }
+        .stat-label { font-size: 0.6rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+        .stat-val { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+
+        .client-list { overflow-y: auto; flex: 1; padding: 0.5rem; }
+        .client-list::-webkit-scrollbar { width: 4px; }
+        .client-list::-webkit-scrollbar-track { background: transparent; }
+        .client-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+        .client-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0.65rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background 0.15s;
+            border: 1px solid transparent;
+            margin-bottom: 0.2rem;
+        }
+        .client-item:hover { background: var(--surface2); }
+        .client-item.active { background: var(--accent-dim); border-color: var(--accent-border); }
+        .client-item-name {
+            font-weight: 700; font-size: 0.78rem; color: var(--text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 160px;
+        }
+        .client-item-sub {
+            font-size: 0.6rem; font-weight: 500; color: var(--muted2); margin-top: 0.1rem;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .client-badge {
+            font-size: 0.55rem; font-weight: 800; letter-spacing: 0.08em;
+            text-transform: uppercase; padding: 0.2rem 0.5rem;
+            border-radius: 2rem; white-space: nowrap;
+        }
+        .badge-saldo { background: rgba(239,68,68,0.1); color: var(--danger); }
+        .badge-ok { background: rgba(14,165,233,0.1); color: var(--accent); }
+
+        .empty-list {
+            text-align: center; padding: 3rem 1rem; color: var(--muted);
+            font-size: 0.75rem;
+        }
+
+        /* ─── MAIN PANEL ───────────────────────────────── */
+        .main-panel {
+            overflow-y: auto; background: var(--bg);
+        }
+        .main-panel::-webkit-scrollbar { width: 4px; }
+        .main-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        .welcome-state {
+            height: 100%; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            color: var(--muted); text-align: center; padding: 2rem;
+        }
+        .welcome-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.3; }
+        .welcome-state p { font-size: 0.8rem; }
+
+        /* PANEL SECTIONS */
+        .panel-content { padding: 1.5rem; max-width: 860px; display: flex; flex-direction: column; gap: 1.25rem; }
+
+        /* Client header strip */
+        .client-header {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-top: 4px solid var(--accent);
+            border-radius: 1rem;
+            padding: 1.25rem 1.5rem;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 8px rgba(14,165,233,0.06);
+        }
+        .ch-name {
+            font-family: 'Syne', sans-serif;
+            font-weight: 800; font-size: 1.4rem;
+            letter-spacing: -0.03em;
+        }
+        .ch-meta { font-size: 0.65rem; font-weight: 500; color: var(--muted2); margin-top: 0.25rem; }
+        .ch-meta span { color: var(--muted2); }
+        .ch-actions { display: flex; gap: 0.5rem; }
+
+        /* Stats row */
+        .stats-row {
+            display: grid; grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.75rem;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            padding: 1rem;
+        }
+        .sc-label { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.35rem; }
+        .sc-val { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; }
+        .sc-val.green { color: #16a34a; }
+        .sc-val.red { color: var(--danger); }
+        .sc-val.blue { color: var(--accent); }
+
+        /* Section card */
+        .section-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 0.75rem;
+            overflow: hidden;
+        }
+        .section-head {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .section-title {
+            font-size: 0.6rem; font-weight: 800; letter-spacing: 0.2em;
+            text-transform: uppercase; color: var(--muted2);
+        }
+        .section-body { padding: 1.25rem; }
+
+        /* CUOTAS TABLE */
+        .cuotas-wrap { display: flex; flex-direction: column; gap: 0.4rem; max-height: 400px; overflow-y: auto; padding-right: 4px; }
+        .cuotas-wrap::-webkit-scrollbar { width: 3px; }
+        .cuotas-wrap::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+        .cuota-row {
+            display: grid;
+            grid-template-columns: 28px 1fr 120px 130px 80px;
+            gap: 0.5rem; align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            transition: opacity 0.2s;
+        }
+        .cuota-row.pagada { opacity: 0.75; background: rgba(22,163,74,0.04); border-color: rgba(22,163,74,0.2); }
+        .cuota-n {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.65rem; font-weight: 700; color: var(--muted);
+            text-align: center;
+        }
+        .cuota-estado {
+            font-size: 0.65rem; font-weight: 700;
+        }
+        .cuota-estado.ok { color: #16a34a; }
+        .cuota-estado.pending { color: var(--warn); }
+        .cuota-input {
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 0.4rem;
+            padding: 0.35rem 0.5rem;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem; font-weight: 600;
+            outline: none; width: 100%;
+            transition: border-color 0.2s;
+        }
+        .cuota-input:focus { border-color: var(--accent); }
+        .cuota-input:disabled { opacity: 1; cursor: default; color: #16a34a; font-weight: 800; border-color: rgba(22,163,74,0.25); background: rgba(22,163,74,0.05); }
+        .cuota-date {
+            background: var(--bg);
+            border: 1px solid var(--border2);
+            border-radius: 0.4rem;
+            padding: 0.35rem 0.5rem;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem; font-weight: 500;
+            outline: none; width: 100%;
+            transition: border-color 0.2s;
+        }
+        .cuota-date:focus { border-color: var(--accent); }
+        .cuota-date:disabled { opacity: 0.85; cursor: default; color: var(--muted2); }
+        .cuota-btn {
+            font-size: 0.6rem; font-weight: 800; letter-spacing: 0.05em;
+            text-transform: uppercase; padding: 0.35rem 0.6rem;
+            border-radius: 0.4rem; border: none; cursor: pointer;
+            transition: all 0.15s; width: 100%; text-align: center;
+        }
+        .cuota-btn.pagar { background: var(--accent); color: #ffffff; }
+        .cuota-btn.pagar:hover { opacity: 0.85; }
+        .cuota-btn.pagado { background: var(--accent-dim); color: var(--accent); cursor: default; }
+
+        /* FICHA DATOS */
+        .ficha-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem;
+        }
+        .ficha-field { display: flex; flex-direction: column; gap: 0.25rem; }
+        .ficha-field.full { grid-column: 1 / -1; }
+        .ff-label {
+            font-size: 0.55rem; font-weight: 800; letter-spacing: 0.18em;
+            text-transform: uppercase; color: var(--muted);
+        }
+        .ff-val {
+            font-size: 0.82rem; font-weight: 600; color: var(--text);
+        }
+        .ff-val.mono { font-family: 'JetBrains Mono', monospace; }
+        .ff-val.accent { color: var(--accent); font-size: 0.9rem; }
+        .ff-val.warn { color: var(--warn); }
+
+        /* EDITABLE INPUT */
+        .edit-input {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text);
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 0.82rem; font-weight: 600;
+            outline: none; width: 100%;
+            transition: border-color 0.2s;
+        }
+        .edit-input:focus { border-color: var(--accent); }
+        .edit-select {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            border-radius: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            color: var(--text);
+            font-family: 'Instrument Sans', sans-serif;
+            font-size: 0.82rem; font-weight: 600;
+            outline: none; width: 100%; cursor: pointer;
+        }
+        .edit-select:focus { border-color: var(--accent); }
+
+        /* DOCS / FOTOS */
+        .docs-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;
+        }
+        .doc-slot {
+            border: 1px dashed var(--border2);
+            border-radius: 0.75rem;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .doc-slot:hover { border-color: var(--accent); }
+        .doc-slot-label {
+            font-size: 0.6rem; font-weight: 800; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--muted);
+            padding: 0.6rem 0.75rem 0;
+        }
+        .doc-preview {
+            min-height: 120px;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; gap: 0.5rem; padding: 1rem;
+            cursor: pointer;
+        }
+        .doc-preview img {
+            width: 100%; max-height: 160px; object-fit: cover;
+            border-radius: 0.5rem;
+        }
+        .doc-placeholder {
+            color: var(--muted); font-size: 0.7rem; font-weight: 600;
+            text-align: center;
+        }
+        .doc-placeholder span { display: block; font-size: 1.5rem; margin-bottom: 0.25rem; opacity: 0.4; }
+        .doc-actions {
+            padding: 0.5rem 0.75rem;
+            display: flex; gap: 0.4rem; border-top: 1px solid var(--border);
+        }
+        .upload-progress {
+            height: 2px; background: var(--border); border-radius: 1px; margin: 0 0.75rem 0.5rem;
+        }
+        .upload-bar {
+            height: 100%; background: var(--accent); border-radius: 1px;
+            transition: width 0.3s; width: 0;
+        }
+
+        /* DIVIDER */
+        .divider {
+            height: 1px; background: var(--border); margin: 0.25rem 0;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .body-wrap { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .stats-row { grid-template-columns: 1fr 1fr; }
+            .ficha-grid { grid-template-columns: 1fr; }
+            .docs-grid { grid-template-columns: 1fr; }
+            .cuota-row { grid-template-columns: 24px 1fr 90px 100px 70px; }
+        }
+
+        /* TOAST */
+        .toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            background: var(--text); color: #ffffff;
+            border-radius: 0.75rem; padding: 0.75rem 1.25rem;
+            font-size: 0.75rem; font-weight: 600; z-index: 9000;
+            transform: translateY(80px); opacity: 0;
+            transition: all 0.3s; pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: var(--accent); color: #ffffff; }
+        .toast.error { background: var(--danger); color: #ffffff; }
+
+        /* SPINNING LOADER */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spin { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+
+    </style>
+</head>
+<body>
+
+<!-- ─── LOCK ──────────────────────────── -->
+<div id="lock">
+    <div class="lock-card">
+        <div class="lock-logo">Credi<em>Listo</em></div>
+        <div class="lock-sub">Panel Administrativo</div>
+        <input type="password" class="lock-input" id="pin" placeholder="••••" maxlength="6"
+               onkeydown="if(event.key==='Enter')auth()">
+        <button class="lock-btn" onclick="auth()">Entrar</button>
+        <div id="lock-err">PIN incorrecto</div>
+    </div>
+</div>
+
+<!-- ─── APP ───────────────────────────── -->
+<div id="app">
+
+    <header class="header">
+        <div class="header-brand">Credi<em>Listo</em> <span style="color:var(--muted);font-size:0.7rem;font-weight:500;letter-spacing:0.05em"> / Admin</span></div>
+        <nav class="header-nav">
+            <button class="btn btn-ghost btn-sm" onclick="exportarCartera()">↓ Excel</button>
+            <button class="btn btn-ghost btn-sm" onclick="location.href='index.html'">Inicio</button>
+        </nav>
+    </header>
+
+    <div class="body-wrap">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="sidebar-top">
+                <input type="text" class="sidebar-search" id="search" placeholder="Buscar cliente…" oninput="filtrarLista()">
+                <!-- Tabs Activos / Archivo -->
+                <div style="display:flex;gap:0.25rem;margin-top:0.25rem">
+                    <button id="tab-activos" onclick="cambiarTab('activos')"
+                            style="flex:1;padding:0.35rem 0;border-radius:0.4rem;border:1px solid var(--accent);
+                                   background:var(--accent);color:#fff;font-family:'Instrument Sans',sans-serif;
+                                   font-weight:700;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer">
+                        Activos
+                    </button>
+                    <button id="tab-archivo" onclick="cambiarTab('archivo')"
+                            style="flex:1;padding:0.35rem 0;border-radius:0.4rem;border:1px solid var(--border2);
+                                   background:transparent;color:var(--muted2);font-family:'Instrument Sans',sans-serif;
+                                   font-weight:700;font-size:0.6rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer">
+                        Archivo
+                    </button>
+                </div>
+                <div class="sidebar-stat">
+                    <span class="stat-label">Clientes activos</span>
+                    <span class="stat-val" id="total-activos">0</span>
+                </div>
+                <div class="sidebar-stat" style="border-top:1px solid var(--border);padding-top:0.5rem">
+                    <span class="stat-label">Cobrado hoy</span>
+                    <span class="stat-val" id="cobrado-hoy">$0.00</span>
+                </div>
+                <div class="sidebar-stat" style="border-top:1px solid var(--border);padding-top:0.5rem">
+                    <span class="stat-label">Capital invertido</span>
+                    <span class="stat-val" id="capital-invertido" style="color:var(--accent)">$0.00</span>
+                </div>
+                <div class="sidebar-stat" style="border-top:1px solid var(--border);padding-top:0.5rem">
+                    <span class="stat-label">Caja Chica disponible</span>
+                    <span class="stat-val" id="saldo-caja" style="color:#10b981">$0.00</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.4rem;padding-top:0.5rem;border-top:1px solid var(--border)">
+                    <!-- COBROS DEL DÍA — nuevo módulo -->
+                    <button class="btn btn-sm" style="justify-content:space-between;width:100%;
+                            background:rgba(14,165,233,0.12);color:var(--accent);
+                            border:1px solid rgba(14,165,233,0.35);font-weight:800"
+                            onclick="mostrarCobrosDelDia()">
+                        <span>📅 Cobros del Día</span>
+                        <span class="client-badge" id="badge-cobros-dia"
+                              style="background:var(--accent);color:#fff;display:none">0</span>
+                    </button>
+                    <button class="btn btn-ghost btn-sm" style="justify-content:space-between;width:100%"
+                            onclick="mostrarSolicitudes()">
+                        <span>📋 Solicitudes pendientes</span>
+                        <span class="client-badge badge-saldo" id="badge-pendientes" style="display:none">0</span>
+                    </button>
+                    <button class="btn btn-accent btn-sm" style="justify-content:center;width:100%"
+                            onclick="mostrarNuevoCliente()">
+                        + Nuevo cliente
+                    </button>
+                    <button class="btn btn-ghost btn-sm" style="justify-content:center;width:100%"
+                            onclick="location.href='reporte-solicitudes.html'">
+                        📋 Reporte solicitudes
+                    </button>
+                    <button class="btn btn-ghost btn-sm" style="justify-content:center;width:100%"
+                            onclick="location.href='reporte-activos.html'">
+                        📊 Reporte clientes activos
+                    </button>
+
+                </div>
+            </div>
+            <div class="client-list" id="client-list">
+                <div class="empty-list">Cargando clientes…</div>
+            </div>
+        </aside>
+
+        <!-- MAIN PANEL -->
+        <main class="main-panel" id="main-panel">
+            <div class="welcome-state" id="welcome">
+                <div class="welcome-icon">📋</div>
+                <p>Selecciona un cliente para gestionar su crédito</p>
+            </div>
+            <div id="panel" style="display:none" class="panel-content"></div>
+        </main>
+
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- FILE INPUTS ocultos -->
+<input type="file" id="fi-contrato"    accept="image/*,application/pdf" style="display:none" onchange="subirDoc(this,'contrato')">
+<input type="file" id="fi-letra"       accept="image/*,application/pdf" style="display:none" onchange="subirDoc(this,'letra')">
+<input type="file" id="fi-dui_frontal" accept="image/*"                 style="display:none" onchange="subirDoc(this,'dui_frontal')">
+<input type="file" id="fi-dui_reverso" accept="image/*"                 style="display:none" onchange="subirDoc(this,'dui_reverso')">
+
+<!-- Shared Config -->
+<script src="firebase-config.js"></script>
+<script>
+// ─── CONFIG ──────────────────────────────────────────────────────────────
+const PIN     = "2025";
+// negocioID, db and storage are already inherited from firebase-config.js
+
+let db, storage;
+let allClients = {};
+let currentId  = null;
+let currentTab = 'activos';
+
+// ─── AUTH ─────────────────────────────────────────────────────────────────
+function auth() {
+    if (document.getElementById('pin').value === PIN) {
+        document.getElementById('lock').style.display = 'none';
+        document.getElementById('app').style.display  = 'block';
+        initFirebase();
+    } else {
+        document.getElementById('lock-err').style.display = 'block';
+        document.getElementById('pin').value = '';
+    }
+}
+document.addEventListener('DOMContentLoaded', () => {
+    // Siempre mostrar lock al cargar
+    document.getElementById('lock').style.display = 'flex';
+    document.getElementById('app').style.display  = 'none';
+    document.getElementById('pin').value = '';
+    document.getElementById('lock-err').style.display = 'none';
+    document.getElementById('pin').addEventListener('keydown', e => { if(e.key==='Enter') auth(); });
+    document.getElementById('pin').focus();
+});
+// Forzar lock al volver con botón atrás del navegador (bfcache)
+window.addEventListener('pageshow', () => {
+    document.getElementById('lock').style.display = 'flex';
+    document.getElementById('app').style.display  = 'none';
+    document.getElementById('pin').value = '';
+});
+
+// ─── FIREBASE ─────────────────────────────────────────────────────────────
+function initFirebase() {
+    // Already initialized via firebase-config.js
+    escucharClientes();
+}
+
+function escucharClientes() {
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // Escuchar finanzas globales
+    db.ref('config/finanzas').on('value', snapCfg => {
+        const cfg = snapCfg.val() || {};
+        const cajaChica      = parseFloat(cfg.cajaChica || 0);
+        const capitalInv     = parseFloat(cfg.capitalInvertido || 0);
+        const elCaja = document.getElementById('saldo-caja');
+        const elCap  = document.getElementById('capital-invertido');
+        if (elCaja) elCaja.textContent = '$' + cajaChica.toFixed(2);
+        if (elCap)  elCap.textContent  = '$' + capitalInv.toFixed(2);
+    });
+
+    db.ref('clientes').on('value', snap => {
+        allClients = {};
+        let activos = 0, cobradoHoy = 0, pendientes = 0;
+
+        snap.forEach(c => {
+            const v = c.val();
+            allClients[c.key] = { ...v, _key: c.key };
+            if (v.tipo === 'ACTIVO') {
+                activos++;
+                (v.cuotas || []).forEach(cuo => {
+                    if (cuo.pagada && cuo.fecha_ISO === hoy)
+                        cobradoHoy += parseFloat(cuo.valorPagado || 0);
+                });
+            }
+            if (v.tipo === 'PENDIENTE') pendientes++;
+        });
+
+        document.getElementById('total-activos').textContent = activos;
+        document.getElementById('cobrado-hoy').textContent   = '$' + cobradoHoy.toFixed(2);
+        const badge = document.getElementById('badge-pendientes');
+        if (pendientes > 0) {
+            badge.textContent = pendientes;
+            badge.style.display = 'inline';
+        } else {
+            badge.style.display = 'none';
+        }
+
+        // Badge Cobros del Día
+        const _cd = calcularCobrosHoy();
+        const badgeCD = document.getElementById('badge-cobros-dia');
+        const totalCD = _cd.cobrarHoy + _cd.enMora;
+        if (badgeCD) {
+            if (totalCD > 0) { badgeCD.textContent = totalCD; badgeCD.style.display = 'inline'; }
+            else badgeCD.style.display = 'none';
+        }
+
+        renderSidebar();
+        if (currentId && allClients[currentId]) renderPanel(currentId);
+    });
+}
+
+// ─── HELPERS COBROS DEL DÍA ───────────────────────────────────────────────
+function parseFechaProgr(str) {
+    if (!str) return null;
+    if (str.includes('-') && str.length === 10) {
+        const d = new Date(str + 'T00:00:00'); d.setHours(0,0,0,0); return d;
+    }
+    if (str.includes('/')) {
+        const p = str.split('/');
+        const d = new Date(`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}T00:00:00`);
+        d.setHours(0,0,0,0);
+        if (!isNaN(d)) return d;
+    }
+    return null;
+}
+
+function calcularCobrosHoy() {
+    const HOY = new Date(); HOY.setHours(0,0,0,0);
+    const HOY_ISO = HOY.toISOString().split('T')[0];
+    let cobrarHoy = 0, enMora = 0, pagadosHoy = 0;
+    Object.values(allClients).forEach(c => {
+        if (c.tipo !== 'ACTIVO') return;
+        const cuotas = c.cuotas || [];
+        const yaPago = cuotas.some(q => q.pagada && q.fecha_ISO === HOY_ISO);
+        if (yaPago) { pagadosHoy++; return; }
+        let maxAtraso = 0, tocaHoyFlag = false;
+        for (const cuo of cuotas) {
+            if (cuo.pagada) continue;
+            const f = parseFechaProgr(cuo.fecha_prog || cuo.fecha_prog_sv);
+            if (!f) continue;
+            const diff = Math.floor((HOY - f) / 86400000);
+            if (diff > 0) maxAtraso = Math.max(maxAtraso, diff);
+            if (diff === 0) tocaHoyFlag = true;
+        }
+        if (maxAtraso > 0)    enMora++;
+        else if (tocaHoyFlag) cobrarHoy++;
+    });
+    return { cobrarHoy, enMora, pagadosHoy };
+}
+
+// ─── TABS ─────────────────────────────────────────────────────────────────
+function cambiarTab(tab) {
+    currentTab = tab;
+    const btnA = document.getElementById('tab-activos');
+    const btnB = document.getElementById('tab-archivo');
+    if (btnA && btnB) {
+        if (tab === 'activos') {
+            btnA.style.background = 'var(--accent)'; btnA.style.color = '#fff'; btnA.style.borderColor = 'var(--accent)';
+            btnB.style.background = 'transparent';   btnB.style.color = 'var(--muted2)'; btnB.style.borderColor = 'var(--border2)';
+        } else {
+            btnB.style.background = '#10b981'; btnB.style.color = '#fff'; btnB.style.borderColor = '#10b981';
+            btnA.style.background = 'transparent';   btnA.style.color = 'var(--muted2)'; btnA.style.borderColor = 'var(--border2)';
+        }
+    }
+    currentId = null;
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('welcome').style.display = 'flex';
+    renderSidebar();
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────────────────
+function filtrarLista() {
+    const q = document.getElementById('search').value.toLowerCase();
+    document.querySelectorAll('.client-item').forEach(el => {
+        el.style.display = el.dataset.search.includes(q) ? '' : 'none';
+    });
+}
+
+function renderSidebar() {
+    const q    = document.getElementById('search').value.toLowerCase();
+    const list = document.getElementById('client-list');
+
+    if (currentTab === 'archivo') {
+        const items = Object.values(allClients)
+            .filter(c => c.tipo === 'ARCHIVO')
+            .sort((a,b) => (b.fechaArchivo||'').localeCompare(a.fechaArchivo||''));
+
+        if (!items.length) {
+            list.innerHTML = '<div class="empty-list">No hay clientes archivados</div>';
+            return;
+        }
+        list.innerHTML = items.map(c => {
+            const active = c._key === currentId ? 'active' : '';
+            const ds = (c.nombre||'').toLowerCase() + ' ' + (c.dui||'');
+            return `
+            <div class="client-item ${active}" data-search="${ds}"
+                 onclick="renderPanel('${c._key}')">
+                <div>
+                    <div class="client-item-name">${c.nombre||'—'}</div>
+                    <div class="client-item-sub">${c.fechaArchivo||c.dui||'sin DUI'}</div>
+                </div>
+                <span class="client-badge badge-ok" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3)">Saldado</span>
+            </div>`;
+        }).join('');
+        return;
+    }
+
+    const items = Object.values(allClients)
+        .filter(c => c.tipo === 'ACTIVO')
+        .sort((a,b) => (a.nombre||'').localeCompare(b.nombre||''));
+
+    if (!items.length) {
+        list.innerHTML = '<div class="empty-list">No hay clientes activos</div>';
+        return;
+    }
+
+    list.innerHTML = items.map(c => {
+        const saldo = parseFloat(c.saldo || 0);
+        const badgeCls = saldo <= 0 ? 'badge-ok' : 'badge-saldo';
+        const badgeTxt = saldo <= 0 ? 'Saldado' : '$' + saldo.toFixed(2);
+        const active = c._key === currentId ? 'active' : '';
+        const ds = (c.nombre||'').toLowerCase() + ' ' + (c.dui||'');
+        return `
+        <div class="client-item ${active}" data-search="${ds}"
+             onclick="renderPanel('${c._key}')">
+            <div>
+                <div class="client-item-name">${c.nombre||'—'}</div>
+                <div class="client-item-sub">${c.dui||'sin DUI'}</div>
+            </div>
+            <span class="client-badge ${badgeCls}">${badgeTxt}</span>
+        </div>`;
+    }).join('');
+}
+
+// ─── PANEL ────────────────────────────────────────────────────────────────
+function renderPanel(id) {
+    currentId = id;
+    const s   = allClients[id];
+    if (!s) return;
+
+    // mark active sidebar
+    document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+    const match = [...document.querySelectorAll('.client-item')]
+        .find(el => el.dataset.search.startsWith((s.nombre||'').toLowerCase()));
+    if (match) match.classList.add('active');
+
+    const total  = parseFloat(s.total || (parseFloat(s.monto||0) * 1.2));
+    const saldo  = parseFloat(s.saldo !== undefined ? s.saldo : total);
+    const pagado = total - saldo;
+
+    document.getElementById('welcome').style.display = 'none';
+    const panel = document.getElementById('panel');
+    panel.style.display = 'flex';
+
+    panel.innerHTML = `
+    <!-- HEADER CLIENTE -->
+    <div class="client-header">
+        <div>
+            <div class="ch-name">${s.nombre||'—'}</div>
+            <div class="ch-meta">
+                DUI: <span>${s.dui||'—'}</span> &nbsp;·&nbsp;
+                Tel: <span>${s.tel||'—'}</span> &nbsp;·&nbsp;
+                Inicio: <span>${s.fechaInicio||s.fecha||'—'}</span>
+            </div>
+        </div>
+        <div class="ch-actions">
+            <a href="https://wa.me/503${s.tel||''}?text=${encodeURIComponent('Hola '+s.nombre+', te contactamos de CrediListo.')}" target="_blank" class="btn btn-accent btn-sm">
+                💬 WhatsApp
+            </a>
+            ${(s.tipo === 'ARCHIVO' || saldo <= 0) ? `
+            <button class="btn btn-sm" style="background:rgba(14,165,233,0.1);color:var(--accent);border:1px solid var(--accent-border)" onclick="modalNuevoCredito()">🔄 Nuevo Crédito</button>
+            ` : ''}
+            <button class="btn btn-danger btn-sm" onclick="eliminarCliente()">Eliminar</button>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats-row" style="flex-wrap:wrap">
+        <div class="stat-card">
+            <div class="sc-label">Capital prestado</div>
+            <div class="sc-val blue">$${parseFloat(s.monto||0).toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="sc-label">Total a cobrar</div>
+            <div class="sc-val blue">$${total.toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="sc-label">Deuda pendiente</div>
+            <div class="sc-val ${saldo > 0 ? 'red' : 'green'}">$${saldo.toFixed(2)}</div>
+        </div>
+        <div class="stat-card">
+            <div class="sc-label">Ya cobrado</div>
+            <div class="sc-val green">$${pagado.toFixed(2)}</div>
+        </div>
+        <div class="stat-card" style="border:2px solid rgba(16,185,129,0.3);background:rgba(16,185,129,0.05)">
+            <div class="sc-label">Saldo Caja Chica</div>
+            <div class="sc-val" style="color:#10b981">$${parseFloat(s.cajachica||0).toFixed(2)}</div>
+        </div>
+    </div>
+    <!-- ACCIONES FINANCIERAS -->
+    <div style="display:flex;gap:0.5rem;padding:0 0 0.5rem 0;flex-wrap:wrap">
+        ${s.tipo !== 'ARCHIVO' ? `
+        ${saldo > 0 ? `
+        <button class="btn btn-blue btn-sm" onclick="modalInyectarCapital()">💰 Inyectar Capital</button>
+        <button class="btn btn-ghost btn-sm" onclick="modalDeducirCobrado()">➖ Deducir de Cobrado</button>
+        ` : `
+        <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.3);border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.72rem;color:#10b981;font-weight:700;display:flex;align-items:center;gap:0.5rem">
+            ✅ Crédito SALDADO — elige una acción:
+        </div>
+        <button class="btn btn-sm" style="background:rgba(14,165,233,0.1);color:var(--accent);border:1px solid var(--accent-border)" onclick="modalNuevoCredito()">🔄 Nuevo Crédito</button>
+        <button class="btn btn-sm" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3)" onclick="archivarCliente()">📁 Solo Archivar</button>
+        `}
+        ` : `
+        <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);border-radius:0.5rem;padding:0.5rem 0.75rem;font-size:0.7rem;color:#10b981;font-weight:600">
+            📁 Cliente archivado el ${s.fechaArchivo||'—'} · Usa <strong>Nuevo Crédito</strong> para reactivarlo
+        </div>
+        `}
+    </div>
+
+    <!-- CUOTAS -->
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title">Registro de Pagos — ${(s.frecuencia||'diario').toUpperCase()}</div>
+        </div>
+        <div class="section-body">
+            <div style="display:grid;grid-template-columns:28px 1fr 120px 130px 80px;gap:0.5rem;padding:0 0.75rem 0.5rem;margin-bottom:0.25rem">
+                <span style="font-size:0.55rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">#</span>
+                <span style="font-size:0.55rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Estado</span>
+                <span style="font-size:0.55rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Monto ($)</span>
+                <span style="font-size:0.55rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em">Fecha</span>
+                <span></span>
+            </div>
+            <div class="cuotas-wrap" id="cuotas-wrap"></div>
+        </div>
+    </div>
+
+    <!-- FICHA COMPLETA -->
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title">Ficha del Cliente</div>
+            <button class="btn btn-ghost btn-sm" onclick="guardarFicha()">Guardar cambios</button>
+        </div>
+        <div class="section-body">
+            <div class="ficha-grid" id="ficha-grid"></div>
+        </div>
+    </div>
+
+    <!-- DOCUMENTOS -->
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title">Documentos — Contrato & Letra de Cambio</div>
+        </div>
+        <div class="section-body">
+            <p style="font-size:0.7rem;color:var(--muted2);margin-bottom:1rem">
+                Sube una foto o PDF. Se almacena en Firebase Storage y queda vinculado a este cliente.
+            </p>
+            <div class="docs-grid">
+                ${docSlot('contrato',    'Contrato firmado',  s.doc_contrato)}
+                ${docSlot('letra',       'Letra de Cambio',   s.doc_letra)}
+                ${docSlot('dui_frontal', 'DUI Frontal',       s.doc_dui_frontal)}
+                ${docSlot('dui_reverso', 'DUI Reverso',       s.doc_dui_reverso)}
+            </div>
+        </div>
+    </div>`;
+
+    renderCuotas(s);
+    renderFicha(s);
+}
+
+// ─── CUOTAS ───────────────────────────────────────────────────────────────
+function renderCuotas(s) {
+    const wrap = document.getElementById('cuotas-wrap');
+    if (!wrap) return;
+    const cuotas = s.cuotas || [];
+    if (!cuotas.length) {
+        wrap.innerHTML = '<p style="font-size:0.75rem;color:var(--muted);padding:0.5rem">Sin cuotas registradas.</p>';
+        return;
+    }
+    wrap.innerHTML = cuotas.map((c, i) => {
+        const pagada = !!c.pagada;
+        return `
+        <div class="cuota-row ${pagada ? 'pagada' : ''}">
+            <span class="cuota-n">${c.n||i+1}</span>
+            <span class="cuota-estado ${pagada ? 'ok' : 'pending'}">${pagada ? '✓ Pagado' : '· Pendiente'}</span>
+            <input type="number" class="cuota-input" id="v-${i}" value="${c.valorPagado||0}" step="0.01"
+                   ${pagada ? 'disabled' : ''}>
+            <input type="date" class="cuota-date" id="f-${i}" value="${c.fecha_ISO||''}"
+                   ${pagada ? 'disabled' : ''}>
+            ${pagada
+                ? `<span class="cuota-btn pagado">Pagado</span>`
+                : `<button class="cuota-btn pagar" onclick="pagarCuota(${i})">Pagar</button>`}
+        </div>`;
+    }).join('');
+}
+
+async function pagarCuota(i) {
+    const monto = parseFloat(document.getElementById('v-' + i).value);
+    const fecha = document.getElementById('f-' + i).value || new Date().toISOString().split('T')[0];
+    if (isNaN(monto) || monto <= 0) return toast('Monto no válido', 'error');
+
+    const snap = await db.ref('clientes/' + currentId).once('value');
+    let s = snap.val();
+    s.cuotas[i].pagada = true;
+    s.cuotas[i].valorPagado = monto;
+    s.cuotas[i].fecha_ISO   = fecha;
+    s.cuotas[i].fecha       = fecha.split('-').reverse().join('/');
+
+    let pagadoTotal = 0;
+    s.cuotas.forEach(c => { if (c.pagada) pagadoTotal += parseFloat(c.valorPagado || 0); });
+    s.saldo = (parseFloat(s.total) - pagadoTotal).toFixed(2);
+
+    await db.ref('clientes/' + currentId).set(s);
+    toast('✓ Pago registrado', 'success');
+}
+
+// ─── FICHA ────────────────────────────────────────────────────────────────
+function renderFicha(s) {
+    const g = document.getElementById('ficha-grid');
+    if (!g) return;
+    const campo = (lbl, id, val, tipo='text', full=false, mono=false) => `
+        <div class="ficha-field ${full ? 'full' : ''}">
+            <span class="ff-label">${lbl}</span>
+            <input class="edit-input ${mono ? 'mono' : ''}" type="${tipo}" id="ef-${id}" value="${val||''}">
+        </div>`;
+    const campoSel = (lbl, id, val, opts) => `
+        <div class="ficha-field">
+            <span class="ff-label">${lbl}</span>
+            <select class="edit-select" id="ef-${id}">
+                ${opts.map(o => `<option value="${o}" ${val===o?'selected':''}>${o}</option>`).join('')}
+            </select>
+        </div>`;
+    const campoRO = (lbl, val, accent=false) => `
+        <div class="ficha-field">
+            <span class="ff-label">${lbl}</span>
+            <div class="ff-val ${accent ? 'accent mono' : 'mono'}">${val||'—'}</div>
+        </div>`;
+
+    const campoMontoSel = (lbl, id, val, opts, frecuencia) => `
+        <div class="ficha-field">
+            <span class="ff-label">${lbl}</span>
+            <select class="edit-select" id="ef-${id}"
+                    onchange="actualizarPreviewFicha()">
+                ${opts.map(o => `<option value="${o}" ${String(val)===String(o)?'selected':''}>${'$'+o}</option>`).join('')}
+            </select>
+        </div>`;
+
+    g.innerHTML =
+        campo('Nombre completo', 'nombre', s.nombre, 'text', true) +
+        campo('DUI', 'dui', s.dui) +
+        campo('WhatsApp / Teléfono', 'tel', s.tel, 'tel') +
+        campo('Contraseña de acceso', 'pass', s.pass) +
+        campo('Dirección de vivienda', 'dirCasa', s.dirCasa||s.dirVivienda, 'text', true) +
+        campo('Nombre del negocio', 'negocio', s.negocio) +
+        campo('Dirección del negocio', 'dirNeg', s.dirNeg||s.dirNegocio) +
+        campo('Ingresos / Sueldo', 'ingresos', s.ingresos) +
+        campo('Propósito del crédito', 'inversion', s.inversion, 'text', true) +
+        campo('Referencia (Nombre)', 'refNom', s.refNom||s.refNombre) +
+        campo('Referencia (Teléfono)', 'refTel', s.refTel, 'tel') +
+        campoMontoSel('Monto del crédito', 'monto', s.monto,
+            ['50','100','150','200','250','300','400','500']) +
+        `<div class="ficha-field">
+            <span class="ff-label">Frecuencia de pago</span>
+            <select class="edit-select" id="ef-frecuencia" onchange="actualizarPreviewFicha()">
+                <option value="diario" ${(s.frecuencia||'diario')==='diario'?'selected':''}>Diario</option>
+                <option value="semanal" ${s.frecuencia==='semanal'?'selected':''}>Semanal</option>
+            </select>
+        </div>` +
+        `<div class="ficha-field">
+            <span class="ff-label">Total a pagar (20% interés)</span>
+            <div class="ff-val accent mono" id="ef-total-preview">$${parseFloat(s.total||0).toFixed(2)}</div>
+        </div>` +
+        `<div class="ficha-field">
+            <span class="ff-label">Cuota por pago</span>
+            <div class="ff-val mono" id="ef-cuota-preview">${(() => {
+                const t = parseFloat(s.total||0);
+                const n = (s.frecuencia||'diario')==='semanal' ? 4 : 30;
+                return '$' + (t/n).toFixed(2) + ' ' + (s.frecuencia||'diario');
+            })()}</div>
+        </div>` +
+        campoRO('Fecha de inicio', s.fechaInicio||s.fecha);
+}
+
+function actualizarPreviewFicha() {
+    const monto = parseFloat(document.getElementById('ef-monto')?.value) || 0;
+    const frec  = document.getElementById('ef-frecuencia')?.value || 'diario';
+    const total = monto * 1.2;
+    const n     = frec === 'semanal' ? 4 : 30;
+    const cuota = (total / n).toFixed(2);
+    const elT = document.getElementById('ef-total-preview');
+    const elC = document.getElementById('ef-cuota-preview');
+    if (elT) elT.textContent = '$' + total.toFixed(2);
+    if (elC) elC.textContent = '$' + cuota + ' ' + frec;
+}
+
+async function guardarFicha() {
+    const g = id => (document.getElementById('ef-' + id)||{}).value || '';
+    const nuevoMonto      = parseFloat(g('monto')) || 0;
+    const nuevaFrecuencia = g('frecuencia');
+    const clienteActual   = allClients[currentId] || {};
+    const montoAnterior   = parseFloat(clienteActual.monto) || 0;
+    const frecAnterior    = clienteActual.frecuencia || 'diario';
+    const cambio          = nuevoMonto !== montoAnterior || nuevaFrecuencia !== frecAnterior;
+
+    const updates = {
+        nombre:     g('nombre').toUpperCase(),
+        dui:        g('dui'),
+        tel:        g('tel'),
+        pass:       g('pass'),
+        dirCasa:    g('dirCasa'),
+        negocio:    g('negocio'),
+        dirNeg:     g('dirNeg'),
+        ingresos:   g('ingresos'),
+        inversion:  g('inversion'),
+        refNom:     g('refNom'),
+        refTel:     g('refTel'),
+        monto:      String(nuevoMonto),
+        frecuencia: nuevaFrecuencia,
+    };
+
+    if (cambio && nuevoMonto > 0) {
+        const nCuotas    = nuevaFrecuencia === 'semanal' ? 4 : 30;
+        const nuevoTotal = parseFloat((nuevoMonto * 1.2).toFixed(2));
+        const nuevaCuota = parseFloat((nuevoTotal / nCuotas).toFixed(2));
+
+        // Recalcular cuotas: respetar pagadas, actualizar pendientes
+        const cuotasActuales = clienteActual.cuotas || [];
+        const cuotasRecalc = [];
+        for (let i = 0; i < nCuotas; i++) {
+            const anterior = cuotasActuales[i];
+            if (anterior && anterior.pagada) {
+                cuotasRecalc.push(anterior);
+            } else {
+                cuotasRecalc.push({
+                    n: i + 1,
+                    valorPagado: nuevaCuota,
+                    pagada: false,
+                    fecha: anterior?.fecha || '',
+                    fecha_ISO: anterior?.fecha_ISO || '',
+                    fecha_prog: anterior?.fecha_prog || '',
+                    fecha_prog_sv: anterior?.fecha_prog_sv || '',
+                });
+            }
+        }
+
+        let pagadoTotal = 0;
+        cuotasRecalc.forEach(c => { if (c.pagada) pagadoTotal += parseFloat(c.valorPagado || 0); });
+
+        updates.total  = nuevoTotal;
+        updates.saldo  = parseFloat((nuevoTotal - pagadoTotal).toFixed(2));
+        updates.cuotas = cuotasRecalc;
+
+        if (!confirm(
+            `¿Cambiar monto a $${nuevoMonto}?\n\n` +
+            `Nuevo total: $${nuevoTotal.toFixed(2)}\n` +
+            `Nueva cuota: $${nuevaCuota.toFixed(2)} (${nuevaFrecuencia})\n\n` +
+            `Las cuotas pendientes se recalcularán.`
+        )) return;
+    }
+
+    await db.ref('clientes/' + currentId).update(updates);
+    toast('✓ Ficha actualizada', 'success');
+}
+
+async function eliminarCliente() {
+    if (!confirm('¿Eliminar a ' + (allClients[currentId]?.nombre||'este cliente') + '? No se puede deshacer.')) return;
+    await db.ref('clientes/' + currentId).remove();
+    currentId = null;
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('welcome').style.display = 'flex';
+    toast('Cliente eliminado', 'error');
+}
+
+// ─── ARCHIVAR CLIENTE ─────────────────────────────────────────────────────
+async function archivarCliente() {
+    const s = allClients[currentId];
+    if (!s) return;
+    if (!confirm('¿Archivar a ' + (s.nombre||'este cliente') + '?\nSu ficha pasará al Archivo y lo cobrado sumará a Caja Chica.')) return;
+
+    const fechaArchivo = new Date().toLocaleDateString('es-SV');
+    const totalCobrado = parseFloat((parseFloat(s.total||0) - parseFloat(s.saldo||0)).toFixed(2));
+
+    const snapCfg = await db.ref('config/finanzas').once('value');
+    const cfg = snapCfg.val() || {};
+    const nuevaCaja = parseFloat((parseFloat(cfg.cajaChica||0) + totalCobrado).toFixed(2));
+
+    await Promise.all([
+        db.ref('clientes/' + currentId).update({ tipo: 'ARCHIVO', fechaArchivo }),
+        db.ref('config/finanzas').update({ cajaChica: nuevaCaja })
+    ]);
+
+    currentId = null;
+    document.getElementById('panel').style.display = 'none';
+    document.getElementById('welcome').style.display = 'flex';
+    toast('✓ Archivado · $' + totalCobrado.toFixed(2) + ' sumados a Caja Chica', 'success');
+}
+
+// ─── NUEVO CRÉDITO (desde Activo saldado o desde Archivo) ──────────────
+function modalNuevoCredito() {
+    const s = allClients[currentId];
+    if (!s) return;
+    const hoy = new Date().toISOString().split('T')[0];
+
+    // Leer caja chica global para mostrarlo en el modal
+    db.ref('config/finanzas').once('value').then(snapCfg => {
+        const cfg = snapCfg.val() || {};
+        const cajaChicaGlobal = parseFloat(cfg.cajaChica || 0);
+        const capitalInvertido = parseFloat(cfg.capitalInvertido || 0);
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-nuevo-credito';
+        modal.style.cssText = `position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);
+            backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto`;
+
+        modal.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;
+                    width:min(96vw,520px);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+            <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+                        display:flex;justify-content:space-between;align-items:center;
+                        position:sticky;top:0;background:var(--surface);z-index:1">
+                <div>
+                    <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--text)">🔄 Nuevo Crédito</div>
+                    <div style="font-size:0.65rem;color:var(--muted2);margin-top:0.1rem">${s.nombre||'—'} &nbsp;·&nbsp; ${s.tipo === 'ARCHIVO' ? '📁 Desde Archivo' : '✅ Crédito Saldado'}</div>
+                </div>
+                <button onclick="document.getElementById('modal-nuevo-credito').remove()"
+                        style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                               padding:0.35rem 0.6rem;cursor:pointer;color:var(--muted2);font-size:0.75rem">✕</button>
+            </div>
+            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+
+                <!-- INFO FINANCIERA GLOBAL -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                    <div style="background:rgba(14,165,233,0.07);border:1px solid rgba(14,165,233,0.25);border-radius:0.6rem;padding:0.75rem">
+                        <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Capital invertido total</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:1rem">$${capitalInvertido.toFixed(2)}</div>
+                    </div>
+                    <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.25);border-radius:0.6rem;padding:0.75rem">
+                        <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Caja Chica disponible</div>
+                        <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#10b981;font-size:1rem">$${cajaChicaGlobal.toFixed(2)}</div>
+                    </div>
+                </div>
+
+                <!-- PROCEDENCIA DE CAPITAL -->
+                <div>
+                    <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.6rem">💼 Procedencia del Capital</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                        <div id="opt-inyeccion"
+                             onclick="selProcNC('inyeccion')"
+                             style="border:2px solid var(--border2);background:var(--surface2);border-radius:0.75rem;
+                                    padding:0.85rem 0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                            <div style="font-size:1.3rem;margin-bottom:0.3rem">💰</div>
+                            <div style="font-size:0.72rem;font-weight:800;color:var(--muted2)">Inyección de fondo</div>
+                            <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.15rem">Dinero nuevo · sube capital</div>
+                        </div>
+                        <div id="opt-recogido"
+                             onclick="selProcNC('recogido')"
+                             style="border:2px solid var(--accent);background:var(--accent-dim);border-radius:0.75rem;
+                                    padding:0.85rem 0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                            <div style="font-size:1.3rem;margin-bottom:0.3rem">🔄</div>
+                            <div style="font-size:0.72rem;font-weight:800;color:var(--accent)">Dinero recogido</div>
+                            <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.15rem">Sale de Caja Chica</div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="nc-procedencia" value="recogido">
+                </div>
+
+                <!-- MONTO Y FRECUENCIA -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+                    <div>
+                        <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Monto del crédito</div>
+                        <select id="nc-monto" onchange="recalcNC()"
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                                       padding:0.6rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                                       font-size:0.9rem;font-weight:700;outline:none">
+                            ${['50','100','150','200','250','300','400','500'].map(v =>
+                                `<option value="${v}" ${String(Math.round(parseFloat(s.monto||200)))===v?'selected':''}>$${v}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Frecuencia</div>
+                        <select id="nc-frec" onchange="recalcNC()"
+                                style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                                       padding:0.6rem 0.75rem;color:var(--text);font-family:'Instrument Sans',sans-serif;
+                                       font-size:0.85rem;font-weight:600;outline:none">
+                            <option value="diario" ${(s.frecuencia||'diario')==='diario'?'selected':''}>Diario (30 pagos)</option>
+                            <option value="semanal" ${s.frecuencia==='semanal'?'selected':''}>Semanal (4 pagos)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TOTALES PREVIEW -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;padding:0.75rem">
+                        <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Total a pagar (20%)</div>
+                        <div id="nc-total" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent);font-size:1rem">$0.00</div>
+                    </div>
+                    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;padding:0.75rem">
+                        <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Cuota por pago</div>
+                        <div id="nc-cuota" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text);font-size:1rem">$0.00</div>
+                    </div>
+                </div>
+
+                <!-- IMPACTO EN CAJA CHICA (visible con "recogido") -->
+                <div id="nc-impacto-caja" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.3);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:#10b981;margin-bottom:0.5rem">Impacto en Caja Chica</div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:0.2rem">
+                        <span style="color:var(--muted2)">Caja Chica actual:</span>
+                        <span style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#10b981">$${cajaChicaGlobal.toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:0.2rem">
+                        <span style="color:var(--muted2)">− Monto a prestar:</span>
+                        <span id="nc-imp-monto" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--danger)">$0.00</span>
+                    </div>
+                    <div style="border-top:1px solid rgba(16,185,129,0.3);padding-top:0.4rem;margin-top:0.4rem;display:flex;justify-content:space-between">
+                        <strong style="font-size:0.72rem">= Caja Chica resultante:</strong>
+                        <strong id="nc-imp-resultado" style="font-family:'JetBrains Mono',monospace;color:#10b981">$0.00</strong>
+                    </div>
+                </div>
+
+                <!-- FECHA -->
+                <div>
+                    <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Fecha de inicio</div>
+                    <input type="date" id="nc-fecha" value="${hoy}"
+                           style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                                  padding:0.6rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                                  font-size:0.85rem;font-weight:600;outline:none">
+                </div>
+
+                <button onclick="confirmarNuevoCredito()"
+                        style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:0.75rem;
+                               padding:0.85rem;font-family:'Syne',sans-serif;font-weight:800;font-size:0.75rem;
+                               letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">
+                    ✓ Activar Nuevo Crédito
+                </button>
+            </div>
+        </div>`;
+
+        document.body.appendChild(modal);
+        // Guardar cajaChica en variable global del modal para usarla en recalcNC
+        window._ncCajaChicaGlobal = cajaChicaGlobal;
+        window._ncCapitalInvertido = capitalInvertido;
+        recalcNC();
+    });
+}
+
+function selProcNC(tipo) {
+    document.getElementById('nc-procedencia').value = tipo;
+    const optI = document.getElementById('opt-inyeccion');
+    const optR = document.getElementById('opt-recogido');
+    if (!optI || !optR) return;
+    if (tipo === 'inyeccion') {
+        optI.style.borderColor = 'var(--accent)'; optI.style.background = 'var(--accent-dim)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optR.style.borderColor = 'var(--border2)'; optR.style.background = 'var(--surface2)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+        const impacto = document.getElementById('nc-impacto-caja');
+        if (impacto) impacto.style.display = 'none';
+    } else {
+        optR.style.borderColor = 'var(--accent)'; optR.style.background = 'var(--accent-dim)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optI.style.borderColor = 'var(--border2)'; optI.style.background = 'var(--surface2)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+        const impacto = document.getElementById('nc-impacto-caja');
+        if (impacto) impacto.style.display = 'block';
+    }
+    recalcNC();
+}
+
+function recalcNC() {
+    const m = parseFloat(document.getElementById('nc-monto')?.value || 200);
+    const f = document.getElementById('nc-frec')?.value || 'diario';
+    const total = m * 1.2;
+    const n = f === 'semanal' ? 4 : 30;
+    const cuota = (total / n).toFixed(2);
+    const elT = document.getElementById('nc-total');
+    const elC = document.getElementById('nc-cuota');
+    if (elT) elT.textContent = '$' + total.toFixed(2);
+    if (elC) elC.textContent = '$' + cuota + ' ' + f;
+
+    // Actualizar impacto en caja chica
+    const elImpMonto = document.getElementById('nc-imp-monto');
+    const elImpRes   = document.getElementById('nc-imp-resultado');
+    if (elImpMonto) elImpMonto.textContent = '$' + m.toFixed(2);
+    if (elImpRes) {
+        const caja = window._ncCajaChicaGlobal || 0;
+        const resultado = caja - m;
+        elImpRes.textContent = '$' + Math.max(0, resultado).toFixed(2);
+        elImpRes.style.color = resultado < 0 ? 'var(--danger)' : '#10b981';
+        const impCont = document.getElementById('nc-impacto-caja');
+        if (impCont && resultado < 0) {
+            impCont.style.borderColor = 'rgba(239,68,68,0.4)';
+            impCont.style.background  = 'rgba(239,68,68,0.05)';
+        } else if (impCont) {
+            impCont.style.borderColor = 'rgba(16,185,129,0.3)';
+            impCont.style.background  = 'rgba(16,185,129,0.07)';
+        }
+    }
+}
+
+async function confirmarNuevoCredito() {
+    const s = allClients[currentId];
+    if (!s) return;
+    const monto      = parseFloat(document.getElementById('nc-monto').value);
+    const frec       = document.getElementById('nc-frec').value;
+    const fechaISO   = document.getElementById('nc-fecha').value || new Date().toISOString().split('T')[0];
+    const procedencia = document.getElementById('nc-procedencia')?.value || 'recogido';
+    const total      = parseFloat((monto * 1.2).toFixed(2));
+    const nCuotas    = frec === 'semanal' ? 4 : 30;
+    const cuota      = parseFloat((total / nCuotas).toFixed(2));
+    const fechaSV    = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-SV');
+
+    // Leer config global actual
+    const snapCfg = await db.ref('config/finanzas').once('value');
+    const cfg = snapCfg.val() || {};
+    let cajaChica       = parseFloat(cfg.cajaChica || 0);
+    let capitalInvertido = parseFloat(cfg.capitalInvertido || 0);
+
+    // Validar si alcanza la caja chica
+    if (procedencia === 'recogido') {
+        if (monto > cajaChica + 0.01) {
+            toast(`Caja Chica insuficiente. Disponible: $${cajaChica.toFixed(2)}`, 'error');
+            return;
+        }
+        cajaChica = parseFloat((cajaChica - monto).toFixed(2));
+    } else {
+        // Inyección: sube el capital invertido
+        capitalInvertido = parseFloat((capitalInvertido + monto).toFixed(2));
+    }
+
+    function fechasPago(inicio, n, semanal) {
+        const base = new Date(inicio + 'T12:00:00');
+        return Array.from({length: n}, (_, i) => {
+            const d = new Date(base);
+            d.setDate(d.getDate() + (semanal ? (i+1)*7 : (i+1)));
+            return { iso: d.toISOString().split('T')[0], sv: d.toLocaleDateString('es-SV') };
+        });
+    }
+    const fechas = fechasPago(fechaISO, nCuotas, frec === 'semanal');
+    const cuotas = fechas.map((fec, i) => ({
+        n: i+1, valorPagado: cuota, pagada: false,
+        fecha: '', fecha_ISO: '', fecha_prog: fec.sv, fecha_prog_sv: fec.sv
+    }));
+
+    // Guardar historial del crédito anterior
+    const historial = Array.isArray(s.historialCreditos) ? [...s.historialCreditos] : [];
+    historial.push({
+        monto:        s.monto || '0',
+        total:        s.total || 0,
+        fechaInicio:  s.fechaInicio || s.fecha || '—',
+        fechaArchivo: new Date().toLocaleDateString('es-SV'),
+        frecuencia:   s.frecuencia || 'diario',
+        procedencia:  s.procedenciaCapital || '—',
+    });
+
+    // El cliente activo reemplaza el mismo nodo (tarjeta en Archivo se preserva
+    // porque el tipo pasa a ACTIVO pero el historial queda en historialCreditos)
+    const nuevoCliente = {
+        id:                 s.id || currentId,
+        nombre:             s.nombre || '',
+        dui:                s.dui || '',
+        tel:                s.tel || '',
+        pass:               s.pass || '1234',
+        dirCasa:            s.dirCasa || s.dirVivienda || '',
+        negocio:            s.negocio || '',
+        dirNeg:             s.dirNeg || s.dirNegocio || '',
+        ingresos:           s.ingresos || '',
+        inversion:          s.inversion || '',
+        refNom:             s.refNom || s.refNombre || '',
+        refTel:             s.refTel || '',
+        monto:              String(monto),
+        frecuencia:         frec,
+        fecha:              fechaSV,
+        fechaInicio:        fechaSV,
+        tipo:               'ACTIVO',
+        total:              total,
+        saldo:              total,
+        cajachica:          0,
+        procedenciaCapital: procedencia,
+        historialCreditos:  historial,
+        cuotas:             cuotas,
+        doc_contrato:       s.doc_contrato || '',
+        doc_letra:          s.doc_letra || '',
+        doc_dui_frontal:    s.doc_dui_frontal || '',
+        doc_dui_reverso:    s.doc_dui_reverso || '',
+    };
+
+    // Guardar cliente + actualizar config global en paralelo
+    await Promise.all([
+        db.ref('clientes/' + currentId).set(nuevoCliente),
+        db.ref('config/finanzas').update({ cajaChica, capitalInvertido })
+    ]);
+
+    document.getElementById('modal-nuevo-credito')?.remove();
+    const msg = procedencia === 'inyeccion'
+        ? `✓ Crédito activado · Capital invertido: $${capitalInvertido.toFixed(2)}`
+        : `✓ Crédito activado · Caja Chica restante: $${cajaChica.toFixed(2)}`;
+    toast(msg, 'success');
+    cambiarTab('activos');
+    setTimeout(() => renderPanel(currentId), 400);
+}
+
+// ─── INYECTAR CAPITAL ─────────────────────────────────────────────────────
+function modalInyectarCapital() {
+    const s = allClients[currentId];
+    if (!s) return;
+    const modal = document.createElement('div');
+    modal.id = 'modal-capital';
+    modal.style.cssText = `position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);
+        backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem`;
+    modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;
+                width:min(96vw,400px);box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+                    display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--text)">💰 Inyectar Capital</div>
+            <button onclick="document.getElementById('modal-capital').remove()"
+                    style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                           padding:0.35rem 0.6rem;cursor:pointer;color:var(--muted2);font-size:0.75rem">✕</button>
+        </div>
+        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+            <p style="font-size:0.75rem;color:var(--muted2)">
+                Agrega dinero nuevo al crédito activo. Aumenta el capital, total a cobrar y recalcula cuotas pendientes.
+            </p>
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Monto a inyectar ($)</div>
+                <input type="number" id="inj-monto" value="100" min="1" step="0.01"
+                       style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                              padding:0.7rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                              font-size:1.1rem;font-weight:700;outline:none">
+            </div>
+            <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;padding:0.75rem;font-size:0.75rem;color:var(--muted2)">
+                Capital actual: <strong style="color:var(--text)">$${parseFloat(s.monto||0).toFixed(2)}</strong><br>
+                Total actual: <strong style="color:var(--text)">$${parseFloat(s.total||0).toFixed(2)}</strong>
+            </div>
+            <div style="display:flex;gap:0.5rem">
+                <button onclick="document.getElementById('modal-capital').remove()"
+                        style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:0.6rem;
+                               padding:0.7rem;cursor:pointer;font-weight:700;font-size:0.75rem;color:var(--muted2)">Cancelar</button>
+                <button onclick="confirmarInyeccion()"
+                        style="flex:2;background:var(--accent);color:#fff;border:none;border-radius:0.6rem;
+                               padding:0.7rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:800;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase">
+                    ✓ Inyectar
+                </button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+}
+
+async function confirmarInyeccion() {
+    const inyeccion = parseFloat(document.getElementById('inj-monto')?.value || 0);
+    if (!inyeccion || inyeccion <= 0) { toast('Monto no válido', 'error'); return; }
+
+    const snap = await db.ref('clientes/' + currentId).once('value');
+    let s = snap.val();
+    const montoNuevo = parseFloat(s.monto || 0) + inyeccion;
+    const totalNuevo = parseFloat((montoNuevo * 1.2).toFixed(2));
+    const nCuotas    = (s.frecuencia||'diario') === 'semanal' ? 4 : 30;
+    const cuotaNueva = parseFloat((totalNuevo / nCuotas).toFixed(2));
+
+    // Recalcular solo cuotas pendientes
+    const cuotasActuales = s.cuotas || [];
+    let pagadoTotal = 0;
+    cuotasActuales.forEach(c => { if (c.pagada) pagadoTotal += parseFloat(c.valorPagado || 0); });
+
+    const cuotasRecalc = cuotasActuales.map((c, i) => {
+        if (c.pagada) return c;
+        return { ...c, valorPagado: cuotaNueva };
+    });
+
+    s.monto  = String(montoNuevo);
+    s.total  = totalNuevo;
+    s.saldo  = parseFloat((totalNuevo - pagadoTotal).toFixed(2));
+    s.cuotas = cuotasRecalc;
+
+    await db.ref('clientes/' + currentId).set(s);
+    document.getElementById('modal-capital')?.remove();
+    toast(`✓ Capital aumentado en $${inyeccion.toFixed(2)}`, 'success');
+}
+
+// ─── DEDUCIR DE COBRADO / CAJA CHICA ─────────────────────────────────────
+function modalDeducirCobrado() {
+    const s = allClients[currentId];
+    if (!s) return;
+    const pagado   = parseFloat(s.total||0) - parseFloat(s.saldo||0);
+    const cajachica = parseFloat(s.cajachica||0);
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-deducir';
+    modal.style.cssText = `position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);
+        backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem`;
+    modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;
+                width:min(96vw,420px);box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+                    display:flex;justify-content:space-between;align-items:center">
+            <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem;color:var(--text)">➖ Deducir de Cobrado</div>
+            <button onclick="document.getElementById('modal-deducir').remove()"
+                    style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                           padding:0.35rem 0.6rem;cursor:pointer;color:var(--muted2);font-size:0.75rem">✕</button>
+        </div>
+        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+            <p style="font-size:0.75rem;color:var(--muted2)">
+                Deduce un monto de lo ya cobrado para usarlo como nuevo crédito. Ese dinero sale de caja y se registra como <strong>Saldo en Caja Chica</strong> restante.
+            </p>
+            <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:0.6rem;padding:0.75rem;font-size:0.75rem">
+                Ya cobrado disponible: <strong style="color:#10b981;font-family:'JetBrains Mono',monospace">$${pagado.toFixed(2)}</strong><br>
+                Saldo actual en Caja Chica: <strong style="color:#10b981;font-family:'JetBrains Mono',monospace">$${cajachica.toFixed(2)}</strong>
+            </div>
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Monto a deducir de cobrado ($)</div>
+                <input type="number" id="ded-monto" value="" min="0.01" step="0.01" placeholder="Ej: 100.00"
+                       max="${pagado.toFixed(2)}"
+                       style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                              padding:0.7rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                              font-size:1.1rem;font-weight:700;outline:none">
+                <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.3rem">Máximo: $${pagado.toFixed(2)} (lo ya cobrado)</div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--muted2);background:var(--surface2);border-radius:0.5rem;padding:0.6rem">
+                💡 Este monto quedará registrado en <strong>Caja Chica</strong> y podrás descontarlo al inyectar nuevo capital a un cliente.
+            </div>
+            <div style="display:flex;gap:0.5rem">
+                <button onclick="document.getElementById('modal-deducir').remove()"
+                        style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:0.6rem;
+                               padding:0.7rem;cursor:pointer;font-weight:700;font-size:0.75rem;color:var(--muted2)">Cancelar</button>
+                <button onclick="confirmarDeduccion(${pagado.toFixed(2)})"
+                        style="flex:2;background:#10b981;color:#fff;border:none;border-radius:0.6rem;
+                               padding:0.7rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:800;font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase">
+                    ✓ Registrar en Caja Chica
+                </button>
+            </div>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+}
+
+async function confirmarDeduccion(maxDisponible) {
+    const monto = parseFloat(document.getElementById('ded-monto')?.value || 0);
+    if (!monto || monto <= 0) { toast('Ingresa un monto válido', 'error'); return; }
+    if (monto > maxDisponible + 0.01) { toast(`No puedes deducir más de $${maxDisponible.toFixed(2)}`, 'error'); return; }
+
+    const snap = await db.ref('clientes/' + currentId).once('value');
+    let s = snap.val();
+    const cajachicaActual = parseFloat(s.cajachica || 0);
+    s.cajachica = parseFloat((cajachicaActual + monto).toFixed(2));
+    await db.ref('clientes/' + currentId).set(s);
+    document.getElementById('modal-deducir')?.remove();
+    toast(`✓ $${monto.toFixed(2)} registrado en Caja Chica`, 'success');
+}
+
+
+function docSlot(tipo, label, url) {
+    const hasDoc = !!url;
+    return `
+    <div class="doc-slot" id="slot-${tipo}">
+        <div class="doc-slot-label">${label}</div>
+        <div class="doc-preview" onclick="document.getElementById('fi-${tipo}').click()" style="cursor:pointer">
+            ${hasDoc
+                ? `<img src="${url}" alt="${label}"
+                       style="width:100%;max-height:160px;object-fit:cover;border-radius:0.5rem;display:block"
+                       onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"
+                   >
+                   <div class="doc-placeholder" style="display:none"><span>📄</span><span style="color:var(--accent)">Archivo guardado</span></div>`
+                : `<div class="doc-placeholder"><span>📎</span>Toca para subir</div>`}
+        </div>
+        <div class="upload-progress"><div class="upload-bar" id="bar-${tipo}"></div></div>
+        <div class="doc-actions">
+            <button class="btn btn-ghost btn-sm" style="flex:1;justify-content:center"
+                    onclick="document.getElementById('fi-${tipo}').click()">
+                ${hasDoc ? '↑ Reemplazar' : '↑ Subir foto o PDF'}
+            </button>
+            ${hasDoc ? `<button class="btn btn-blue btn-sm" onclick="verDocumento('${url}')">🔍 Ver</button>` : ''}
+        </div>
+        <p style="font-size:0.58rem;color:var(--muted2);padding:0 0.75rem 0.6rem;text-align:center">
+            Imágenes o PDF · Guardado en Firebase Storage
+        </p>
+    </div>`;
+}
+
+function verDocumento(url) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);
+        display:flex;align-items:center;justify-content:center;flex-direction:column;gap:1rem;padding:1rem`;
+    modal.onclick = () => modal.remove();
+    modal.innerHTML = `
+        <img src="${url}" style="max-width:95vw;max-height:85vh;object-fit:contain;border-radius:0.5rem;box-shadow:0 8px 40px rgba(0,0,0,0.5)"
+             onerror="this.outerHTML='<p style=color:white;font-size:0.9rem>No se pudo cargar la imagen.<br>Abre el enlace directamente.</p>'">
+        <div style="display:flex;gap:0.75rem">
+            <a href="${url}" target="_blank"
+               style="background:#0ea5e9;color:white;padding:0.5rem 1.25rem;border-radius:0.5rem;
+                      font-weight:700;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;text-decoration:none">
+                Abrir en nueva pestaña
+            </a>
+            <button onclick="event.stopPropagation();this.closest('div[style*=fixed]').remove()"
+                    style="background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);
+                           padding:0.5rem 1.25rem;border-radius:0.5rem;font-weight:700;font-size:0.7rem;
+                           letter-spacing:0.1em;text-transform:uppercase;cursor:pointer">
+                Cerrar ✕
+            </button>
+        </div>
+        <p style="color:rgba(255,255,255,0.4);font-size:0.65rem">Toca fuera para cerrar</p>`;
+    document.body.appendChild(modal);
+}
+
+async function subirDoc(input, tipo) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const bar  = document.getElementById('bar-' + tipo);
+
+    // Validar tamaño (20MB máx)
+    if (file.size > 20 * 1024 * 1024) {
+        toast('Archivo demasiado grande (máx. 20 MB)', 'error');
+        input.value = '';
+        return;
+    }
+
+    if (bar) bar.style.width = '5%';
+
+    try {
+        const ext  = file.name.split('.').pop();
+        const path = `clientes/${currentId}/${tipo}_${Date.now()}.${ext}`;
+        const ref  = storage.ref(path);
+        const task = ref.put(file);
+
+        task.on('state_changed',
+            snap => {
+                const pct = (snap.bytesTransferred / snap.totalBytes) * 100;
+                if (bar) bar.style.width = pct + '%';
+            },
+            err => {
+                toast('Error al subir: ' + err.message, 'error');
+                input.value = '';
+            },
+            async () => {
+                const url = await task.snapshot.ref.getDownloadURL();
+                const campo = 'doc_' + tipo;   // doc_contrato, doc_letra, doc_dui_frontal, doc_dui_reverso
+                await db.ref('clientes/' + currentId).update({ [campo]: url });
+                setTimeout(() => { if (bar) bar.style.width = '0'; }, 800);
+                toast('✓ ' + tipo.replace('_',' ') + ' guardado', 'success');
+                input.value = '';
+            }
+        );
+    } catch (err) {
+        toast('Error: ' + err.message, 'error');
+        input.value = '';
+    }
+}
+
+// ─── SOLICITUDES PENDIENTES ───────────────────────────────────────────────
+// ─── COBROS DEL DÍA ──────────────────────────────────────────────────────────
+function mostrarCobrosDelDia() {
+    currentId = null;
+    document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('welcome').style.display = 'none';
+    const panel = document.getElementById('panel');
+    panel.style.display = 'flex';
+
+    const HOY = new Date(); HOY.setHours(0,0,0,0);
+    const fechaLabel = HOY.toLocaleDateString('es-SV', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+    // Armazón del panel con pestañas INVER1 / INVER2
+    panel.innerHTML = `
+    <div class="client-header">
+        <div>
+            <div class="ch-name">📅 Cobros del Día</div>
+            <div class="ch-meta" style="text-transform:capitalize">${fechaLabel}</div>
+        </div>
+        <div class="ch-actions">
+            <div style="display:flex;gap:0.35rem;background:var(--surface2);border:1px solid var(--border);
+                        border-radius:0.6rem;padding:0.25rem">
+                <button id="tab-cd-inver1" onclick="switchTabCobros('inver1')"
+                        style="padding:0.35rem 0.9rem;border-radius:0.4rem;font-size:0.7rem;font-weight:800;
+                               border:none;cursor:pointer;transition:all 0.15s;
+                               background:var(--accent);color:#fff">
+                    🏠 INVER1
+                </button>
+                <button id="tab-cd-inver2" onclick="switchTabCobros('inver2')"
+                        style="padding:0.35rem 0.9rem;border-radius:0.4rem;font-size:0.7rem;font-weight:800;
+                               border:none;cursor:pointer;transition:all 0.15s;
+                               background:transparent;color:var(--muted2)">
+                    🏦 INVER2
+                </button>
+                <button id="tab-cd-inver3" onclick="switchTabCobros('inver3')"
+                        style="padding:0.35rem 0.9rem;border-radius:0.4rem;font-size:0.7rem;font-weight:800;
+                               border:none;cursor:pointer;transition:all 0.15s;
+                               background:transparent;color:var(--muted2)">
+                    🏛️ INVER3
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="cobros-tab-content" style="display:contents"></div>`;
+
+    // Renderizar INVER1 por defecto
+    renderCobrosContent(allClients, 'inver1');
+}
+
+function switchTabCobros(rama) {
+    const t1 = document.getElementById('tab-cd-inver1');
+    const t2 = document.getElementById('tab-cd-inver2');
+    const t3 = document.getElementById('tab-cd-inver3');
+    if (!t1 || !t2) return;
+    // Reset all tabs
+    t1.style.background = 'transparent'; t1.style.color = 'var(--muted2)';
+    t2.style.background = 'transparent'; t2.style.color = 'var(--muted2)';
+    if (t3) { t3.style.background = 'transparent'; t3.style.color = 'var(--muted2)'; }
+
+    if (rama === 'inver1') {
+        t1.style.background = 'var(--accent)'; t1.style.color = '#fff';
+        renderCobrosContent(allClients, 'inver1');
+    } else if (rama === 'inver2') {
+        t2.style.background = '#7c3aed'; t2.style.color = '#fff';
+        document.getElementById('cobros-tab-content').innerHTML =
+            '<div style="text-align:center;padding:2rem;color:var(--muted2)"><div style="font-size:1.5rem;margin-bottom:0.5rem">⏳</div><p style="font-size:0.8rem">Cargando INVER2…</p></div>';
+        db.ref('clientes2').once('value').then(snap => {
+            const clients2 = {};
+            snap.forEach(c => { clients2[c.key] = { ...c.val(), _key: c.key }; });
+            renderCobrosContent(clients2, 'inver2');
+        }).catch(() => {
+            document.getElementById('cobros-tab-content').innerHTML =
+                '<div style="text-align:center;padding:2rem;color:var(--danger)"><p style="font-size:0.8rem;font-weight:700">❌ No se pudo cargar INVER2</p></div>';
+        });
+    } else if (rama === 'inver3') {
+        if (t3) { t3.style.background = '#0ea5e9'; t3.style.color = '#fff'; }
+        document.getElementById('cobros-tab-content').innerHTML =
+            '<div style="text-align:center;padding:2rem;color:var(--muted2)"><div style="font-size:1.5rem;margin-bottom:0.5rem">⏳</div><p style="font-size:0.8rem">Cargando INVER3…</p></div>';
+        db.ref('clientes3').once('value').then(snap => {
+            const clients3 = {};
+            snap.forEach(c => { clients3[c.key] = { ...c.val(), _key: c.key }; });
+            renderCobrosContent(clients3, 'inver3');
+        }).catch(() => {
+            document.getElementById('cobros-tab-content').innerHTML =
+                '<div style="text-align:center;padding:2rem;color:var(--danger)"><p style="font-size:0.8rem;font-weight:700">❌ No se pudo cargar INVER3</p></div>';
+        });
+    }
+}
+
+function renderCobrosContent(clientsObj, rama) {
+    const HOY = new Date(); HOY.setHours(0,0,0,0);
+    const HOY_ISO = HOY.toISOString().split('T')[0];
+    const esInver2 = rama === 'inver2';
+    const esInver3 = rama === 'inver3';
+    const accentColor = esInver2 ? '#7c3aed' : esInver3 ? '#0ea5e9' : 'var(--accent)';
+    const accentDim   = esInver2 ? 'rgba(124,58,237,0.12)' : esInver3 ? 'rgba(14,165,233,0.12)' : 'var(--accent-dim)';
+    const accentBorder= esInver2 ? 'rgba(124,58,237,0.3)'  : esInver3 ? 'rgba(14,165,233,0.3)'  : 'var(--accent-border)';
+
+    const mora=[], hoy=[], pagados=[];
+    Object.entries(clientsObj).forEach(([id, c]) => {
+        if (c.tipo !== 'ACTIVO') return;
+        const cuotas = c.cuotas || [];
+        const yaPago = cuotas.some(q => q.pagada && q.fecha_ISO === HOY_ISO);
+        if (yaPago) { pagados.push({id,c}); return; }
+        let maxAtraso = 0, tocaHoyFlag = false, cuotaPend = null;
+        for (const cuo of cuotas) {
+            if (cuo.pagada) continue;
+            if (!cuotaPend) cuotaPend = cuo;
+            const f = parseFechaProgr(cuo.fecha_prog || cuo.fecha_prog_sv);
+            if (!f) continue;
+            const diff = Math.floor((HOY - f) / 86400000);
+            if (diff > 0) maxAtraso = Math.max(maxAtraso, diff);
+            if (diff === 0) tocaHoyFlag = true;
+        }
+        if (maxAtraso > 0)    mora.push({id,c,dias:maxAtraso,cuotaPend});
+        else if (tocaHoyFlag) hoy.push({id,c,cuotaPend});
+    });
+    mora.sort((a,b) => b.dias - a.dias);
+
+    const btnVer = esInver2
+        ? (id) => `<button onclick="location.href='gestionar2.html'" style="background:rgba(124,58,237,0.15);color:#7c3aed;border:1px solid rgba(124,58,237,0.3);border-radius:0.4rem;padding:0.35rem 0.7rem;font-size:0.7rem;font-weight:800;cursor:pointer">Ir a INVER2</button>`
+        : esInver3
+        ? (id) => `<button onclick="location.href='gestionar3.html'" style="background:rgba(14,165,233,0.15);color:#0ea5e9;border:1px solid rgba(14,165,233,0.3);border-radius:0.4rem;padding:0.35rem 0.7rem;font-size:0.7rem;font-weight:800;cursor:pointer">Ir a INVER3</button>`
+        : (id) => `<button onclick="renderPanel('${id}')" class="btn btn-accent btn-sm">Ver ficha</button>`;
+
+    const btnVerMora = esInver2
+        ? (id) => `<button onclick="location.href='gestionar2.html'" style="background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);border-radius:0.4rem;padding:0.35rem 0.7rem;font-size:0.7rem;font-weight:800;cursor:pointer">Ir a INVER2</button>`
+        : esInver3
+        ? (id) => `<button onclick="location.href='gestionar3.html'" style="background:rgba(239,68,68,0.15);color:var(--danger);border:1px solid rgba(239,68,68,0.3);border-radius:0.4rem;padding:0.35rem 0.7rem;font-size:0.7rem;font-weight:800;cursor:pointer">Ir a INVER3</button>`
+        : (id) => `<button onclick="renderPanel('${id}')" class="btn btn-danger btn-sm">Ver ficha</button>`;
+
+    const rowMora = x => {
+        const m = x.cuotaPend ? parseFloat(x.cuotaPend.valorPagado||0).toFixed(2) : '—';
+        const s = parseFloat(x.c.saldo||0).toFixed(2);
+        return `<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid var(--danger);
+                    border-radius:0.6rem;padding:0.75rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:0.75rem">
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem">
+                    <span style="background:rgba(239,68,68,0.15);color:var(--danger);font-size:0.6rem;font-weight:800;
+                                 letter-spacing:0.08em;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:2rem;
+                                 border:1px solid rgba(239,68,68,0.25)">⚠ ${x.dias} día${x.dias!==1?'s':''} atraso</span>
+                    <span style="font-size:0.58rem;font-weight:600;color:var(--muted);text-transform:uppercase">${(x.c.frecuencia||'diario')}</span>
+                </div>
+                <div style="font-weight:800;font-size:0.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.c.nombre||'—'}</div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.2rem">
+                    <span style="font-size:0.65rem;color:var(--muted2)">Cuota: <strong style="color:var(--text)">$${m}</strong></span>
+                    <span style="font-size:0.65rem;color:var(--muted2)">Saldo: <strong style="color:var(--danger)">$${s}</strong></span>
+                </div>
+            </div>
+            ${btnVerMora(x.id)}
+        </div>`;
+    };
+
+    const rowHoy = x => {
+        const m = x.cuotaPend ? parseFloat(x.cuotaPend.valorPagado||0).toFixed(2) : '—';
+        const s = parseFloat(x.c.saldo||0).toFixed(2);
+        return `<div style="background:var(--surface2);border:1px solid var(--border);border-left:3px solid ${accentColor};
+                    border-radius:0.6rem;padding:0.75rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:0.75rem">
+            <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem">
+                    <span style="background:${accentDim};color:${accentColor};font-size:0.6rem;font-weight:800;
+                                 letter-spacing:0.08em;text-transform:uppercase;padding:0.15rem 0.5rem;border-radius:2rem;
+                                 border:1px solid ${accentBorder}">HOY</span>
+                    <span style="font-size:0.58rem;font-weight:600;color:var(--muted);text-transform:uppercase">${(x.c.frecuencia||'diario')}</span>
+                </div>
+                <div style="font-weight:800;font-size:0.9rem;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${x.c.nombre||'—'}</div>
+                <div style="display:flex;gap:0.75rem;margin-top:0.2rem">
+                    <span style="font-size:0.65rem;color:var(--muted2)">Cuota: <strong style="color:var(--text)">$${m}</strong></span>
+                    <span style="font-size:0.65rem;color:var(--muted2)">Saldo: <strong style="color:var(--danger)">$${s}</strong></span>
+                </div>
+            </div>
+            ${btnVer(x.id)}
+        </div>`;
+    };
+
+    const rowPagado = x => {
+        const q = (x.c.cuotas||[]).find(q => q.pagada && q.fecha_ISO === HOY_ISO);
+        const m = q ? parseFloat(q.valorPagado||0).toFixed(2) : '—';
+        return `<div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.2);border-left:3px solid #10b981;
+                    border-radius:0.6rem;padding:0.65rem 1rem;display:flex;justify-content:space-between;align-items:center;gap:0.75rem;opacity:0.7">
+            <div style="flex:1;min-width:0">
+                <div style="font-weight:800;font-size:0.85rem;color:var(--text)">${x.c.nombre||'—'}</div>
+                <div style="font-size:0.65rem;color:var(--muted2);margin-top:0.1rem">Cobrado: <strong style="color:#10b981">$${m}</strong></div>
+            </div>
+            <span style="font-size:0.7rem;color:#10b981;font-weight:800">✓ Pagado</span>
+        </div>`;
+    };
+
+    const totalPendiente = mora.length + hoy.length;
+
+    document.getElementById('cobros-tab-content').innerHTML = `
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;padding:0 0 0.25rem 0">
+        <div style="background:${accentDim};border:1px solid ${accentBorder};border-radius:0.6rem;padding:0.4rem 0.85rem;text-align:center">
+            <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:${accentColor};margin-bottom:0.1rem">Por cobrar</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:1.1rem;color:${accentColor}">${totalPendiente}</div>
+        </div>
+        <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:0.6rem;padding:0.4rem 0.85rem;text-align:center">
+            <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:var(--danger);margin-bottom:0.1rem">En mora</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:1.1rem;color:var(--danger)">${mora.length}</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:0.6rem;padding:0.4rem 0.85rem;text-align:center">
+            <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#10b981;margin-bottom:0.1rem">Pagados</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-weight:800;font-size:1.1rem;color:#10b981">${pagados.length}</div>
+        </div>
+    </div>
+
+    ${mora.length > 0 ? `
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title" style="color:var(--danger)">⚠️ En Mora — ${mora.length} cliente${mora.length!==1?'s':''}</div>
+            <span style="font-size:0.6rem;font-weight:600;color:var(--muted2)">ordenados por más días de atraso</span>
+        </div>
+        <div class="section-body" style="display:flex;flex-direction:column;gap:0.5rem">
+            ${mora.map(rowMora).join('')}
+        </div>
+    </div>` : ''}
+
+    ${hoy.length > 0 ? `
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title" style="color:${accentColor}">📅 Cobros de Hoy — ${hoy.length} cliente${hoy.length!==1?'s':''}</div>
+        </div>
+        <div class="section-body" style="display:flex;flex-direction:column;gap:0.5rem">
+            ${hoy.map(rowHoy).join('')}
+        </div>
+    </div>` : ''}
+
+    ${hoy.length === 0 && mora.length === 0 ? `
+    <div style="text-align:center;padding:2rem;color:var(--muted2)">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">🎉</div>
+        <p style="font-size:0.85rem;font-weight:600">¡No hay cobros pendientes para hoy${esInver2?' en INVER2':esInver3?' en INVER3':''}!</p>
+    </div>` : ''}
+
+    ${pagados.length > 0 ? `
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title" style="color:#10b981">✅ Pagados Hoy — ${pagados.length} cliente${pagados.length!==1?'s':''}</div>
+        </div>
+        <div class="section-body" style="display:flex;flex-direction:column;gap:0.4rem">
+            ${pagados.map(rowPagado).join('')}
+        </div>
+    </div>` : ''}`;
+}
+
+function mostrarSolicitudes() {
+    currentId = null;
+    document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('welcome').style.display = 'none';
+    const panel = document.getElementById('panel');
+    panel.style.display = 'flex';
+
+    const pendientes = Object.values(allClients).filter(c => c.tipo === 'PENDIENTE');
+
+    panel.innerHTML = `
+    <div class="client-header">
+        <div>
+            <div class="ch-name">Solicitudes Pendientes</div>
+            <div class="ch-meta">${pendientes.length} solicitud${pendientes.length!==1?'es':''} esperando revisión</div>
+        </div>
+        <div class="ch-actions">
+            <button class="btn btn-ghost btn-sm" onclick="location.href='reporte-solicitudes.html'">📊 Reporte solicitudes</button>
+            <button class="btn btn-ghost btn-sm" onclick="location.href='reporte-activos.html'">📊 Reporte activos</button>
+        </div>
+    </div>
+
+    ${pendientes.length === 0 ? `
+    <div style="text-align:center;padding:3rem;color:var(--muted2)">
+        <div style="font-size:2.5rem;margin-bottom:0.75rem">✅</div>
+        <p style="font-size:0.85rem;font-weight:600">No hay solicitudes pendientes</p>
+    </div>` : pendientes.map(s => {
+        const cuotaD = s.monto ? ((parseFloat(s.monto)*1.2)/30).toFixed(2) : '—';
+        const cuotaS = s.monto ? ((parseFloat(s.monto)*1.2)/4).toFixed(2) : '—';
+        const cuota  = s.frecuencia === 'semanal' ? cuotaS : cuotaD;
+        return `
+    <div class="section-card">
+        <div class="section-head">
+            <div class="section-title">${s.nombre||'—'} &nbsp;·&nbsp; ${s.fecha||'—'}</div>
+            <div style="display:flex;gap:0.4rem">
+                <button class="btn btn-accent btn-sm" onclick="aprobarSolicitud('${s._key}')">✓ Aprobar</button>
+                <button class="btn btn-danger btn-sm" onclick="rechazarSolicitud('${s._key}')">✗ Rechazar</button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem">
+                ${[
+                    ['DUI', s.dui],
+                    ['WhatsApp', s.tel],
+                    ['Monto', '$'+(s.monto||'—')],
+                    ['Frecuencia', (s.frecuencia||'—').toUpperCase()],
+                    ['Cuota', '$'+cuota],
+                    ['Total (20%)', s.monto ? '$'+(parseFloat(s.monto)*1.2).toFixed(2) : '—'],
+                    ['Dirección', s.dirCasa||s.dirVivienda||'—'],
+                    ['Negocio', s.negocio||'—'],
+                    ['Motivo', s.inversion||'—'],
+                    ['Referencia', (s.refNom||s.refNombre||'—')+' / '+(s.refTel||'—')],
+                ].map(([lbl,val]) => `
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.5rem;padding:0.5rem 0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">${lbl}</div>
+                    <div style="font-size:0.8rem;font-weight:600;color:var(--text)">${val}</div>
+                </div>`).join('')}
+            </div>
+        </div>
+    </div>`; }).join('')}`;
+}
+
+// ─── MODAL DE APROBACIÓN ──────────────────────────────────────────────────
+let aprobandoId   = null;
+let docAprobFiles = { contrato: null, letra: null };
+
+function aprobarSolicitud(id) {
+    aprobandoId = id;
+    docAprobFiles = { contrato: null, letra: null, dui_frontal: null, dui_reverso: null };
+    const s   = allClients[id];
+    if (!s) return;
+
+    const hoy      = new Date().toISOString().split('T')[0];
+    const monto    = parseFloat(s.monto) || 0;
+    const total    = monto * 1.2;
+    const esSemanl = (s.frecuencia || 'diario') === 'semanal';
+    const nCuotas  = esSemanl ? 4 : 30;
+    const cuota    = (total / nCuotas).toFixed(2);
+
+    // Calcular fechas de pago preview
+    function fechasPago(inicio, n, semanal) {
+        const base = new Date(inicio + 'T12:00:00');
+        return Array.from({length: n}, (_, i) => {
+            const d = new Date(base);
+            d.setDate(d.getDate() + (semanal ? (i+1)*7 : (i+1)));
+            return d.toLocaleDateString('es-SV');
+        });
+    }
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-aprobacion';
+    modal.style.cssText = `position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);
+        backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto`;
+
+    modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;
+                width:min(96vw,580px);max-height:92vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+
+        <!-- cabecera -->
+        <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+                    display:flex;justify-content:space-between;align-items:center;
+                    position:sticky;top:0;background:var(--surface);z-index:1">
+            <div>
+                <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1.1rem;color:var(--text)">
+                    Aprobar Crédito
+                </div>
+                <div style="font-size:0.65rem;color:var(--muted2);margin-top:0.1rem">${s.nombre||'—'}</div>
+            </div>
+            <button onclick="document.getElementById('modal-aprobacion').remove()"
+                    style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                           padding:0.35rem 0.6rem;cursor:pointer;color:var(--muted2);font-size:0.75rem">✕</button>
+        </div>
+
+        <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+
+            <!-- resumen crédito -->
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.5rem">
+                <div style="background:var(--surface2);border:2px solid var(--accent);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem">Monto a prestar</div>
+                    <select id="ap-monto" onchange="recalcularAprobacion()"
+                            style="background:transparent;border:none;outline:none;width:100%;
+                                   font-family:'JetBrains Mono',monospace;font-weight:700;
+                                   color:var(--accent);font-size:0.9rem;cursor:pointer;padding:0">
+                        ${['50','100','150','200','250','300','400','500'].map(v =>
+                            `<option value="${v}" ${String(Math.round(monto))===v?'selected':''}>\$${v}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Total (20%)</div>
+                    <div id="ap-total-preview" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text)">$${total.toFixed(2)}</div>
+                </div>
+                <div style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.25rem">Cuota ${s.frecuencia||'diario'}</div>
+                    <div id="ap-cuota-preview" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--text)">$${cuota}</div>
+                </div>
+            </div>
+
+            <!-- PROCEDENCIA DE CAPITAL -->
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;
+                            color:var(--muted2);margin-bottom:0.5rem">💼 Procedencia del Capital</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                    <div id="ap-opt-inyeccion"
+                         onclick="selProcAP('inyeccion')"
+                         style="border:2px solid var(--border2);background:var(--surface2);border-radius:0.75rem;
+                                padding:0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                        <div style="font-size:1.2rem;margin-bottom:0.25rem">💰</div>
+                        <div style="font-size:0.7rem;font-weight:800;color:var(--muted2)">Inyección de fondo</div>
+                        <div style="font-size:0.58rem;color:var(--muted2);margin-top:0.1rem">Dinero nuevo · sube capital</div>
+                    </div>
+                    <div id="ap-opt-recogido"
+                         onclick="selProcAP('recogido')"
+                         style="border:2px solid var(--accent);background:var(--accent-dim);border-radius:0.75rem;
+                                padding:0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                        <div style="font-size:1.2rem;margin-bottom:0.25rem">🔄</div>
+                        <div style="font-size:0.7rem;font-weight:800;color:var(--accent)">Dinero recogido</div>
+                        <div style="font-size:0.58rem;color:var(--muted2);margin-top:0.1rem">Sale de Caja Chica</div>
+                    </div>
+                </div>
+                <input type="hidden" id="ap-procedencia" value="recogido">
+            </div>
+
+            <!-- fecha desembolso -->
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;
+                            color:var(--muted2);margin-bottom:0.5rem">Fecha de Desembolso</div>
+                <input type="date" id="ap-fecha" value="${hoy}"
+                       onchange="actualizarFechasPago()"
+                       style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                              padding:0.6rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                              font-size:0.85rem;font-weight:600;outline:none;width:100%">
+            </div>
+
+            <!-- preview fechas de pago -->
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;
+                            color:var(--muted2);margin-bottom:0.5rem">
+                    Fechas de pago programadas (${nCuotas} ${esSemanl ? 'semanales' : 'diarias'})
+                </div>
+                <div id="ap-fechas-wrap"
+                     style="background:var(--surface2);border:1px solid var(--border);border-radius:0.6rem;
+                            padding:0.75rem;display:flex;flex-wrap:wrap;gap:0.3rem;max-height:100px;overflow-y:auto">
+                </div>
+            </div>
+
+            <!-- contraseña -->
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;
+                            color:var(--muted2);margin-bottom:0.5rem">Contraseña para portal del cliente</div>
+                <input type="text" id="ap-pass" value="${s.pass||'1234'}"
+                       style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                              padding:0.6rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                              font-size:0.9rem;font-weight:700;outline:none;width:100%;letter-spacing:0.2em">
+            </div>
+
+            <!-- documentos -->
+            <div>
+                <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;
+                            color:var(--muted2);margin-bottom:0.5rem">Documentos (opcional)</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem">
+
+                    ${['contrato','letra','dui_frontal','dui_reverso'].map(tipo => {
+                        const iconos = {contrato:'📄',letra:'📋',dui_frontal:'🪪',dui_reverso:'🔄'};
+                        const labels = {contrato:'Contrato firmado',letra:'Letra de Cambio',dui_frontal:'DUI Frontal',dui_reverso:'DUI Reverso'};
+                        return `<label style="border:1px dashed var(--border2);border-radius:0.75rem;padding:1rem;
+                                      cursor:pointer;text-align:center;transition:border-color 0.2s;display:block"
+                               onmouseover="this.style.borderColor='var(--accent)'"
+                               onmouseout="this.style.borderColor='var(--border2)'"
+                               for="ap-fi-${tipo}">
+                            <div id="ap-prev-${tipo}" style="margin-bottom:0.4rem">
+                                <span style="font-size:1.5rem;opacity:0.4;display:block">${iconos[tipo]}</span>
+                            </div>
+                            <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.12em;
+                                        text-transform:uppercase;color:var(--muted)">${labels[tipo]}</div>
+                            <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.25rem" id="ap-lbl-${tipo}">Toca para adjuntar</div>
+                            <input type="file" id="ap-fi-${tipo}" accept="image/*,application/pdf" style="display:none"
+                                   onchange="previewDocAprob(this,'${tipo}')">
+                        </label>`;
+                    }).join('')}
+
+                </div>
+                <!-- barra de progreso subida -->
+                <div style="height:3px;background:var(--border);border-radius:2px;margin-top:0.75rem">
+                    <div id="ap-upload-bar" style="height:100%;background:var(--accent);border-radius:2px;width:0;transition:width 0.3s"></div>
+                </div>
+                <div id="ap-upload-msg" style="font-size:0.6rem;color:var(--muted2);text-align:center;margin-top:0.3rem"></div>
+            </div>
+
+            <!-- botón confirmar -->
+            <button id="ap-btn-confirmar" onclick="confirmarAprobacion()"
+                    style="width:100%;padding:0.9rem;background:var(--accent);color:#fff;border:none;
+                           border-radius:0.75rem;font-family:'Syne',sans-serif;font-weight:800;
+                           font-size:0.75rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;
+                           transition:opacity 0.2s">
+                ✓ Confirmar Aprobación
+            </button>
+        </div>
+    </div>`;
+
+    document.body.appendChild(modal);
+    actualizarFechasPago();
+}
+
+function actualizarFechasPago() {
+    const s        = allClients[aprobandoId];
+    if (!s) return;
+    const fecha    = document.getElementById('ap-fecha')?.value;
+    if (!fecha) return;
+    const esSemanl = (s.frecuencia || 'diario') === 'semanal';
+    const nCuotas  = esSemanl ? 4 : 30;
+    const wrap     = document.getElementById('ap-fechas-wrap');
+    if (!wrap) return;
+
+    const base = new Date(fecha + 'T12:00:00');
+    wrap.innerHTML = Array.from({length: nCuotas}, (_, i) => {
+        const d = new Date(base);
+        d.setDate(d.getDate() + (esSemanl ? (i+1)*7 : (i+1)));
+        const lbl = d.toLocaleDateString('es-SV', {day:'2-digit', month:'short'});
+        return `<span style="background:var(--surface);border:1px solid var(--border2);border-radius:0.3rem;
+                             padding:0.15rem 0.4rem;font-size:0.6rem;font-family:'JetBrains Mono',monospace;
+                             font-weight:600;color:var(--text)">#${i+1} ${lbl}</span>`;
+    }).join('');
+}
+
+function recalcularAprobacion() {
+    const s = allClients[aprobandoId];
+    if (!s) return;
+    const monto = parseFloat(document.getElementById('ap-monto')?.value) || 0;
+    const esSemanl = (s.frecuencia || 'diario') === 'semanal';
+    const nCuotas = esSemanl ? 4 : 30;
+    const total = monto * 1.2;
+    const cuota = (total / nCuotas).toFixed(2);
+    const totalEl = document.getElementById('ap-total-preview');
+    const cuotaEl = document.getElementById('ap-cuota-preview');
+    if (totalEl) totalEl.textContent = '$' + total.toFixed(2);
+    if (cuotaEl) cuotaEl.textContent = '$' + cuota;
+}
+
+function previewDocAprob(input, tipo) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    docAprobFiles[tipo] = file;
+    const isImg = file.type.startsWith('image/');
+    const prev  = document.getElementById('ap-prev-' + tipo);
+    const lbl   = document.getElementById('ap-lbl-' + tipo);
+    if (isImg) {
+        const url = URL.createObjectURL(file);
+        prev.innerHTML = `<img src="${url}" style="width:100%;max-height:70px;object-fit:cover;border-radius:0.4rem">`;
+    } else {
+        prev.innerHTML = `<span style="font-size:1.5rem;display:block">📄</span>`;
+    }
+    lbl.textContent = file.name.length > 22 ? file.name.substring(0,20)+'…' : file.name;
+    lbl.style.color = 'var(--accent)';
+}
+
+async function confirmarAprobacion() {
+    const s = allClients[aprobandoId];
+    if (!s) return;
+
+    const btn       = document.getElementById('ap-btn-confirmar');
+    const bar       = document.getElementById('ap-upload-bar');
+    const msg       = document.getElementById('ap-upload-msg');
+    const fechaISO  = document.getElementById('ap-fecha').value;
+    const pass      = document.getElementById('ap-pass').value || '1234';
+    const procedencia = document.getElementById('ap-procedencia')?.value || 'recogido';
+
+    if (!fechaISO) { toast('Selecciona la fecha de desembolso', 'error'); return; }
+
+    // Leer config global
+    const snapCfg = await db.ref('config/finanzas').once('value');
+    const cfg = snapCfg.val() || {};
+    let cajaChica        = parseFloat(cfg.cajaChica || 0);
+    let capitalInvertido = parseFloat(cfg.capitalInvertido || 0);
+
+    const monto = parseFloat(document.getElementById('ap-monto')?.value) || parseFloat(s.monto) || 0;
+
+    // Validar caja chica si es dinero recogido
+    if (procedencia === 'recogido' && monto > cajaChica + 0.01) {
+        toast(`Caja Chica insuficiente. Disponible: $${cajaChica.toFixed(2)}`, 'error');
+        return;
+    }
+
+    btn.disabled    = true;
+    btn.textContent = 'Procesando…';
+    msg.textContent = '';
+
+    const esSemanl = (s.frecuencia || 'diario') === 'semanal';
+    const nCuotas  = esSemanl ? 4 : 30;
+    const total    = parseFloat((monto * 1.2).toFixed(2));
+    const cuota    = parseFloat((total / nCuotas).toFixed(2));
+    const base     = new Date(fechaISO + 'T12:00:00');
+
+    const cuotas = Array.from({length: nCuotas}, (_, i) => {
+        const d = new Date(base);
+        d.setDate(d.getDate() + (esSemanl ? (i+1)*7 : (i+1)));
+        const iso = d.toISOString().split('T')[0];
+        return {
+            n: i + 1, valorPagado: cuota, pagada: false,
+            fecha: '', fecha_ISO: '', fecha_prog: iso,
+            fecha_prog_sv: d.toLocaleDateString('es-SV')
+        };
+    });
+
+    let urlContrato   = s.doc_contrato   || '';
+    let urlLetra      = s.doc_letra      || '';
+    let urlDuiFrontal = s.doc_dui_frontal || '';
+    let urlDuiReverso = s.doc_dui_reverso || '';
+
+    try {
+        if (docAprobFiles.contrato) {
+            msg.textContent = 'Subiendo contrato…'; bar.style.width = '5%';
+            const file = docAprobFiles.contrato;
+            const ext  = file.name.split('.').pop();
+            urlContrato = await new Promise((res, rej) => {
+                const task = storage.ref(`clientes/${aprobandoId}/contrato_${Date.now()}.${ext}`).put(file);
+                task.on('state_changed', snap => { bar.style.width = (5 + snap.bytesTransferred/snap.totalBytes*20) + '%'; }, rej, async () => res(await task.snapshot.ref.getDownloadURL()));
+            });
+            bar.style.width = '25%';
+        }
+        if (docAprobFiles.letra) {
+            msg.textContent = 'Subiendo letra…'; bar.style.width = '25%';
+            const file = docAprobFiles.letra;
+            const ext  = file.name.split('.').pop();
+            urlLetra = await new Promise((res, rej) => {
+                const task = storage.ref(`clientes/${aprobandoId}/letra_${Date.now()}.${ext}`).put(file);
+                task.on('state_changed', snap => { bar.style.width = (25 + snap.bytesTransferred/snap.totalBytes*20) + '%'; }, rej, async () => res(await task.snapshot.ref.getDownloadURL()));
+            });
+            bar.style.width = '50%';
+        }
+        if (docAprobFiles.dui_frontal) {
+            msg.textContent = 'Subiendo DUI frontal…';
+            const file = docAprobFiles.dui_frontal; const ext = file.name.split('.').pop();
+            urlDuiFrontal = await new Promise((res, rej) => {
+                const task = storage.ref(`clientes/${aprobandoId}/dui_frontal_${Date.now()}.${ext}`).put(file);
+                task.on('state_changed', snap => { bar.style.width = (50 + snap.bytesTransferred/snap.totalBytes*20) + '%'; }, rej, async () => res(await task.snapshot.ref.getDownloadURL()));
+            });
+            bar.style.width = '70%';
+        }
+        if (docAprobFiles.dui_reverso) {
+            msg.textContent = 'Subiendo DUI reverso…';
+            const file = docAprobFiles.dui_reverso; const ext = file.name.split('.').pop();
+            urlDuiReverso = await new Promise((res, rej) => {
+                const task = storage.ref(`clientes/${aprobandoId}/dui_reverso_${Date.now()}.${ext}`).put(file);
+                task.on('state_changed', snap => { bar.style.width = (70 + snap.bytesTransferred/snap.totalBytes*15) + '%'; }, rej, async () => res(await task.snapshot.ref.getDownloadURL()));
+            });
+            bar.style.width = '85%';
+        }
+
+        msg.textContent = 'Guardando…';
+        const fechaSV = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-SV');
+
+        // Actualizar finanzas globales
+        if (procedencia === 'recogido') {
+            cajaChica = parseFloat((cajaChica - monto).toFixed(2));
+        } else {
+            capitalInvertido = parseFloat((capitalInvertido + monto).toFixed(2));
+        }
+
+        const datosBase = {
+            id: s.id || aprobandoId,
+            nombre: s.nombre || '', dui: s.dui || '', tel: s.tel || '',
+            dirCasa: s.dirCasa || s.dirVivienda || '', negocio: s.negocio || '',
+            dirNeg: s.dirNeg || s.dirNegocio || '', ingresos: s.ingresos || '',
+            inversion: s.inversion || '', refNom: s.refNom || s.refNombre || '',
+            refTel: s.refTel || '', monto: String(monto),
+            frecuencia: s.frecuencia || 'diario',
+            fecha: s.fecha || fechaSV,
+            tipo: 'ACTIVO', pass, total, saldo: total,
+            fechaInicio: fechaSV, cuotas,
+            cajachica: 0,
+            procedenciaCapital: procedencia,
+            doc_contrato: urlContrato, doc_letra: urlLetra,
+            doc_dui_frontal: urlDuiFrontal, doc_dui_reverso: urlDuiReverso,
+        };
+
+        await Promise.all([
+            db.ref('clientes/' + aprobandoId).set(datosBase),
+            db.ref('config/finanzas').update({ cajaChica, capitalInvertido })
+        ]);
+
+        bar.style.width = '100%';
+        msg.textContent = '¡Aprobado!';
+        msg.style.color = 'var(--accent)';
+        document.getElementById('modal-aprobacion')?.remove();
+
+        const toastMsg = procedencia === 'inyeccion'
+            ? `✓ Aprobado · Capital invertido: $${capitalInvertido.toFixed(2)}`
+            : `✓ Aprobado · Caja Chica restante: $${cajaChica.toFixed(2)}`;
+        toast(toastMsg, 'success');
+        setTimeout(() => renderPanel(aprobandoId), 400);
+
+    } catch (err) {
+        console.error('Error en confirmarAprobacion:', err);
+        msg.textContent = 'Error: ' + err.message;
+        msg.style.color = 'var(--danger)';
+        toast('Error: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.textContent = '✓ Confirmar Aprobación';
+        bar.style.width = '0';
+    }
+}
+
+function selProcAP(tipo) {
+    document.getElementById('ap-procedencia').value = tipo;
+    const optI = document.getElementById('ap-opt-inyeccion');
+    const optR = document.getElementById('ap-opt-recogido');
+    if (!optI || !optR) return;
+    if (tipo === 'inyeccion') {
+        optI.style.borderColor = 'var(--accent)'; optI.style.background = 'var(--accent-dim)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optR.style.borderColor = 'var(--border2)'; optR.style.background = 'var(--surface2)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+    } else {
+        optR.style.borderColor = 'var(--accent)'; optR.style.background = 'var(--accent-dim)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optI.style.borderColor = 'var(--border2)'; optI.style.background = 'var(--surface2)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+    }
+}
+
+async function rechazarSolicitud(id) {
+    const s = allClients[id];
+    if (!confirm('¿Rechazar y eliminar la solicitud de ' + (s?.nombre||'este cliente') + '?')) return;
+    await db.ref('clientes/' + id).remove();
+    toast('Solicitud rechazada', 'error');
+    mostrarSolicitudes();
+}
+
+// ─── NUEVO CLIENTE MANUAL ─────────────────────────────────────────────────
+function mostrarNuevoCliente() {
+    currentId = null;
+    document.querySelectorAll('.client-item').forEach(el => el.classList.remove('active'));
+    document.getElementById('welcome').style.display = 'none';
+    const panel = document.getElementById('panel');
+    panel.style.display = 'flex';
+
+    panel.innerHTML = `
+    <div class="client-header">
+        <div>
+            <div class="ch-name">Nuevo Cliente Manual</div>
+            <div class="ch-meta">Registrar directamente como crédito activo</div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-head"><div class="section-title">Datos Personales</div></div>
+        <div class="section-body">
+            <div class="ficha-grid">
+                <div class="ficha-field full">
+                    <span class="ff-label">Nombre completo</span>
+                    <input class="edit-input" id="n-nombre" type="text" placeholder="JUAN PÉREZ">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">DUI</span>
+                    <input class="edit-input" id="n-dui" type="text" placeholder="00000000-0">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">WhatsApp</span>
+                    <input class="edit-input" id="n-tel" type="tel" placeholder="7777-7777">
+                </div>
+                <div class="ficha-field full">
+                    <span class="ff-label">Dirección de vivienda</span>
+                    <input class="edit-input" id="n-dirCasa" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Nombre del negocio</span>
+                    <input class="edit-input" id="n-negocio" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Dirección del negocio</span>
+                    <input class="edit-input" id="n-dirNeg" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Ingresos / Sueldo</span>
+                    <input class="edit-input" id="n-ingresos" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Contraseña para portal cliente</span>
+                    <input class="edit-input" id="n-pass" type="text" value="1234">
+                </div>
+                <div class="ficha-field full">
+                    <span class="ff-label">Propósito del crédito</span>
+                    <input class="edit-input" id="n-inversion" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Referencia (nombre)</span>
+                    <input class="edit-input" id="n-refNom" type="text">
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Referencia (teléfono)</span>
+                    <input class="edit-input" id="n-refTel" type="tel">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <div class="section-head"><div class="section-title">Condiciones del Crédito</div></div>
+        <div class="section-body">
+            <div class="ficha-grid">
+                <div class="ficha-field">
+                    <span class="ff-label">Monto</span>
+                    <select class="edit-select" id="n-monto" onchange="calcularPreview()">
+                        <option value="50">$50</option>
+                        <option value="100">$100</option>
+                        <option value="150">$150</option>
+                        <option value="200" selected>$200</option>
+                        <option value="250">$250</option>
+                        <option value="300">$300</option>
+                        <option value="400">$400</option>
+                        <option value="500">$500</option>
+                    </select>
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Frecuencia de pago</span>
+                    <select class="edit-select" id="n-frecuencia" onchange="calcularPreview()">
+                        <option value="diario">Diario (30 pagos)</option>
+                        <option value="semanal">Semanal (4 pagos)</option>
+                    </select>
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Total a pagar (20%)</span>
+                    <div class="ff-val accent mono" id="n-preview-total">$240.00</div>
+                </div>
+                <div class="ficha-field">
+                    <span class="ff-label">Cuota por pago</span>
+                    <div class="ff-val accent mono" id="n-preview-cuota">$8.00 diario</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PROCEDENCIA DE CAPITAL -->
+    <div class="section-card">
+        <div class="section-head"><div class="section-title">💼 Procedencia del Capital</div></div>
+        <div class="section-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;margin-bottom:1rem">
+                <div style="background:rgba(14,165,233,0.07);border:1px solid rgba(14,165,233,0.2);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Capital invertido</div>
+                    <div id="nm-capital-inv" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)">$0.00</div>
+                </div>
+                <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);border-radius:0.6rem;padding:0.75rem">
+                    <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.2rem">Caja Chica disponible</div>
+                    <div id="nm-caja-chica" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#10b981">$0.00</div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem">
+                <div id="nm-opt-inyeccion" onclick="selProcNM('inyeccion')"
+                     style="border:2px solid var(--border2);background:var(--surface2);border-radius:0.75rem;
+                            padding:0.85rem 0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                    <div style="font-size:1.3rem;margin-bottom:0.3rem">💰</div>
+                    <div style="font-size:0.72rem;font-weight:800;color:var(--muted2)">Inyección de fondo</div>
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.15rem">Dinero nuevo · sube capital</div>
+                </div>
+                <div id="nm-opt-recogido" onclick="selProcNM('recogido')"
+                     style="border:2px solid var(--accent);background:var(--accent-dim);border-radius:0.75rem;
+                            padding:0.85rem 0.75rem;cursor:pointer;text-align:center;transition:all 0.2s">
+                    <div style="font-size:1.3rem;margin-bottom:0.3rem">🔄</div>
+                    <div style="font-size:0.72rem;font-weight:800;color:var(--accent)">Dinero recogido</div>
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.15rem">Sale de Caja Chica</div>
+                </div>
+            </div>
+            <input type="hidden" id="n-procedencia" value="recogido">
+            <div id="nm-impacto-caja" style="margin-top:0.75rem;background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.3);border-radius:0.6rem;padding:0.75rem">
+                <div style="font-size:0.55rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:#10b981;margin-bottom:0.4rem">Impacto en Caja Chica</div>
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:0.2rem">
+                    <span style="color:var(--muted2)">Caja Chica actual:</span>
+                    <span id="nm-imp-actual" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#10b981">$0.00</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:0.72rem;margin-bottom:0.2rem">
+                    <span style="color:var(--muted2)">− Monto a prestar:</span>
+                    <span id="nm-imp-monto" style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--danger)">$0.00</span>
+                </div>
+                <div style="border-top:1px solid rgba(16,185,129,0.3);padding-top:0.4rem;margin-top:0.4rem;display:flex;justify-content:space-between">
+                    <strong style="font-size:0.72rem">= Caja Chica resultante:</strong>
+                    <strong id="nm-imp-resultado" style="font-family:'JetBrains Mono',monospace;color:#10b981">$0.00</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex;gap:0.75rem;padding-bottom:1rem">
+        <button class="btn btn-accent btn-lg" style="flex:1;justify-content:center" onclick="guardarNuevoManual()">
+            ✓ Registrar como ACTIVO
+        </button>
+        <button class="btn btn-ghost btn-lg" style="justify-content:center" onclick="guardarComoPendiente()">
+            Guardar como Pendiente
+        </button>
+    </div>
+    <p style="font-size:0.65rem;color:var(--muted2);text-align:center;padding-bottom:1rem">
+        💡 Las fotos de DUI, contrato y letra de cambio se agregan desde la ficha del cliente una vez registrado.
+    </p>`;
+
+    calcularPreview();
+    // Cargar finanzas globales en el formulario
+    db.ref('config/finanzas').once('value').then(snap => {
+        const cfg = snap.val() || {};
+        window._nmCajaChica    = parseFloat(cfg.cajaChica || 0);
+        window._nmCapitalInv   = parseFloat(cfg.capitalInvertido || 0);
+        const elCap  = document.getElementById('nm-capital-inv');
+        const elCaja = document.getElementById('nm-caja-chica');
+        if (elCap)  elCap.textContent  = '$' + window._nmCapitalInv.toFixed(2);
+        if (elCaja) elCaja.textContent = '$' + window._nmCajaChica.toFixed(2);
+        actualizarImpactoNM();
+    });
+}
+
+function calcularPreview() {
+    const m = parseFloat(document.getElementById('n-monto')?.value || 200);
+    const f = document.getElementById('n-frecuencia')?.value || 'diario';
+    const total = m * 1.2;
+    const n     = f === 'semanal' ? 4 : 30;
+    const cuota = (total / n).toFixed(2);
+    const el1 = document.getElementById('n-preview-total');
+    const el2 = document.getElementById('n-preview-cuota');
+    if (el1) el1.textContent = '$' + total.toFixed(2);
+    if (el2) el2.textContent = '$' + cuota + ' ' + f;
+    // Actualizar impacto en caja chica si aplica
+    if (typeof actualizarImpactoNM === 'function') actualizarImpactoNM();
+}
+
+function recogerDatosNuevo() {
+    const g = id => (document.getElementById(id)||{}).value || '';
+    return {
+        nombre:    g('n-nombre').toUpperCase(),
+        dui:       g('n-dui'),
+        tel:       g('n-tel'),
+        pass:      g('n-pass') || '1234',
+        dirCasa:   g('n-dirCasa'),
+        negocio:   g('n-negocio'),
+        dirNeg:    g('n-dirNeg'),
+        ingresos:  g('n-ingresos'),
+        inversion: g('n-inversion'),
+        refNom:    g('n-refNom'),
+        refTel:    g('n-refTel'),
+        monto:     g('n-monto'),
+        frecuencia: g('n-frecuencia'),
+        fecha:     new Date().toLocaleDateString('es-SV'),
+    };
+}
+
+function selProcNM(tipo) {
+    document.getElementById('n-procedencia').value = tipo;
+    const optI = document.getElementById('nm-opt-inyeccion');
+    const optR = document.getElementById('nm-opt-recogido');
+    if (!optI || !optR) return;
+    if (tipo === 'inyeccion') {
+        optI.style.borderColor = 'var(--accent)'; optI.style.background = 'var(--accent-dim)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optR.style.borderColor = 'var(--border2)'; optR.style.background = 'var(--surface2)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+        const imp = document.getElementById('nm-impacto-caja');
+        if (imp) imp.style.display = 'none';
+    } else {
+        optR.style.borderColor = 'var(--accent)'; optR.style.background = 'var(--accent-dim)';
+        optR.querySelector('div:nth-child(2)').style.color = 'var(--accent)';
+        optI.style.borderColor = 'var(--border2)'; optI.style.background = 'var(--surface2)';
+        optI.querySelector('div:nth-child(2)').style.color = 'var(--muted2)';
+        const imp = document.getElementById('nm-impacto-caja');
+        if (imp) imp.style.display = 'block';
+    }
+    actualizarImpactoNM();
+}
+
+function actualizarImpactoNM() {
+    const monto  = parseFloat(document.getElementById('n-monto')?.value || 0);
+    const caja   = window._nmCajaChica || 0;
+    const result = caja - monto;
+    const elAct  = document.getElementById('nm-imp-actual');
+    const elMon  = document.getElementById('nm-imp-monto');
+    const elRes  = document.getElementById('nm-imp-resultado');
+    const elCont = document.getElementById('nm-impacto-caja');
+    if (elAct) elAct.textContent = '$' + caja.toFixed(2);
+    if (elMon) elMon.textContent = '$' + monto.toFixed(2);
+    if (elRes) {
+        elRes.textContent = '$' + Math.max(0, result).toFixed(2);
+        elRes.style.color = result < 0 ? 'var(--danger)' : '#10b981';
+    }
+    if (elCont) {
+        elCont.style.borderColor = result < 0 ? 'rgba(239,68,68,0.4)' : 'rgba(16,185,129,0.3)';
+        elCont.style.background  = result < 0 ? 'rgba(239,68,68,0.05)' : 'rgba(16,185,129,0.07)';
+    }
+}
+
+async function guardarNuevoManual() {
+    const data = recogerDatosNuevo();
+    if (!data.nombre || !data.dui) { toast('Nombre y DUI son obligatorios', 'error'); return; }
+
+    const procedencia = document.getElementById('n-procedencia')?.value || 'recogido';
+    const monto       = parseFloat(data.monto);
+
+    // Leer y validar finanzas globales
+    const snapCfg = await db.ref('config/finanzas').once('value');
+    const cfg = snapCfg.val() || {};
+    let cajaChica        = parseFloat(cfg.cajaChica || 0);
+    let capitalInvertido = parseFloat(cfg.capitalInvertido || 0);
+
+    if (procedencia === 'recogido' && monto > cajaChica + 0.01) {
+        toast('Caja Chica insuficiente. Disponible: $' + cajaChica.toFixed(2), 'error');
+        return;
+    }
+
+    const total     = monto * 1.2;
+    const numCuotas = data.frecuencia === 'semanal' ? 4 : 30;
+    const cuota     = (total / numCuotas).toFixed(2);
+    const cuotas    = Array.from({length: numCuotas}, (_, i) => ({
+        n: i+1, valorPagado: parseFloat(cuota), pagada: false, fecha: ''
+    }));
+
+    if (procedencia === 'recogido') {
+        cajaChica = parseFloat((cajaChica - monto).toFixed(2));
+    } else {
+        capitalInvertido = parseFloat((capitalInvertido + monto).toFixed(2));
+    }
+
+    const id = Date.now();
+    await Promise.all([
+        db.ref('clientes/' + id).set({
+            ...data, id, tipo: 'ACTIVO', total, saldo: total,
+            fechaInicio: new Date().toLocaleDateString('es-SV'),
+            cajachica: 0,
+            procedenciaCapital: procedencia,
+            cuotas
+        }),
+        db.ref('config/finanzas').update({ cajaChica, capitalInvertido })
+    ]);
+
+    const msg = procedencia === 'inyeccion'
+        ? '✓ Registrado · Capital invertido: $' + capitalInvertido.toFixed(2)
+        : '✓ Registrado · Caja Chica restante: $' + cajaChica.toFixed(2);
+    toast(msg, 'success');
+    mostrarNuevoCliente();
+}
+
+async function guardarComoPendiente() {
+    const data = recogerDatosNuevo();
+    if (!data.nombre || !data.dui) { toast('Nombre y DUI son obligatorios', 'error'); return; }
+    const id = Date.now();
+    await db.ref('clientes/' + id).set({ ...data, id, tipo: 'PENDIENTE' });
+    toast('Solicitud guardada como Pendiente', 'success');
+    mostrarSolicitudes();
+}
+
+// ─── EXPORT EXCEL ─────────────────────────────────────────────────────────
+function exportarCartera() {
+    const data = [['CLIENTE', 'DUI', 'TEL', 'MONTO', 'TOTAL', 'SALDO', 'FRECUENCIA', 'INICIO']];
+    Object.values(allClients).forEach(s => {
+        if (s.tipo === 'ACTIVO')
+            data.push([s.nombre, s.dui, s.tel, s.monto, s.total, s.saldo, s.frecuencia, s.fechaInicio||s.fecha]);
+    });
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Cartera');
+    XLSX.writeFile(wb, 'Cartera_CrediListo.xlsx');
+}
+
+// ─── CONFIGURAR FINANZAS GLOBALES ────────────────────────────────────────
+function modalConfigurarFinanzas() {
+    db.ref('config/finanzas').once('value').then(snap => {
+        const cfg = snap.val() || {};
+        const capital = parseFloat(cfg.capitalInvertido || 0);
+        const caja    = parseFloat(cfg.cajaChica || 0);
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-config-finanzas';
+        modal.style.cssText = `position:fixed;inset:0;z-index:8000;background:rgba(15,23,42,0.7);
+            backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:1rem`;
+        modal.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;
+                    width:min(96vw,420px);box-shadow:0 20px 60px rgba(0,0,0,0.15)">
+            <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+                        display:flex;justify-content:space-between;align-items:center">
+                <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:1rem">⚙️ Finanzas Globales</div>
+                <button onclick="document.getElementById('modal-config-finanzas').remove()"
+                        style="background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                               padding:0.35rem 0.6rem;cursor:pointer;color:var(--muted2);font-size:0.75rem">✕</button>
+            </div>
+            <div style="padding:1.25rem;display:flex;flex-direction:column;gap:1rem">
+                <p style="font-size:0.73rem;color:var(--muted2);background:rgba(245,158,11,0.07);
+                           border:1px solid rgba(245,158,11,0.25);border-radius:0.6rem;padding:0.75rem">
+                    ⚠️ Estos valores son la base financiera del sistema. Ajústalos solo si necesitas corregir el capital inicial o la caja chica.
+                </p>
+                <div>
+                    <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Capital Invertido Total ($)</div>
+                    <input type="number" id="cfg-capital" value="${capital.toFixed(2)}" step="0.01" min="0"
+                           style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                                  padding:0.7rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                                  font-size:1.1rem;font-weight:700;outline:none">
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.3rem">Suma total de dinero real que has puesto a circular</div>
+                </div>
+                <div>
+                    <div style="font-size:0.6rem;font-weight:800;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.4rem">Caja Chica Disponible ($)</div>
+                    <input type="number" id="cfg-caja" value="${caja.toFixed(2)}" step="0.01" min="0"
+                           style="width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:0.5rem;
+                                  padding:0.7rem 0.75rem;color:var(--text);font-family:'JetBrains Mono',monospace;
+                                  font-size:1.1rem;font-weight:700;outline:none">
+                    <div style="font-size:0.6rem;color:var(--muted2);margin-top:0.3rem">Dinero cobrado disponible para reinvertir en nuevos créditos</div>
+                </div>
+                <div style="display:flex;gap:0.5rem">
+                    <button onclick="document.getElementById('modal-config-finanzas').remove()"
+                            style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:0.6rem;
+                                   padding:0.7rem;cursor:pointer;font-weight:700;font-size:0.75rem;color:var(--muted2)">Cancelar</button>
+                    <button onclick="guardarConfigFinanzas()"
+                            style="flex:2;background:#b45309;color:#fff;border:none;border-radius:0.6rem;
+                                   padding:0.7rem;cursor:pointer;font-family:'Syne',sans-serif;font-weight:800;
+                                   font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase">
+                        ✓ Guardar
+                    </button>
+                </div>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+    });
+}
+
+async function guardarConfigFinanzas() {
+    const capital = parseFloat(document.getElementById('cfg-capital')?.value || 0);
+    const caja    = parseFloat(document.getElementById('cfg-caja')?.value || 0);
+    if (isNaN(capital) || isNaN(caja)) { toast('Valores inválidos', 'error'); return; }
+    await db.ref('config/finanzas').set({ capitalInvertido: capital, cajaChica: caja });
+    document.getElementById('modal-config-finanzas')?.remove();
+    toast(`✓ Finanzas actualizadas · Capital: $${capital.toFixed(2)} · Caja: $${caja.toFixed(2)}`, 'success');
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────
+function toast(msg, type='success') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show ' + type;
+    setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+</script>
+</body>
+</html>

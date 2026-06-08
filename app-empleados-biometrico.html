@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <title>PARCHE SYS · Empleados Biométrico (Bajo Licencia de PARCHE SYS)</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    /* Tokens (simplified) */
+    :root{--a:#2563eb;--pu:#7c3aed;--gr:#16a34a;--ye:#ca8a04;--re:#dc2626;--or:#ea580c;--tx:#0f172a;--bd:#e2e8f0;--bg:#f1f5f9;--al:#eff6ff;--rl:16px;--font-display:'Space Grotesk',sans-serif;--font-body:'Inter',sans-serif;}
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--font-body);-webkit-font-smoothing:antialiased}
+    #app{display:flex;flex-direction:column;height:100%;padding-top:env(safe-area-inset-top,0)}
+    .topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:white;border-bottom:1px solid var(--bd);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    .tb-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--pu));color:white;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden}
+    .tb-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .scroll{flex:1;overflow-y:auto;padding-bottom:calc(72px + env(safe-area-inset-bottom,0))}
+    .bnav{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+    .nb{flex:1;padding:10px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:none;background:transparent;cursor:pointer;transition:.15s}
+    .nb.on .nb-ic{transform:scale(1.15)}
+    .nb.on .nb-lbl{color:var(--a)}
+    .ov{display:none;position:fixed;inset:0;background:rgba(15,23,42,.7);backdrop-filter:blur(6px);align-items:flex-end;justify-content:center;z-index:200}
+    .ov.open{display:flex}
+    .mbox{background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;padding:20px 20px 32px}
+    .mhandle{width:36px;height:4px;background:var(--bd);margin:0 auto 16px;border-radius:2px}
+    .mbox-title{font-family:var(--font-display);font-size:15px;font-weight:800;margin-bottom:16px;color:var(--tx)}
+    /* Biometric modal (simplified) */
+    .bio-modal{background:linear-gradient(160deg,#0f172a,#1e293b);border:1px solid rgba(255,255,255,.1);border-radius:32px;padding:40px 32px 36px;max-width:340px;margin:auto;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+    .bio-title{font-family:var(--font-display);font-size:20px;font-weight:800;color:white;margin-bottom:6px}
+    .bio-subtitle{font-size:13px;color:rgba(255,255,255,.5)}
+    .bio-type-badge{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 14px;border-radius:20px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+    .bio-type-badge.entrada{background:rgba(22,163,74,.2);color:#4ade80;border:1px solid rgba(74,222,128,.3)}
+    .bio-scanner{width:140px;height:140px;margin:0 auto 28px;position:relative}
+    .bio-scanner-ring{position:absolute;inset:0;border-radius:50%;border:2px solid rgba(37,99,235,.3);animation:ring-pulse 2s infinite}
+    .bio-scanner-circle{position:absolute;inset:16px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center}
+    .bio-fingerprint-svg{width:64px;height:64px;color:rgba(255,255,255,.35);transition:color .3s}
+    .bio-status-text{font-size:15px;font-weight:700;color:white;margin-bottom:6px}
+    .bio-actions{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+    .sbtn{padding:13px;border-radius:12px;background:var(--a);color:white;border:none;cursor:pointer;transition:.15s;font-weight:700}
+    .sbtn.ghost{background:var(--bg);color:var(--tx);border:1.5px solid var(--bd)}
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-biz" id="tb-emp">PARCHE SYS</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="tb-av" id="tb-av" onclick="confirmarCerrarSesion()" title="Cerrar sesión">?</div>
+    </div>
+  </div>
+
+  <!-- Scroll content -->
+  <div class="scroll">
+    <div class="page on" id="p-inicio">
+      <div class="banner">
+        <div class="ban-av" id="ban-av">?</div>
+        <div>
+          <div class="ban-name" id="ban-name">Cargando...</div>
+          <div class="ban-puesto" id="ban-puesto">—</div>
+          <div class="ban-dept" id="ban-dept">—</div>
+        </div>
+      </div>
+      <div id="asist-wrap"></div>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div class="bnav">
+    <button class="nb on" id="nb-inicio" onclick="goTab('inicio')"><div class="nb-ic">🏠</div><div class="nb-lbl">Inicio</div></button>
+    <button class="nb" id="nb-otros" onclick="goTab('otros')"><div class="nb-ic">👤</div><div class="nb-lbl">Perfil</div></button>
+  </div>
+
+  <!-- Modal Biométrico -->
+  <div class="ov" id="bio-overlay" onclick="if(event.target===this)cerrarBiometria()">
+    <div class="bio-modal" id="bio-modal">
+      <div class="bio-header">
+        <div class="bio-title" id="bio-title">Verificación Biométrica</div>
+        <div class="bio-subtitle" id="bio-subtitle">Confirma tu identidad para registrar</div>
+        <div class="bio-type-badge entrada" id="bio-type-badge">⬆️ ENTRADA</div>
+      </div>
+      <div class="bio-scanner" id="bio-scanner-fp">
+        <div class="bio-scanner-ring"></div>
+        <div class="bio-scanner-ring"></div>
+        <div class="bio-scanner-ring"></div>
+        <div class="bio-scanner-circle">
+          <svg class="bio-fingerprint-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M50 15 C35 15 22 28 22 45 C22 62 35 75 50 75"/>
+            <path d="M50 15 C65 15 78 28 78 45 C78 62 65 75 50 75"/>
+            <path d="M50 25 C40 25 32 33 32 45 C32 57 40 65 50 65"/>
+            <path d="M50 25 C60 25 68 33 68 45 C68 57 60 65 50 65"/>
+            <path d="M50 35 C45 35 41 39 41 45 C41 51 45 55 50 55"/>
+            <path d="M50 35 C55 35 59 39 59 45 C59 51 55 55 50 55"/>
+            <line x1="50" y1="45" x2="50" y2="45"/>
+            <path d="M35 80 C35 82 40 85 50 85 C60 85 65 82 65 80"/>
+            <path d="M27 70 C24 67 22 62 22 57"/>
+            <path d="M73 70 C76 67 78 62 78 57"/>
+          </svg>
+        </div>
+        <div class="bio-scanner-line"></div>
+      </div>
+      <div class="bio-status-text" id="bio-status-text">Coloca tu dedo en el sensor</div>
+      <div class="bio-status-sub" id="bio-status-sub">Toca "Simular escaneo" para continuar</div>
+      <div class="bio-progress"><div class="bio-progress-bar" id="bio-progress-bar" style="width:0%"></div></div>
+      <div class="bio-actions">
+        <button class="sbtn" id="bio-btn-sim" onclick="simularBiometrico()"><i class="fa-solid fa-fingerprint"></i> Simular escaneo</button>
+        <button class="sbtn ghost" onclick="cerrarBiometria()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+  // Firebase config (same as other pages)
+  const FB={apiKey:"AIzaSyBoM-hQcdhJxfeODu848q2D1AYsa1dvRqQ",authDomain:"ventas-id-43ff8.firebaseapp.com",databaseURL:"https://ventas-id-43ff8-default-rtdb.firebaseio.com",projectId:"ventas-id-43ff8",storageBucket:"ventas-id-43ff8.firebasestorage.app",messagingSenderId:"898228544993",appId:"1:898228544993:web:06658053096e51cdfa5ea0"};
+  firebase.initializeApp(FB);
+  /* Firebase centralizado en firebase-config.js */
+  let NID='',EID='',EMP={};
+  // Simple init (similar to food page)
+  window.addEventListener('load',()=>{
+    const params=new URLSearchParams(location.search);
+    const urlNID=params.get('negocio');
+    if(urlNID) localStorage.setItem('negocioID',urlNID);
+    const saved=localStorage.getItem('modus_emp');
+    if(saved){
+      try{const s=JSON.parse(saved);if(s.NID&&s.EID){NID=s.NID;EID=s.EID;EMP=s.EMP||{};iniciar();}}
+      catch(e){}
+    } else {document.getElementById('s-login')?.classList.remove('off');}
+  });
+  function iniciar(){
+    document.getElementById('s-login')?.classList.add('off');
+    document.getElementById('s-main')?.classList.add('on');
+    renderPerfil();
+    cargarAsistencia();
+  }
+  function renderPerfil(){
+    const ini=(EMP.nombre||'?').charAt(0).toUpperCase();
+    const tbAv=document.getElementById('tb-av');
+    if(tbAv) tbAv.textContent=ini;
+    const banAv=document.getElementById('ban-av');
+    if(banAv) banAv.textContent=ini;
+    const name=document.getElementById('ban-name');
+    if(name) name.textContent=EMP.nombre||'—';
+  }
+  // ---------- Biometric functions (simplified) ----------
+  function abrirBiometria(){document.getElementById('bio-overlay').classList.add('open');}
+  function cerrarBiometria(){document.getElementById('bio-overlay').classList.remove('open');}
+  function simularBiometrico(){
+    const status=document.getElementById('bio-status-text');
+    const bar=document.getElementById('bio-progress-bar');
+    status.textContent='Verificando...';
+    bar.style.width='100%';
+    setTimeout(()=>{
+      status.textContent='¡Éxito!';
+      cerrarBiometria();
+    },1500);
+  }
+  function confirmarCerrarSesion(){
+    // Placeholder logout
+    localStorage.removeItem('modus_emp');
+    location.reload();
+  }
+  function goTab(t){ /* Simple navigation placeholder */ }
+  function cargarAsistencia(){ /* Placeholder for future attendance loading */ }
+</script>
+</body>
+</html>

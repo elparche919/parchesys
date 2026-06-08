@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS | Restaurant & Order Management System (Bajo Licencia de MODUS FOOD)</title>
+<meta name="description" content="Manage your restaurant, cafe, or bar with PARCHE SYS (bajo licencia de MODUS FOOD). Digital table control, kitchen display system, delivery integration, and global billing.">
+<meta name="keywords" content="Restaurant Management Software, Cloud POS for Food, Digital Kitchen System, Table Management, PARCHE SYS, MODUS FOOD">
+<link rel="canonical" href="https://modusapp.store/MODUSFOOD/index.html">
+<link rel="icon" href="LOGOPARCHESYS.png">
+
+<!-- SOCIAL -->
+<meta property="og:title" content="PARCHE SYS | Gestión Gastronómica Inteligente">
+<meta property="og:description" content="El sistema definitivo para el control total de tu restaurante.">
+<meta property="og:image" content="LOGOPARCHESYS.png">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0D1F12;--green:#1A6B32;--green-d:#0F4520;--green-l:#E8F5EC;
+  --orange:#E85D04;--orange-l:#FFF0E6;
+  --bd:#D6E2D8;--light:#F4F7F2;--muted:#6B7F6F;
+  --font-h:'Fraunces',Georgia,serif;--font-b:'DM Sans',system-ui,sans-serif;
+}
+html,body{height:100%}
+body{
+  font-family:var(--font-b);
+  background:linear-gradient(135deg,#0D1F12 0%,#1A3A20 50%,#0D2810 100%);
+  min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+  position:relative;overflow:hidden;
+}
+body::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 20% 50%,rgba(232,93,4,.15) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 30%,rgba(26,107,50,.2) 0%,transparent 50%);
+  pointer-events:none;
+}
+
+/* Floating particles */
+.particle{position:absolute;border-radius:50%;opacity:.07;animation:float linear infinite}
+@keyframes float{0%{transform:translateY(100vh) rotate(0deg);opacity:0}10%{opacity:.07}90%{opacity:.07}100%{transform:translateY(-100px) rotate(720deg);opacity:0}}
+
+/* Card */
+.card{
+  position:relative;z-index:10;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:28px;
+  padding:48px 40px;
+  width:100%;max-width:420px;
+  backdrop-filter:blur(20px);
+  box-shadow:0 40px 80px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.05) inset;
+}
+@media(max-width:480px){.card{padding:36px 24px;border-radius:20px}}
+
+/* Brand */
+.brand{text-align:center;margin-bottom:36px}
+.brand-logo{
+  width:64px;height:64px;border-radius:18px;
+  background:linear-gradient(135deg,var(--orange),#FF8A3D);
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;margin:0 auto 16px;
+  box-shadow:0 8px 24px rgba(232,93,4,.4);
+}
+.brand-name{font-family:var(--font-h);font-size:26px;font-weight:900;color:white;letter-spacing:-.03em;margin-bottom:4px}
+.brand-name em{color:var(--orange);font-style:normal}
+.brand-sub{font-size:13px;color:rgba(255,255,255,.45);font-weight:500}
+
+/* Form */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:11px;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.06em;text-transform:uppercase}
+.inp{
+  width:100%;padding:13px 16px;border-radius:12px;
+  border:1.5px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.06);
+  color:white;font-size:14px;font-family:var(--font-b);
+  outline:none;transition:.2s;
+}
+.inp::placeholder{color:rgba(255,255,255,.25)}
+.inp:focus{border-color:var(--orange);background:rgba(232,93,4,.08);box-shadow:0 0 0 3px rgba(232,93,4,.15)}
+
+.btn{
+  width:100%;padding:15px;border-radius:13px;border:none;
+  background:linear-gradient(135deg,var(--orange),#FF6B35);
+  color:white;font-size:14px;font-weight:700;font-family:var(--font-b);
+  cursor:pointer;transition:.2s;margin-top:6px;
+  box-shadow:0 8px 20px rgba(232,93,4,.35);
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(232,93,4,.45)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+
+.err{
+  background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);
+  color:#fca5a5;font-size:12px;font-weight:600;
+  padding:10px 14px;border-radius:9px;margin-bottom:14px;display:none;
+}
+
+.footer-link{text-align:center;margin-top:20px}
+.footer-link a{color:rgba(255,255,255,.35);font-size:12px;font-weight:600;text-decoration:none;transition:.15s}
+.footer-link a:hover{color:rgba(255,255,255,.6)}
+
+.divider{height:1px;background:rgba(255,255,255,.07);margin:20px 0}
+.back-link{display:flex;align-items:center;gap:6px;color:rgba(255,255,255,.3);font-size:12px;font-weight:600;text-decoration:none;margin-bottom:24px;transition:.15s}
+.back-link:hover{color:rgba(255,255,255,.6)}
+</style>
+</head>
+<body>
+
+<!-- Particles -->
+<div class="particle" style="width:120px;height:120px;background:#E85D04;left:10%;animation-duration:18s;animation-delay:0s"></div>
+<div class="particle" style="width:60px;height:60px;background:#1A6B32;left:80%;animation-duration:14s;animation-delay:3s"></div>
+<div class="particle" style="width:80px;height:80px;background:#E85D04;left:55%;animation-duration:20s;animation-delay:6s"></div>
+
+<div class="card">
+  <a href="../index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Volver al inicio</a>
+
+  <div class="brand">
+    <div class="brand-logo" style="background:transparent; box-shadow:none; width:auto; height:auto; display:flex; align-items:center; justify-content:center; margin-bottom:12px;">
+      <img src="LOGOPARCHESYS.png" alt="PARCHE SYS Logo" style="max-height:80px; object-fit:contain;">
+    </div>
+    <div class="brand-name">PARCHE <em>SYS</em></div>
+    <div class="brand-sub">Bajo Licencia de MODUS FOOD</div>
+  </div>
+
+  <div class="err" id="err"></div>
+
+  <div class="field">
+    <label>Correo electrónico</label>
+    <input type="email" id="email" class="inp" placeholder="correo@restaurante.com" autocomplete="email">
+  </div>
+  <div class="field">
+    <label>Contraseña</label>
+    <input type="password" id="pass" class="inp" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <div class="field">
+    <label>National ID / DUI <span style="text-transform:none;font-weight:400;color:rgba(255,255,255,.3)">(00000000-0)</span></label>
+    <input type="text" id="dui" class="inp" placeholder="00000000-0" maxlength="10" autocomplete="off"
+      oninput="var v=this.value.replace(/\D/g,'');this.value=v.length>8?v.slice(0,8)+'-'+v.slice(8,9):v">
+  </div>
+
+  <button class="btn" id="btn" onclick="doLogin()">
+    <i class="fa-solid fa-right-to-bracket"></i> Login to System
+  </button>
+
+  <div class="divider"></div>
+  <div class="footer-link">
+    <a href="https://wa.me/50372419889" target="_blank"><i class="fa-brands fa-whatsapp"></i> ¿Necesitas ayuda? Escríbenos</a>
+  </div>
+</div>
+
+<!-- Modal Dispositivo -->
+<div class="modal-bg" id="modalDispositivo">
+  <div class="modal-box">
+    <div class="mh-head">
+      <h3 style="font-family:var(--font-h); font-size:22px; color:var(--ink)">Seleccionar Interfaz</h3>
+      <p style="font-size:12px; color:var(--muted); margin-top:4px">¿Qué versión deseas utilizar?</p>
+    </div>
+    <div class="mb-body" style="padding:24px; display:flex; flex-direction:column; gap:12px">
+      <button class="dev-opt" id="btnIrMovil" style="background:var(--light); border:1.5px solid var(--bd); padding:20px; border-radius:18px; display:flex; align-items:center; gap:20px; cursor:pointer; text-align:left; transition:.2s; font-family:var(--font-b)">
+        <div style="width:50px; height:50px; border-radius:14px; background:var(--green); color:white; display:flex; align-items:center; justify-content:center; font-size:24px">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+        </div>
+        <div>
+            <strong style="display:block; font-size:16px; color:var(--ink)">Versión Móvil</strong>
+            <span style="font-size:12px; color:var(--muted)">POS, Meseros y Delivery</span>
+        </div>
+      </button>
+
+      <button class="dev-opt" id="btnIrPC" style="background:var(--light); border:1.5px solid var(--bd); padding:20px; border-radius:18px; display:flex; align-items:center; gap:20px; cursor:pointer; text-align:left; transition:.2s; font-family:var(--font-b)">
+        <div style="width:50px; height:50px; border-radius:14px; background:var(--orange); color:white; display:flex; align-items:center; justify-content:center; font-size:24px">
+            <i class="fa-solid fa-laptop"></i>
+        </div>
+        <div>
+            <strong style="display:block; font-size:16px; color:var(--ink)">Versión PC (Escritorio)</strong>
+            <span style="font-size:12px; color:var(--muted)">Administración y Reportes</span>
+        </div>
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+.modal-bg { position:fixed; inset:0; background:rgba(13,31,18,0.8); backdrop-filter:blur(12px); z-index:2000; display:none; align-items:center; justify-content:center; padding:20px; }
+.modal-bg.open { display:flex; }
+.modal-box { background:white; border-radius:32px; width:100%; max-width:400px; box-shadow:0 30px 60px rgba(0,0,0,0.4); overflow:hidden; animation:zoomIn .3s ease; }
+@keyframes zoomIn { from{opacity:0; transform:scale(0.9)} to{opacity:1; transform:scale(1)} }
+.mh-head { padding:24px 24px 0; text-align:center; }
+.dev-opt:hover { border-color:var(--green); background:var(--green-l); transform:translateY(-2px); }
+</style>
+
+<script>
+// Firebase configurado a través de firebase-config.js
+
+function cleanDUI(v){return (v||'').replace(/\D/g,'');}
+function showErr(m){var e=document.getElementById('err');e.textContent=m;e.style.display='block';}
+function hideErr(){document.getElementById('err').style.display='none';}
+
+function doLogin(){
+  var email=document.getElementById('email').value.trim().toLowerCase();
+  var pass=document.getElementById('pass').value;
+  var duiRaw=document.getElementById('dui').value.trim();
+  var dui=cleanDUI(duiRaw);
+  var btn=document.getElementById('btn');
+  hideErr();
+  if(!email||!pass||!dui){showErr('Completa todos los campos.');return;}
+  btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
+
+  // Negocio único: verificar directamente contra el nodo fijo "elparche"
+  db.ref('negocios/' + NEGOCIO_ID + '/info').once('value', function(infoSnap){
+    var info = infoSnap.val();
+    if(!info || (info.email||'').toLowerCase() !== email || info.password !== pass){
+      showErr('Correo o contraseña incorrectos.');
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
+      return;
+    }
+
+    // Verificar empleado por DUI
+    db.ref('negocios/' + NEGOCIO_ID + '/empleados').once('value', function(eSnap){
+      var emp=null;
+      eSnap.forEach(function(c){var e=c.val();if(cleanDUI(e.dui)===dui&&!emp)emp={key:c.key,data:e};});
+      if(!emp){
+        showErr('DUI no registrado en este restaurante.');
+        btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
+        return;
+      }
+      var e=emp.data;
+      var ses={tipo:(e.rol==='propietario'||e.rol==='admin')?'admin':'empleado',nombre:e.nombre||'Usuario',rol:e.rol||'empleado',dui:e.dui||duiRaw,puesto:e.puesto||'',empKey:emp.key,timestamp:Date.now()};
+      localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
+      try{localStorage.setItem('food_biz_' + NEGOCIO_ID, JSON.stringify(info));}catch(ex){}
+
+      // Registrar asistencia
+      var hoy=new Date().toISOString().split('T')[0];
+      db.ref('negocios/' + NEGOCIO_ID + '/asistencia/'+hoy+'/'+emp.key).update({
+        nombre:e.nombre, dui:e.dui||duiRaw,
+        entrada:new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}),
+        timestamp_entrada:Date.now(), estado:'presente'
+      });
+
+      // Mostrar selector de interfaz
+      document.getElementById('modalDispositivo').classList.add('open');
+      document.getElementById('btnIrMovil').onclick = function(){ location.href = 'portal-food-movil.html'; };
+      document.getElementById('btnIrPC').onclick = function(){ location.href = 'portal-food.html'; };
+      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check"></i> Acceso Concedido';
+
+    },function(err){showErr('Error: '+err.code);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';});
+  },function(err){showErr('Error de conexión: '+err.code);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';});
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="stylesheet" href="modus-design.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS · Contabilidad SV (Bajo Licencia de PARCHE SYS)</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --m-blue:#059669; /* Emerald Override */
+  --m-amber:#f97316; /* Orange Override */
+  --m-blue-light:#ecfdf5;
+  --m-blue-soft:#d1fae5;
+  --m-blue-mid:#047857;
+  --m-bg:#f8fafc;
+  --m-text:#1e293b;
+
+  /* ── Fallbacks para variables de modus-design.css ── */
+  --font-body:'Outfit','Nunito','Plus Jakarta Sans',sans-serif;
+  --m-muted:#94a3b8;
+  /* ── Variables propias ── */
+  --blue:var(--m-blue);--blue-l:var(--m-blue-light);--blue-d:var(--m-blue-mid);
+  --green:#16a34a;--green-l:#dcfce7;
+  --red:#dc2626;--red-l:#fee2e2;
+  --orange:var(--m-amber);--orange-l:#ffedd5;
+  --yellow:#f59e0b;--yellow-l:#fef3c7;
+  --purple:var(--m-blue);--purple-l:var(--m-blue-light);
+  --teal:#0d9488;--teal-l:#ccfbf1;
+  --dark:var(--m-text);--mid:#334155;--light:#f8fafc;--bd:#e2e8f0;
+  --radius:14px;--sidebar:240px;
+}
+body{font-family:var(--font-body);background:#f1f5f9;color:#1e293b;display:flex;min-height:100vh}
+h1,h2,h3,.mod-title{font-family:var(--font-body)}
+
+/* ── SIDEBAR ── */
+#sidebar{width:var(--sidebar);background:var(--m-blue);min-height:100vh;display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:100;overflow-y:auto}
+.sb-logo{padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.10)}
+.sb-logo a{color:#94a3b8;font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px;margin-bottom:10px;letter-spacing:.05em}
+.sb-logo a:hover{color:white}
+.sb-title{font-family:var(--font-body);font-size:15px;font-weight:800;color:white;letter-spacing:-.01em}
+.sb-badge{display:inline-flex;align-items:center;gap:5px;background:var(--m-amber);color:white;font-size:9px;font-weight:700;padding:3px 8px;border-radius:6px;margin-top:5px;text-transform:uppercase;letter-spacing:.08em}
+.sb-sec{padding:14px 18px 4px;font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.15em}
+.sb-item{display:flex;align-items:center;gap:10px;padding:9px 18px;font-size:13px;font-weight:600;color:#94a3b8;cursor:pointer;transition:.15s;text-decoration:none;border-left:3px solid transparent}
+.sb-item:hover{color:white;background:rgba(255,255,255,.10)}
+.sb-item.active{color:white;background:rgba(255,255,255,.12);border-left-color:#E8820C}
+.sb-item i{width:18px;text-align:center;font-size:13px}
+.sb-foot{margin-top:auto;padding:16px 18px;border-top:1px solid rgba(255,255,255,.10)}
+.sb-negocio{font-size:11px;color:#475569;font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.08em}
+.sb-empresa{font-size:13px;font-weight:700;color:#94a3b8}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar);flex:1;min-height:100vh;display:flex;flex-direction:column}
+.topbar{background:white;border-bottom:1px solid var(--bd);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+.tb-left{display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8;font-weight:600}
+.tb-left span{color:#1e293b}
+.tb-right{display:flex;align-items:center;gap:8px}
+.btn{padding:8px 16px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body);transition:.15s;white-space:nowrap}
+.btn-primary{background:var(--blue);color:white}.btn-primary:hover{background:var(--blue-d)}
+.btn-success{background:var(--green-l);color:#15803d;border:1px solid #bbf7d0}.btn-success:hover{background:#bbf7d0}
+.btn-ghost{background:white;color:#1e293b;border:1px solid var(--bd)}.btn-ghost:hover{background:#f1f5f9}
+.btn-danger{background:var(--red-l);color:var(--red);border:1px solid #fecaca}.btn-danger:hover{background:#fecaca}
+.btn-purple{background:var(--purple-l);color:var(--m-blue);border:1px solid var(--m-blue-soft)}.btn-purple:hover{background:var(--m-blue-soft)}
+.btn-teal{background:var(--teal-l);color:var(--teal);border:1px solid #99f6e4}.btn-teal:hover{background:#99f6e4}
+.btn-sm{padding:5px 12px;font-size:11px}
+
+/* ── PAGES ── */
+.page{display:none;padding:24px 28px;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── CARDS ── */
+.card{background:white;border:1px solid var(--bd);border-radius:var(--radius);padding:20px}
+.card-title{font-size:13px;font-weight:700;color:#1e293b;margin-bottom:16px;display:flex;align-items:center;gap:8px;font-family:var(--font-body)}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:900px){.stats-row{grid-template-columns:1fr 1fr}}
+.stat{background:white;border:1px solid var(--bd);border-radius:var(--radius);padding:16px 18px}
+.stat-num{font-size:24px;font-weight:800;font-family:var(--font-body);line-height:1;margin-bottom:4px}
+.stat-lbl{font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em}
+
+/* ── TABLE ── */
+.tbl-wrap{background:white;border:1px solid var(--bd);border-radius:var(--radius);overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead th{text-align:left;padding:10px 14px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.15em;background:#f8fafc;border-bottom:1px solid var(--bd)}
+tbody tr:hover{background:#f8fafc}
+tbody td{padding:11px 14px;font-size:12.5px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+.td-num{font-family:var(--font-body);font-weight:700}
+.td-green{color:var(--green)}
+.td-red{color:var(--red)}
+.td-blue{color:var(--blue)}
+.td-teal{color:var(--teal)}
+
+/* ── FORM ── */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px}
+.fi{width:100%;padding:9px 13px;background:#f8fafc;border:1px solid var(--bd);border-radius:10px;font-size:13px;font-family:var(--font-body);outline:none;transition:.15s;color:#1e293b}
+.fi:focus{border-color:var(--blue);background:white}
+.fi::placeholder{color:#cbd5e1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.b-green{background:var(--green-l);color:#15803d}
+.b-red{background:var(--red-l);color:var(--red)}
+.b-blue{background:var(--blue-l);color:var(--blue-d)}
+.b-yellow{background:var(--yellow-l);color:#92400e}
+.b-purple{background:var(--purple-l);color:var(--m-blue)}
+.b-gray{background:#f1f5f9;color:#64748b}
+.b-teal{background:var(--teal-l);color:var(--teal)}
+
+/* ── MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.6);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:white;border-radius:20px;padding:28px;width:100%;max-height:92vh;overflow-y:auto;position:relative;animation:mIn .2s ease;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+@keyframes mIn{from{opacity:0;scale:.97}to{opacity:1;scale:1}}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:20px;font-family:var(--font-body)}
+.modal-close{position:absolute;top:16px;right:16px;width:28px;height:28px;background:#f1f5f9;border:1px solid var(--bd);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px;color:#64748b}
+.modal-close:hover{background:#e2e8f0}
+
+/* ── INFO BOX ── */
+.info-box{border-radius:10px;padding:12px 14px;font-size:12px;margin-bottom:16px;line-height:1.5}
+.info-blue{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8}
+.info-green{background:var(--green-l);border:1px solid #bbf7d0;color:#15803d}
+.info-amber{background:var(--yellow-l);border:1px solid #fde68a;color:#92400e}
+.info-purple{background:var(--purple-l);border:1px solid var(--m-blue-soft);color:#6d28d9}
+.info-teal{background:var(--teal-l);border:1px solid #99f6e4;color:#0f766e}
+
+/* ── MONTH SELECTOR ── */
+.mes-selector{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.mes-selector input[type=month]{padding:8px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:13px;font-family:var(--font-body);outline:none;background:#f8fafc;color:#1e293b}
+.mes-selector input[type=month]:focus{border-color:var(--blue)}
+
+/* ── LIBRO HEADER ── */
+.libro-header{background:linear-gradient(135deg,var(--m-blue),var(--m-blue-mid));color:white;border-radius:var(--radius);padding:20px 24px;margin-bottom:20px}
+.libro-header h2{font-family:var(--font-body);font-size:16px;font-weight:800;margin-bottom:4px}
+.libro-header p{font-size:12px;color:#94a3b8}
+.libro-header .lh-meta{display:flex;gap:20px;margin-top:12px;flex-wrap:wrap}
+.lh-item{font-size:11px;color:#94a3b8;font-weight:600}
+.lh-item strong{color:white;font-size:13px;display:block;margin-bottom:1px}
+
+/* ── TABS ── */
+.tab-bar{display:flex;gap:4px;margin-bottom:20px;background:#f1f5f9;border-radius:12px;padding:4px;overflow-x:auto}
+.tab{padding:8px 16px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;color:#64748b;transition:.15s;white-space:nowrap;font-family:var(--font-body)}
+.tab.active{background:white;color:var(--m-blue);box-shadow:0 1px 4px rgba(0,0,0,.08)}
+
+/* ── ASIENTO CARD ── */
+.asiento-card{border:1px solid var(--bd);border-radius:var(--radius);overflow:hidden;margin-bottom:12px}
+.asiento-hdr{padding:12px 16px;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+.asiento-num{font-family:var(--font-body);font-size:11px;font-weight:800;color:var(--m-blue);background:var(--purple-l);padding:2px 8px;border-radius:6px}
+.asiento-date{font-size:11px;color:#94a3b8;font-weight:600}
+.asiento-desc{font-size:13px;font-weight:700;color:#1e293b}
+
+/* ── CUENTA BADGE ── */
+.cuenta-tipo{font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.05em}
+.ct-activo{background:#dbeafe;color:#1d4ed8}
+.ct-pasivo{background:var(--red-l);color:var(--red)}
+.ct-patrimon{background:var(--green-l);color:#15803d}
+.ct-ingreso{background:var(--yellow-l);color:#92400e}
+.ct-gasto{background:var(--orange-l);color:#c2410c}
+
+/* ── SALDO CARD ── */
+.saldo-card{border:1.5px solid var(--bd);border-radius:var(--radius);padding:16px 18px;background:white}
+.saldo-card.positivo{border-color:#bbf7d0;background:#f0fdf4}
+.saldo-card.negativo{border-color:#fecaca;background:#fef2f2}
+
+/* ── DTE DROP ZONE ── */
+.dte-drop-zone{border:2px dashed var(--bd);border-radius:var(--radius);padding:32px;text-align:center;cursor:pointer;transition:.2s;background:#fafafa}
+.dte-drop-zone:hover,.dte-drop-zone.drag-over{border-color:var(--teal);background:var(--teal-l)}
+.dte-drop-zone i{font-size:32px;color:#94a3b8;margin-bottom:10px;display:block}
+.dte-drop-zone.drag-over i{color:var(--teal)}
+.dte-preview{background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:10px;font-size:12px}
+.dte-preview-title{font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:22px;right:22px;background:white;border:1px solid var(--bd);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;z-index:9999;transform:translateY(70px);opacity:0;transition:all .3s cubic-bezier(.34,1.56,.64,1);display:flex;align-items:center;gap:8px;max-width:300px;box-shadow:0 4px 20px rgba(0,0,0,.1)}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:#bbf7d0;color:#15803d}
+#toast.err{border-color:#fecaca;color:#dc2626}
+
+/* ── RESPONSIVE ── */
+@media(max-width:768px){
+  #sidebar{width:0;overflow:hidden}
+  #main{margin-left:0}
+}
+
+  /* ── RESPONSIVE MÓVIL ── */
+  #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99}
+  #mob-overlay.open{display:block}
+  #mob-ham{display:none;align-items:center;justify-content:center;width:38px;height:38px;background:#f1f5f9;border:1px solid var(--bd);border-radius:10px;cursor:pointer;font-size:16px;color:#1e293b;flex-shrink:0}
+  @media(max-width:768px){
+    #sidebar{width:260px!important;overflow:auto!important;transition:transform .25s ease;transform:translateX(-100%)}
+    #sidebar.mob-open{transform:translateX(0)}
+    #main{margin-left:0!important}
+    #mob-ham{display:flex}
+    .topbar{padding:0 14px;gap:8px;flex-wrap:wrap;height:auto;min-height:56px}
+    .tb-right{flex-wrap:wrap;gap:6px}
+    .tb-right input[type=month]{width:100%;max-width:160px}
+    .tb-right .btn{font-size:11px;padding:6px 10px}
+    .page{padding:12px 14px!important;padding-bottom:80px!important}
+    .stats-row{grid-template-columns:1fr 1fr!important}
+    .tbl-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+    .tbl-wrap table{min-width:520px}
+    table[style*="width:100%"]{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .card{padding:14px}
+    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+    [style*="grid-template-columns:repeat(2"]{grid-template-columns:1fr!important}
+    [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important}
+    [style*="grid-template-columns:1fr 1fr 1fr"]{grid-template-columns:1fr 1fr!important}
+    .modal{max-width:100%!important;border-radius:22px 22px 0 0!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:auto!important;max-height:90vh!important;overflow-y:auto}
+    .overlay{align-items:flex-end!important}
+  }
+  @media(max-width:400px){
+    .stats-row{grid-template-columns:1fr!important}
+  }
+</style>
+<script src="modus-return.js"></script>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sb-logo">
+    <a href="portal-food.html" id="sb-back-link">
+      <i class="fa-solid fa-arrow-left"></i> Volver al Portal
+    </a>
+    <div class="sb-title">Contabilidad</div>
+    <div class="sb-badge"><i class="fa-solid fa-landmark" style="font-size:8px"></i> El Salvador</div>
+  </div>
+  <div class="sb-sec">Módulos</div>
+  <div class="sb-item active" onclick="showPage('resumen')"><i class="fa-solid fa-chart-pie"></i><span>Resumen</span></div>
+  <div class="sb-item" onclick="showPage('libro-ventas')"><i class="fa-solid fa-file-invoice-dollar"></i><span>Libro de Ventas</span></div>
+  <div class="sb-item" onclick="showPage('libro-compras')"><i class="fa-solid fa-cart-shopping"></i><span>Libro de Compras</span></div>
+  <div class="sb-item" onclick="showPage('importar-dte')"><i class="fa-solid fa-file-import"></i><span>Importar DTE</span></div>
+  <div class="sb-item" onclick="showPage('partida-doble')"><i class="fa-solid fa-scale-balanced"></i><span>Partida Doble</span></div>
+  <div class="sb-item" onclick="showPage('plan-cuentas')"><i class="fa-solid fa-list-tree"></i><span>Plan de Cuentas</span></div>
+  <div class="sb-item" onclick="showPage('retenciones')"><i class="fa-solid fa-percent"></i><span>Retenciones ISR</span></div>
+  <div class="sb-item" onclick="showPage('pago-cuenta')"><i class="fa-solid fa-calendar-check"></i><span>Pago a Cuenta</span></div>
+  <div class="sb-item" onclick="showPage('conciliacion')"><i class="fa-solid fa-code-compare"></i><span>Conciliación Bancaria</span></div>
+  <div class="sb-item" onclick="showPage('estados')"><i class="fa-solid fa-file-chart-column"></i><span>Estados Financieros</span></div>
+  <div class="sb-sec">Declaraciones</div>
+  <div class="sb-item" onclick="showPage('f07')"><i class="fa-solid fa-file-signature"></i><span>F-07 IVA Mensual</span></div>
+  <div class="sb-item" onclick="showPage('f14')"><i class="fa-solid fa-file-signature"></i><span>F-14 Retenciones</span></div>
+  <div class="sb-item" onclick="showPage('f11')"><i class="fa-solid fa-file-signature"></i><span>F-11 Pago a Cuenta</span></div>
+  <div class="sb-foot">
+    <div class="sb-negocio">Empresa</div>
+    <div class="sb-empresa" id="sb-empresa-nombre">Cargando...</div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <button id="mob-ham" onclick="toggleSidebar()">☰</button>
+    <div class="tb-left">
+      <i class="fa-solid fa-landmark" style="color:var(--m-blue)"></i>
+      <span>Contabilidad</span>
+      <span style="color:#cbd5e1">/</span>
+      <span id="tb-section">Resumen</span>
+    </div>
+    <div class="tb-right">
+      <div class="mes-selector" style="margin-bottom:0">
+        <span style="font-size:11px;font-weight:700;color:#94a3b8">Período:</span>
+        <input type="month" id="mes-global" onchange="onMesCambio()">
+      </div>
+      <a class="btn btn-sm" id="btn-ir-dte" href="dte.html" style="background:#fce7f3;color:#be185d;border:none;text-decoration:none"><i class="fa-solid fa-file-circle-plus" style="margin-right:5px"></i>Emitir DTE</a>
+      <button class="btn btn-primary btn-sm" onclick="exportarExcel()"><i class="fa-solid fa-download" style="margin-right:5px"></i>Exportar</button>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: RESUMEN ═══ -->
+  <div class="page active" id="page-resumen">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:20px;font-weight:800;color:#1e293b">Panel Contable</h2>
+      <p style="font-size:13px;color:#64748b;margin-top:4px">Resumen del período seleccionado</p>
+    </div>
+    <div class="stats-row" id="stats-resumen">
+      <div class="stat"><div class="stat-num td-green" id="res-ventas-total">$0.00</div><div class="stat-lbl">Ventas Brutas</div></div>
+      <div class="stat"><div class="stat-num" id="res-iva-debito" style="color:var(--m-blue)">$0.00</div><div class="stat-lbl">IVA Débito Fiscal</div></div>
+      <div class="stat"><div class="stat-num" id="res-iva-credito" style="color:#2563eb">$0.00</div><div class="stat-lbl">IVA Crédito Fiscal</div></div>
+      <div class="stat"><div class="stat-num" id="res-iva-pagar" style="color:#f97316">$0.00</div><div class="stat-lbl">IVA a Pagar</div></div>
+    </div>
+    <div class="grid2" style="gap:16px">
+      <div>
+        <div class="stats-row" style="grid-template-columns:1fr 1fr;margin-bottom:16px">
+          <div class="stat"><div class="stat-num" id="res-pago-cuenta">$0.00</div><div class="stat-lbl" style="color:#d97706">Pago a Cuenta 1.75%</div></div>
+          <div class="stat"><div class="stat-num td-red" id="res-ret-isr">$0.00</div><div class="stat-lbl">Ret. ISR Recibidas</div></div>
+        </div>
+        <!-- DTE importados badge -->
+        <div style="background:var(--teal-l);border:1px solid #99f6e4;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+          <i class="fa-solid fa-file-import" style="color:var(--teal);font-size:18px"></i>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:#0f766e">DTE importados: <span id="res-dte-count">0</span></div>
+            <div style="font-size:11px;color:#0f766e;opacity:.7">de Ministerio de Hacienda este período</div>
+          </div>
+          <button class="btn btn-teal btn-sm" onclick="showPage('importar-dte')" style="margin-left:auto">Importar</button>
+        </div>
+        <div class="card" id="resumen-alertas">
+          <div class="card-title"><i class="fa-solid fa-triangle-exclamation" style="color:#f59e0b"></i> Obligaciones del Mes</div>
+          <div id="lista-obligaciones" style="display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:12px;color:#94a3b8">Selecciona un período para calcular.</div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-chart-bar" style="color:#2563eb"></i> Ventas por Tipo DTE</div>
+        <div id="res-chart-dte" style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+          <div style="font-size:12px;color:#94a3b8">Sin datos para este período.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: LIBRO VENTAS ═══ -->
+  <div class="page" id="page-libro-ventas">
+    <div class="libro-header">
+      <h2>📒 Libro de Ventas</h2>
+      <p>Conforme Art. 141 Código Tributario El Salvador</p>
+      <div class="lh-meta">
+        <div class="lh-item"><strong id="lv-mes-titulo">—</strong>Período</div>
+        <div class="lh-item"><strong id="lv-empresa">—</strong>Empresa</div>
+        <div class="lh-item"><strong id="lv-nrc">—</strong>NRC</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tab-lv-cf" onclick="switchLibroVentas('cf')">Consumidores Finales</div>
+      <div class="tab" id="tab-lv-cr" onclick="switchLibroVentas('cr')">Crédito Fiscal</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:#64748b" id="lv-count">0 comprobantes</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-success btn-sm" onclick="exportarLibroExcel('ventas')"><i class="fa-solid fa-file-excel" style="margin-right:4px"></i>Excel</button>
+        <button class="btn btn-danger btn-sm" onclick="exportarLibroPDF('ventas')"><i class="fa-solid fa-file-pdf" style="margin-right:4px"></i>PDF</button>
+      </div>
+    </div>
+    <div class="tbl-wrap" id="tabla-ventas-wrap">
+      <table>
+        <thead id="lv-thead"></thead>
+        <tbody id="lv-tbody"><tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8">Selecciona un período.</td></tr></tbody>
+      </table>
+    </div>
+    <div style="background:white;border:1px solid var(--bd);border-radius:var(--radius);padding:16px;margin-top:14px">
+      <div class="grid4" id="lv-totales">
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Total Ventas</div><div class="td-num" id="lv-tot-ventas">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Gravadas s/IVA</div><div class="td-num" id="lv-tot-grav">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">IVA Débito 13%</div><div class="td-num" style="color:var(--m-blue)" id="lv-tot-iva">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Exentas</div><div class="td-num" id="lv-tot-exento">$0.00</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: LIBRO COMPRAS ═══ -->
+  <div class="page" id="page-libro-compras">
+    <div class="libro-header">
+      <h2>📗 Libro de Compras</h2>
+      <p>IVA Crédito Fiscal deducible — Art. 141 Código Tributario</p>
+      <div class="lh-meta">
+        <div class="lh-item"><strong id="lc-mes-titulo">—</strong>Período</div>
+        <div class="lh-item"><strong id="lc-empresa">—</strong>Empresa</div>
+        <div class="lh-item"><strong id="lc-nrc">—</strong>NRC</div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:12px;color:#64748b" id="lc-count">0 comprobantes</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-success btn-sm" onclick="exportarLibroExcel('compras')"><i class="fa-solid fa-file-excel" style="margin-right:4px"></i>Excel</button>
+        <button class="btn btn-danger btn-sm" onclick="exportarLibroPDF('compras')"><i class="fa-solid fa-file-pdf" style="margin-right:4px"></i>PDF</button>
+        <button class="btn btn-primary btn-sm" onclick="abrirModalCompra()"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Registrar Compra</button>
+      </div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Fecha</th><th>Proveedor</th><th>NIT/NRC</th><th>N° Comprobante</th>
+          <th style="text-align:right">Total</th><th style="text-align:right">IVA Crédito</th><th>Origen</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="lc-tbody"><tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8">Sin compras registradas.</td></tr></tbody>
+      </table>
+    </div>
+    <div style="background:white;border:1px solid var(--bd);border-radius:var(--radius);padding:16px;margin-top:14px">
+      <div class="grid4">
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Total Compras</div><div class="td-num" id="lc-tot">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Base Imponible</div><div class="td-num" id="lc-base">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">IVA Crédito 13%</div><div class="td-num" style="color:#2563eb" id="lc-iva">$0.00</div></div>
+        <div><div style="font-size:10px;color:#94a3b8;font-weight:700;text-transform:uppercase">Compras Exentas</div><div class="td-num" id="lc-exento">$0.00</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: IMPORTAR DTE ═══ (NUEVO) -->
+  <div class="page" id="page-importar-dte">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:20px;font-weight:800;color:#1e293b">Importar DTE del Ministerio de Hacienda</h2>
+      <p style="font-size:13px;color:#64748b;margin-top:4px">Carga los JSON firmados por MH para sincronizar el libro de ventas con exactitud</p>
+    </div>
+    <div class="info-box info-teal">
+      <strong>¿Cómo funciona?</strong> Los JSON que genera el sistema del MH al firmar un DTE contienen el <strong>codigoGeneracion</strong>, <strong>numeroControl</strong>, <strong>montoTotalOperacion</strong>, <strong>totalIva</strong>, <strong>receptor</strong> y más. Al importarlos aquí, el libro de ventas se actualiza automáticamente con los datos oficiales y se generan los asientos contables correspondientes.
+    </div>
+    <div class="info-box" style="background:#fdf2ff;border:1px solid #e9d5ff;margin-bottom:16px">
+      <i class="fa-solid fa-link" style="color:#7c3aed;margin-right:6px"></i>
+      <strong>¿Quieres emitir un nuevo DTE?</strong> Los DTE generados desde el módulo DTE de PARCHE SYS (bajo licencia de MODUS) se sincronizan automáticamente aquí. <a id="link-ir-dte" href="dte.html" style="color:#7c3aed;font-weight:700">Ir al Módulo DTE →</a>
+    </div>
+    <div class="grid2" style="gap:16px;margin-bottom:20px">
+      <!-- Drop zone -->
+      <div>
+        <div class="dte-drop-zone" id="dte-drop-zone"
+          ondrop="handleDteDrop(event)" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')"
+          onclick="document.getElementById('dte-file-input').click()">
+          <i class="fa-solid fa-cloud-arrow-up"></i>
+          <div style="font-size:14px;font-weight:700;color:#334155;margin-bottom:4px">Arrastra JSON de DTE aquí</div>
+          <div style="font-size:12px;color:#94a3b8">o haz clic para seleccionar archivos</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:8px">Soporta múltiples archivos · CF, CCF, NC, ND</div>
+        </div>
+        <input type="file" id="dte-file-input" accept=".json" multiple style="display:none" onchange="handleDteFiles(this.files)">
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-teal btn-sm" onclick="importarDteSeleccionados()"><i class="fa-solid fa-check" style="margin-right:4px"></i>Importar seleccionados</button>
+          <button class="btn btn-ghost btn-sm" onclick="limpiarDtePreview()"><i class="fa-solid fa-xmark" style="margin-right:4px"></i>Limpiar</button>
+        </div>
+      </div>
+      <!-- Stats DTE importados -->
+      <div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-title"><i class="fa-solid fa-check-circle" style="color:var(--teal)"></i> DTE en este período</div>
+          <div class="grid2" style="gap:10px">
+            <div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Importados</div><div class="td-num td-teal" id="dte-stat-count">0</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Monto Total</div><div class="td-num td-green" id="dte-stat-total">$0.00</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">IVA Total</div><div class="td-num" id="dte-stat-iva" style="color:var(--m-blue)">$0.00</div></div>
+            <div><div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;margin-bottom:4px">Tipos</div><div class="td-num" id="dte-stat-tipos" style="font-size:13px">—</div></div>
+          </div>
+        </div>
+        <div class="info-box info-amber" style="margin-bottom:0">
+          <strong>Tipos soportados:</strong> CF (Consumidor Final) · CCF (Crédito Fiscal) · NC (Nota de Crédito) · ND (Nota de Débito). Las NC se restarán automáticamente del libro de ventas.
+        </div>
+      </div>
+    </div>
+
+    <!-- Preview de archivos cargados -->
+    <div id="dte-preview-wrap"></div>
+
+    <!-- Tabla de DTE importados -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="font-size:14px;font-weight:700">DTE importados del período</h3>
+      <button class="btn btn-success btn-sm" onclick="exportarDteExcel()"><i class="fa-solid fa-file-excel" style="margin-right:4px"></i>Exportar Excel</button>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>Código Generación</th><th>N° Control</th><th>Fecha</th><th>Tipo</th>
+          <th>Receptor</th><th style="text-align:right">Monto Total</th><th style="text-align:right">IVA</th><th>Estado</th>
+        </tr></thead>
+        <tbody id="dte-tbody"><tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Sin DTE importados para este período.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: PARTIDA DOBLE ═══ -->
+  <div class="page" id="page-partida-doble">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div>
+        <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Libro Diario — Partida Doble</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Asientos contables por transacción (NIIF para Pymes)</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-purple btn-sm" onclick="generarAsientosAutomaticos()"><i class="fa-solid fa-wand-magic-sparkles" style="margin-right:5px"></i>Generar del Período</button>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalAsiento()"><i class="fa-solid fa-plus" style="margin-right:5px"></i>Asiento Manual</button>
+      </div>
+    </div>
+    <div class="info-box info-purple">
+      <strong>Asientos automáticos:</strong> Cada venta genera su propio asiento: <strong>Débito Caja/Banco → Crédito Ventas + IVA Débito Fiscal</strong>. Los DTE importados de MH generan asientos con el número de control oficial.
+    </div>
+    <div id="lista-asientos">
+      <div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">Genera los asientos del período o crea uno manual.</div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: PLAN DE CUENTAS ═══ -->
+  <div class="page" id="page-plan-cuentas">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Plan de Cuentas</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Catálogo conforme sistema contable salvadoreño</p>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="abrirModalCuenta()"><i class="fa-solid fa-plus" style="margin-right:5px"></i>Nueva Cuenta</button>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tab-pc-all" onclick="filtrarCuentas('all')">Todas</div>
+      <div class="tab" id="tab-pc-activo" onclick="filtrarCuentas('activo')">Activo</div>
+      <div class="tab" id="tab-pc-pasivo" onclick="filtrarCuentas('pasivo')">Pasivo</div>
+      <div class="tab" id="tab-pc-patrimonio" onclick="filtrarCuentas('patrimonio')">Patrimonio</div>
+      <div class="tab" id="tab-pc-ingreso" onclick="filtrarCuentas('ingreso')">Ingresos</div>
+      <div class="tab" id="tab-pc-gasto" onclick="filtrarCuentas('gasto')">Gastos</div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Código</th><th>Nombre de la Cuenta</th><th>Tipo</th><th>Saldo</th><th>Acciones</th></tr></thead>
+        <tbody id="pc-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: RETENCIONES ISR ═══ -->
+  <div class="page" id="page-retenciones">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Retenciones ISR (1%)</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Art. 156 Ley de Impuesto sobre la Renta — El Salvador</p>
+    </div>
+    <div class="tab-bar">
+      <div class="tab active" id="tab-ret-recibidas" onclick="switchRetenciones('recibidas')">Recibidas (de clientes)</div>
+      <div class="tab" id="tab-ret-efectuadas" onclick="switchRetenciones('efectuadas')">Efectuadas (a proveedores)</div>
+    </div>
+    <div id="panel-ret-recibidas">
+      <div class="info-box info-amber">
+        <strong>Retenciones recibidas:</strong> Cuando emites <strong>Crédito Fiscal a otra empresa</strong>, el receptor puede retenerte el 1% del monto total. Estas se deducen del F-11.
+      </div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num td-red" id="ret-total-mes">$0.00</div><div class="stat-lbl">Retenido en el Mes</div></div>
+        <div class="stat"><div class="stat-num" id="ret-cf-count" style="color:#2563eb">0</div><div class="stat-lbl">Fact. Crédito Fiscal</div></div>
+        <div class="stat"><div class="stat-num" id="ret-base">$0.00</div><div class="stat-lbl">Base de Cálculo</div></div>
+        <div class="stat"><div class="stat-num" id="ret-acumulado" style="color:var(--m-blue)">$0.00</div><div class="stat-lbl">Acumulado Año</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="font-size:14px;font-weight:700">Detalle — Retenciones recibidas</h3>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalRetencion('recibida')"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Registrar</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Empresa Retenedora</th><th>NIT</th><th>N° Documento</th><th style="text-align:right">Monto Base</th><th style="text-align:right">ISR Retenido (1%)</th><th>Estado</th></tr></thead>
+          <tbody id="ret-tbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Sin retenciones registradas.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div id="panel-ret-efectuadas" style="display:none">
+      <div class="info-box info-blue">
+        <strong>Retenciones efectuadas:</strong> Cuando pagas <strong>honorarios o servicios a personas naturales</strong>, debes retenerles el 10% de ISR (Art. 156-A). Estas deben reportarse en el <strong>F-14</strong>.
+      </div>
+      <div class="stats-row">
+        <div class="stat"><div class="stat-num td-blue" id="rete-total-mes">$0.00</div><div class="stat-lbl">Retenido este Mes</div></div>
+        <div class="stat"><div class="stat-num" id="rete-count" style="color:#334155">0</div><div class="stat-lbl">Proveedores</div></div>
+        <div class="stat"><div class="stat-num" id="rete-base">$0.00</div><div class="stat-lbl">Base de Honorarios</div></div>
+        <div class="stat"><div class="stat-num td-red" id="rete-por-enterar">$0.00</div><div class="stat-lbl">Por Enterar a MH</div></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="font-size:14px;font-weight:700">Detalle — Retenciones a proveedores</h3>
+        <button class="btn btn-ghost btn-sm" onclick="abrirModalRetencion('efectuada')"><i class="fa-solid fa-plus" style="margin-right:4px"></i>Registrar</button>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Fecha</th><th>Proveedor / Beneficiario</th><th>NIT</th><th>Concepto</th><th style="text-align:right">Honorarios</th><th style="text-align:right">ISR Retenido (10%)</th><th>Estado</th></tr></thead>
+          <tbody id="rete-tbody"><tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Sin retenciones efectuadas registradas.</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: PAGO A CUENTA ═══ -->
+  <div class="page" id="page-pago-cuenta">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Pago a Cuenta — F-11</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Art. 151 Ley ISR — 1.75% sobre ingresos brutos mensuales</p>
+    </div>
+    <div class="info-box info-blue">
+      El <strong>Pago a Cuenta</strong> es un anticipo mensual del ISR. Se calcula como el <strong>1.75% de las ventas brutas del mes</strong> y se declara en el <strong>F-11 antes del día 10 del mes siguiente</strong>.
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num td-green" id="pc-ingresos">$0.00</div><div class="stat-lbl">Ingresos Brutos</div></div>
+      <div class="stat"><div class="stat-num" id="pc-pago" style="color:#d97706">$0.00</div><div class="stat-lbl">Pago a Cuenta 1.75%</div></div>
+      <div class="stat"><div class="stat-num td-blue" id="pc-ret-clientes">$0.00</div><div class="stat-lbl">Ret. Recibidas (deducir)</div></div>
+      <div class="stat"><div class="stat-num td-red" id="pc-neto">$0.00</div><div class="stat-lbl">Monto Neto a Pagar</div></div>
+    </div>
+    <div class="card"><div id="pc-calculo"></div></div>
+  </div>
+
+  <!-- ═══ PAGE: CONCILIACIÓN ═══ -->
+  <div class="page" id="page-conciliacion">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Conciliación Bancaria</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Cruza los movimientos bancarios contra los registros de PARCHE SYS (bajo licencia de MODUS)</p>
+    </div>
+    <div style="margin-bottom:16px">
+      <label class="fl">Importar CSV del banco</label>
+      <input type="file" accept=".csv" class="fi" style="padding:6px 12px" onchange="importarCSVBanco(this)">
+    </div>
+    <div class="info-box info-green">
+      <strong>¿Cómo funciona?</strong> Importa el CSV de tu banco (columnas: fecha, descripción, monto). El sistema cruzará automáticamente contra los cobros registrados en MODUS y marcará los que coincidan.
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num td-green" id="conc-conciliados">0</div><div class="stat-lbl">Conciliados ✓</div></div>
+      <div class="stat"><div class="stat-num td-red" id="conc-pendientes">0</div><div class="stat-lbl">Pendientes</div></div>
+      <div class="stat"><div class="stat-num" id="conc-banco">$0.00</div><div class="stat-lbl">Total Banco</div></div>
+      <div class="stat"><div class="stat-num" id="conc-modus">$0.00</div><div class="stat-lbl">Total MODUS</div></div>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Fecha Banco</th><th>Descripción Banco</th><th style="text-align:right">Monto Banco</th><th>Fecha PARCHE SYS</th><th>Referencia PARCHE SYS</th><th style="text-align:right">Monto PARCHE SYS</th><th>Estado</th></tr></thead>
+        <tbody id="conc-tbody"><tr><td colspan="7" style="text-align:center;padding:40px;color:#94a3b8">Importa un CSV de tu banco para comenzar la conciliación.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: ESTADOS FINANCIEROS ═══ -->
+  <div class="page" id="page-estados">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Estados Financieros</h2>
+        <p style="font-size:12px;color:#64748b;margin-top:4px">Estado de Resultados y Balance General</p>
+      </div>
+      <button class="btn btn-danger btn-sm" onclick="exportarEstadosPDF()"><i class="fa-solid fa-file-pdf" style="margin-right:5px"></i>Exportar PDF</button>
+    </div>
+    <div class="grid2" style="gap:20px">
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-chart-line" style="color:#16a34a"></i> Estado de Resultados</div>
+        <div id="estado-resultados-wrap"><div style="font-size:12px;color:#94a3b8">Selecciona un período.</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-balance-scale" style="color:#2563eb"></i> Balance General</div>
+        <div style="font-size:11px;color:#94a3b8;margin-bottom:10px">Construido desde saldos del plan de cuentas</div>
+        <div id="balance-general-wrap"><div style="font-size:12px;color:#94a3b8">Agrega saldos al plan de cuentas para generar el balance.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: F-07 ═══ -->
+  <div class="page" id="page-f07">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Formulario F-07 — Declaración Mensual de IVA</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Ministerio de Hacienda — El Salvador</p>
+    </div>
+    <div class="info-box info-amber">⚠️ Este formulario es una <strong>pre-liquidación orientativa</strong>. Siempre verifica y presenta tu declaración oficial en el portal del <strong>Ministerio de Hacienda (MH)</strong>.</div>
+    <div class="card" style="max-width:600px">
+      <div class="card-title"><i class="fa-solid fa-file-signature" style="color:var(--m-blue)"></i> Pre-liquidación F-07</div>
+      <div id="f07-contenido"><div style="font-size:12px;color:#94a3b8">Selecciona un período para generar la pre-liquidación.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: F-14 ═══ -->
+  <div class="page" id="page-f14">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Formulario F-14 — Informe Mensual de Retenciones ISR</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Ministerio de Hacienda — El Salvador</p>
+    </div>
+    <div class="info-box info-amber">⚠️ Documento orientativo. Presenta la declaración oficial en el portal del Ministerio de Hacienda.</div>
+    <div class="card" style="max-width:600px">
+      <div class="card-title"><i class="fa-solid fa-file-signature" style="color:#dc2626"></i> Resumen F-14</div>
+      <div id="f14-contenido"><div style="font-size:12px;color:#94a3b8">Selecciona un período.</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: F-11 ═══ -->
+  <div class="page" id="page-f11">
+    <div style="margin-bottom:20px">
+      <h2 style="font-family:var(--font-body);font-size:18px;font-weight:800">Formulario F-11 — Pago a Cuenta e ISR Retenido</h2>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">Ministerio de Hacienda — El Salvador</p>
+    </div>
+    <div class="info-box info-amber">⚠️ Documento orientativo. Presenta la declaración oficial en el portal del Ministerio de Hacienda.</div>
+    <div class="card" style="max-width:600px">
+      <div class="card-title"><i class="fa-solid fa-file-signature" style="color:#f59e0b"></i> Resumen F-11</div>
+      <div id="f11-contenido"><div style="font-size:12px;color:#94a3b8">Selecciona un período.</div></div>
+    </div>
+  </div>
+</div><!-- /main -->
+
+<!-- MODAL: Registrar Compra -->
+<div class="overlay" id="modal-compra">
+  <div class="modal" style="max-width:560px">
+    <button class="modal-close" onclick="cerrarModal('modal-compra')">×</button>
+    <div class="modal-title">Registrar Compra</div>
+    <div class="grid2">
+      <div class="fg"><label class="fl">Fecha *</label><input type="date" class="fi" id="comp-fecha"></div>
+      <div class="fg"><label class="fl">N° Comprobante *</label><input type="text" class="fi" id="comp-num" placeholder="CCF-00001"></div>
+      <div class="fg"><label class="fl">Proveedor *</label><input type="text" class="fi" id="comp-proveedor" placeholder="Nombre del proveedor"></div>
+      <div class="fg"><label class="fl">NIT / NRC</label><input type="text" class="fi" id="comp-nit" placeholder="0000-000000-000-0"></div>
+      <div class="fg"><label class="fl">Monto Total (con IVA) $*</label><input type="number" class="fi" id="comp-total" step="0.01" placeholder="0.00" oninput="calcularIVACompra()"></div>
+      <div class="fg"><label class="fl">Tipo</label>
+        <select class="fi" id="comp-tipo" onchange="calcularIVACompra()">
+          <option value="gravada">Gravada con IVA (13%)</option>
+          <option value="exenta">Exenta</option>
+          <option value="importacion">Importación</option>
+        </select>
+      </div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:12px 16px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span style="color:#64748b">Base imponible (sin IVA):</span><span class="td-num" id="comp-base-calc">$0.00</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span style="color:#2563eb;font-weight:700">IVA Crédito Fiscal (13%):</span><span class="td-num td-blue" id="comp-iva-calc">$0.00</span></div>
+    </div>
+    <div class="fg"><label class="fl">Descripción / Concepto</label><input type="text" class="fi" id="comp-desc" placeholder="Compra de mercadería, servicios, etc."></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="guardarCompra()" style="flex:1">Guardar Compra</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-compra')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Asiento Manual -->
+<div class="overlay" id="modal-asiento">
+  <div class="modal" style="max-width:640px">
+    <button class="modal-close" onclick="cerrarModal('modal-asiento')">×</button>
+    <div class="modal-title">Asiento Contable Manual</div>
+    <div class="grid2">
+      <div class="fg"><label class="fl">Fecha *</label><input type="date" class="fi" id="as-fecha"></div>
+      <div class="fg"><label class="fl">Descripción *</label><input type="text" class="fi" id="as-desc" placeholder="Concepto del asiento"></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em">Partidas</div>
+        <button class="btn btn-ghost btn-sm" onclick="agregarPartida()">+ Partida</button>
+      </div>
+      <div id="partidas-wrap" style="display:flex;flex-direction:column;gap:6px"></div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid var(--bd);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between">
+      <span style="font-size:12px;font-weight:700">Debe: <span class="td-num td-green" id="as-total-debe">$0.00</span></span>
+      <span style="font-size:12px;font-weight:700">Haber: <span class="td-num td-red" id="as-total-haber">$0.00</span></span>
+      <span style="font-size:12px;font-weight:700" id="as-balance-lbl">Diferencia: <span class="td-num" id="as-diferencia">$0.00</span></span>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="guardarAsiento()" style="flex:1">Guardar Asiento</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-asiento')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Nueva Cuenta -->
+<div class="overlay" id="modal-cuenta">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="cerrarModal('modal-cuenta')">×</button>
+    <div class="modal-title">Nueva Cuenta Contable</div>
+    <div class="grid2">
+      <div class="fg"><label class="fl">Código *</label><input type="text" class="fi" id="cta-codigo" placeholder="1101"></div>
+      <div class="fg"><label class="fl">Tipo *</label>
+        <select class="fi" id="cta-tipo">
+          <option value="activo">Activo</option>
+          <option value="pasivo">Pasivo</option>
+          <option value="patrimonio">Patrimonio</option>
+          <option value="ingreso">Ingreso</option>
+          <option value="gasto">Gasto</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Nombre de la Cuenta *</label><input type="text" class="fi" id="cta-nombre" placeholder="Ej: Caja General"></div>
+    <div class="fg"><label class="fl">Saldo Inicial $</label><input type="number" class="fi" id="cta-saldo" placeholder="0.00" step="0.01"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="guardarCuenta()" style="flex:1">Guardar</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-cuenta')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Retención -->
+<div class="overlay" id="modal-retencion">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="cerrarModal('modal-retencion')">×</button>
+    <div class="modal-title" id="modal-ret-titulo">Registrar Retención ISR</div>
+    <input type="hidden" id="ret-tipo-modal" value="recibida">
+    <div class="grid2">
+      <div class="fg"><label class="fl">Fecha *</label><input type="date" class="fi" id="ret-fecha"></div>
+      <div class="fg"><label class="fl">N° Documento *</label><input type="text" class="fi" id="ret-num" placeholder="CCF-001"></div>
+      <div class="fg"><label class="fl" id="ret-empresa-lbl">Empresa Retenedora *</label><input type="text" class="fi" id="ret-empresa" placeholder="Nombre"></div>
+      <div class="fg"><label class="fl">NIT</label><input type="text" class="fi" id="ret-nit" placeholder="0000-000000-000-0"></div>
+      <div class="fg"><label class="fl" id="ret-monto-lbl">Monto Base $*</label><input type="number" class="fi" id="ret-monto" step="0.01" placeholder="0.00" oninput="calcRetISR()"></div>
+      <div class="fg"><label class="fl" id="ret-isr-lbl">ISR Retenido</label><input type="number" class="fi" id="ret-isr-calc" step="0.01" readonly style="background:#f1f5f9"></div>
+      <div class="fg" id="ret-concepto-wrap" style="display:none"><label class="fl">Concepto</label><input type="text" class="fi" id="ret-concepto" placeholder="Honorarios por servicios"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="guardarRetencion()" style="flex:1">Guardar</button>
+      <button class="btn btn-ghost" onclick="cerrarModal('modal-retencion')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Shared Config -->
+<script src="firebase-config.js"></script>
+<script>
+// ── ESTADO GLOBAL ──
+// negocioID and db are already inherited from firebase-config.js
+if(!negocioID){ window.location.href='index.html'; }
+// ── MODUS RETURN: registrar sesión activa ──
+if(typeof ModusReturn!=='undefined') ModusReturn.init(negocioID);
+let datosBiz = {};
+let pedidosMes = [];
+let comprasMes = [];
+let retencionesMes = [];       // recibidas de clientes
+let retencionesEfectuadas = []; // hechas a proveedores
+let asientosMes = [];
+let planCuentas = [];
+let dteMes = [];               // DTE importados de MH
+let mesActual = '';
+let tipoLibroVentas = 'cf';
+let tipoRetenciones = 'recibidas';
+let dtePreviewQueue = [];       // archivos listos para importar
+
+// ── INIT ──
+window.onload = function(){
+  const hoy = new Date();
+  const mm = String(hoy.getMonth()+1).padStart(2,'0');
+  mesActual = hoy.getFullYear()+'-'+mm;
+  document.getElementById('mes-global').value = mesActual;
+
+  if(negocioID){
+    // ── MODUS RETURN: cablear botón volver al portal ──
+    if(typeof ModusReturn!=='undefined'){
+      ModusReturn.wireButton('sb-back-link');
+    } else {
+      var _sbl=document.getElementById('sb-back-link');if(_sbl){_sbl.href='portal-food.html?negocio='+negocioID; _sbl.onclick=null;}
+    }
+    // ── Cablear links al módulo DTE con negocioID ──
+    var _bd=document.getElementById('btn-ir-dte');
+    if(_bd) _bd.href='dte.html?negocio='+negocioID;
+    var _ld=document.getElementById('link-ir-dte');
+    if(_ld) _ld.href='dte.html?negocio='+negocioID;
+  }
+
+  if(negocioID){
+    db.ref('negocios/'+negocioID+'/info').once('value', s=>{
+      datosBiz = s.val()||{};
+      document.getElementById('sb-empresa-nombre').textContent = datosBiz.nombre||'Mi Empresa';
+      actualizarCabeceras();
+    });
+    db.ref('negocios/'+negocioID+'/contabilidad/cuentas').once('value', s=>{
+      const data = s.val()||{};
+      planCuentas = Object.entries(data).map(([k,v])=>({id:k,...v}));
+      if(planCuentas.length===0) cargarPlanDefecto();
+      else renderPlanCuentas('all');
+    });
+  } else {
+    datosBiz = {nombre:'Mi Empresa',nrc:'12345-6',nit:'0614-010101-001-0'};
+    document.getElementById('sb-empresa-nombre').textContent = datosBiz.nombre;
+    cargarPlanDefecto();
+    actualizarCabeceras();
+  }
+  cargarPartidaDefecto();
+  onMesCambio();
+};
+
+function actualizarCabeceras(){
+  ['lv-empresa','lc-empresa'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent = datosBiz.nombre||'—';
+  });
+  ['lv-nrc','lc-nrc'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent = datosBiz.nrc ? 'NRC: '+datosBiz.nrc : '—';
+  });
+}
+
+// ── NAVEGACIÓN ──
+function showPage(pg){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('page-'+pg).classList.add('active');
+  const items = document.querySelectorAll('.sb-item');
+  items.forEach(i=>{
+    if(i.getAttribute('onclick')&&i.getAttribute('onclick').includes("'"+pg+"'")){
+      i.classList.add('active');
+    }
+  });
+  const titles = {
+    'resumen':'Resumen','libro-ventas':'Libro de Ventas','libro-compras':'Libro de Compras',
+    'importar-dte':'Importar DTE','partida-doble':'Partida Doble','plan-cuentas':'Plan de Cuentas',
+    'retenciones':'Retenciones ISR','pago-cuenta':'Pago a Cuenta',
+    'conciliacion':'Conciliación Bancaria','estados':'Estados Financieros',
+    'f07':'F-07 IVA','f14':'F-14 Retenciones','f11':'F-11 Pago a Cuenta'
+  };
+  document.getElementById('tb-section').textContent = titles[pg]||pg;
+}
+
+// ── CAMBIO DE MES ──
+function onMesCambio(){
+  mesActual = document.getElementById('mes-global').value;
+  if(!mesActual) return;
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const titulo = meses[parseInt(m)-1]+' '+y;
+  ['lv-mes-titulo','lc-mes-titulo'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent = titulo;
+  });
+  cargarDatosMes();
+}
+
+function cargarDatosMes(){
+  if(!negocioID){
+    pedidosMes = generarDemoData();
+    dteMes = generarDemoDTE();
+    procesarTodo();
+    return;
+  }
+  // Load from /ventas (primary) and /pedidos (secondary) - ventas is main path
+  db.ref('negocios/'+negocioID+'/ventas').once('value', sv=>{
+    const ventasData = sv.val()||{};
+    db.ref('negocios/'+negocioID+'/pedidos').once('value', s=>{
+    const pedidosData = s.val()||{};
+    // Merge: ventas is primary, pedidos fills in anything missing
+    const data = {...ventasData, ...pedidosData};
+    pedidosMes = Object.values(data).filter(p=>{
+      if(!p.fecha&&!p.creado&&!p.fecha_registro) return false;
+      const f = (p.fecha_registro||p.fecha||p.creado||'').slice(0,7);
+      return f === mesActual;
+    });
+    db.ref('negocios/'+negocioID+'/contabilidad/compras').once('value', sc=>{
+      const dc = sc.val()||{};
+      comprasMes = Object.entries(dc).map(([k,v])=>({id:k,...v})).filter(c=>(c.fecha||'').slice(0,7)===mesActual);
+      db.ref('negocios/'+negocioID+'/contabilidad/retenciones').once('value', sr=>{
+        const dr = sr.val()||{};
+        retencionesMes = Object.entries(dr).map(([k,v])=>({id:k,...v})).filter(r=>(r.fecha||'').slice(0,7)===mesActual);
+        db.ref('negocios/'+negocioID+'/contabilidad/retenciones_efectuadas').once('value', sre=>{
+          const dre = sre.val()||{};
+          retencionesEfectuadas = Object.entries(dre).map(([k,v])=>({id:k,...v})).filter(r=>(r.fecha||'').slice(0,7)===mesActual);
+          db.ref('negocios/'+negocioID+'/contabilidad/asientos').once('value', sa=>{
+            const da = sa.val()||{};
+            asientosMes = Object.entries(da).map(([k,v])=>({id:k,...v})).filter(a=>(a.fecha||'').slice(0,7)===mesActual);
+            db.ref('negocios/'+negocioID+'/contabilidad/dte').once('value', sd=>{
+              const dd = sd.val()||{};
+              dteMes = Object.entries(dd).map(([k,v])=>{
+                // Normalizar campos: dte.html usa 'montoTotal', contabilidad usa 'montoTotalOperacion'
+                const norm = {id:k,...v};
+                norm.montoTotalOperacion = parseFloat(norm.montoTotalOperacion||norm.montoTotal||0);
+                norm.totalIva = parseFloat(norm.totalIva||0);
+                norm.tipoNombre = norm.tipoNombre || (norm.tipoDte==='01'?'CF':norm.tipoDte==='03'?'CCF':norm.tipoDte==='05'?'NC':norm.tipoDte==='06'?'ND':norm.tipoDte||'DTE');
+                norm.receptor = norm.receptor || {nombre:'—',nit:''};
+                return norm;
+              }).filter(d=>(d.fecEmi||'').slice(0,7)===mesActual);
+              procesarTodo();
+            });
+          });
+        });
+      });
+    });
+    }); // close /pedidos
+  }); // close /ventas
+}
+
+function generarDemoData(){
+  return [
+    {fecha:'2025-01-05',tipo_dte:'CF',correlativo:'DTE-33-00000000-000000000000001',total:115.00,gravado:101.77,iva:13.23,exento:0,cliente:'Consumidor Final'},
+    {fecha:'2025-01-08',tipo_dte:'CR',correlativo:'DTE-03-00000000-000000000000001',total:230.00,gravado:203.54,iva:26.46,exento:0,cliente:'Empresa ABC',nit_cliente:'0614-111111-001-0',nrc_cliente:'98765-1'},
+    {fecha:'2025-01-12',tipo_dte:'CF',correlativo:'DTE-33-00000000-000000000000002',total:57.50,gravado:50.88,iva:6.62,exento:0,cliente:'Consumidor Final'},
+    {fecha:'2025-01-15',tipo_dte:'CR',correlativo:'DTE-03-00000000-000000000000002',total:460.00,gravado:407.08,iva:52.92,exento:0,cliente:'Distribuidora XYZ',nit_cliente:'0614-222222-002-0',nrc_cliente:'54321-2'},
+    {fecha:'2025-01-20',tipo_dte:'CF',correlativo:'DTE-33-00000000-000000000000003',total:89.00,gravado:78.76,iva:10.24,exento:0,cliente:'Consumidor Final'},
+  ];
+}
+
+function generarDemoDTE(){
+  return [
+    {id:'demo1',codGeneracion:'A1B2C3D4-0000-0000-0000-111111111111',numeroControl:'DTE-33-00000000-000000000000001',fecEmi:'2025-01-05',tipoDte:'33',tipoNombre:'CF',montoTotalOperacion:115.00,totalIva:13.23,receptor:{nombre:'Consumidor Final'},origen:'importado'},
+    {id:'demo2',codGeneracion:'A1B2C3D4-0000-0000-0000-222222222222',numeroControl:'DTE-03-00000000-000000000000001',fecEmi:'2025-01-08',tipoDte:'03',tipoNombre:'CCF',montoTotalOperacion:230.00,totalIva:26.46,receptor:{nombre:'Empresa ABC',nit:'0614-111111-001-0'},origen:'importado'},
+  ];
+}
+
+function procesarTodo(){
+  calcularResumen();
+  renderLibroVentas();
+  renderLibroCompras();
+  calcRetenciones();
+  calcRetencionesEfectuadas();
+  calcPagoCuenta();
+  generarF07();
+  generarF14();
+  generarF11();
+  renderEstados();
+  renderDteTabla();
+}
+
+// ══════════════════════════════════════════════
+//  IMPORTADOR DE DTE (NUEVO)
+// ══════════════════════════════════════════════
+
+const TIPOS_DTE = {
+  '01':'CF','03':'CCF','05':'NC','06':'ND','07':'CR','08':'SL','09':'DL','11':'FCE','14':'FEX'
+};
+
+function handleDteDrop(e){
+  e.preventDefault();
+  document.getElementById('dte-drop-zone').classList.remove('drag-over');
+  handleDteFiles(e.dataTransfer.files);
+}
+
+function handleDteFiles(files){
+  dtePreviewQueue = [];
+  let processed = 0;
+  const total = files.length;
+  if(!total) return;
+
+  Array.from(files).forEach(file=>{
+    if(!file.name.endsWith('.json')){
+      toast('Solo se aceptan archivos .json','err');
+      processed++;
+      if(processed===total) renderDtePreview();
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        const json = JSON.parse(ev.target.result);
+        const parsed = parsearDteJson(json, file.name);
+        if(parsed) dtePreviewQueue.push({...parsed, _archivo: file.name});
+        else toast('JSON inválido: '+file.name,'err');
+      } catch(err){
+        toast('Error al leer: '+file.name,'err');
+      }
+      processed++;
+      if(processed===total) renderDtePreview();
+    };
+    reader.readAsText(file);
+  });
+}
+
+function parsearDteJson(json, filename){
+  // Soporta estructura MH con envelope
+  const body = json.cuerpoDocumento || json.body || json;
+  const id = json.identificacion || json.header || {};
+  const receptor = json.receptor || json.destinatario || {};
+  const resumen = json.resumen || json.totales || {};
+
+  const tipoDte = id.tipoDte || id.codigoTipoDte || json.tipoDte || '33';
+  const codGeneracion = id.codigoGeneracion || json.codigoGeneracion || id.uuid || '';
+  const numeroControl = id.numeroControl || json.numeroControl || '';
+  const fecEmi = id.fecEmi || id.fechaEmision || json.fecEmi || '';
+
+  const montoTotal = parseFloat(
+    resumen.montoTotalOperacion || resumen.totalPagar || resumen.totalGeneral ||
+    json.montoTotalOperacion || json.total || 0
+  );
+  const totalIva = parseFloat(
+    resumen.totalIva || resumen.iva || json.totalIva || (montoTotal / 1.13 * 0.13)
+  );
+  const receptorNombre = receptor.nombre || receptor.nombreComercial || receptor.razonSocial || 'Consumidor Final';
+  const receptorNit = receptor.nit || receptor.documento || '';
+
+  // Validación mínima
+  if(!fecEmi && !codGeneracion && !montoTotal) return null;
+
+  return {
+    codGeneracion,
+    numeroControl,
+    fecEmi,
+    tipoDte,
+    tipoNombre: TIPOS_DTE[tipoDte] || tipoDte,
+    montoTotalOperacion: montoTotal,
+    totalIva,
+    receptor: {nombre: receptorNombre, nit: receptorNit},
+    origen: 'importado'
+  };
+}
+
+function renderDtePreview(){
+  const wrap = document.getElementById('dte-preview-wrap');
+  if(!dtePreviewQueue.length){ wrap.innerHTML=''; return; }
+
+  wrap.innerHTML = dtePreviewQueue.map((d,i)=>`
+    <div class="dte-preview">
+      <div class="dte-preview-title">
+        <span class="badge b-teal">${d.tipoNombre}</span>
+        <span>${d._archivo}</span>
+        <span class="badge b-green" style="margin-left:auto">Listo para importar</span>
+      </div>
+      <div class="grid3" style="gap:8px;font-size:11px;color:#64748b">
+        <div><strong>N° Control:</strong> ${d.numeroControl||d.codGeneracion.slice(0,16)+'...'}</div>
+        <div><strong>Fecha:</strong> ${d.fecEmi}</div>
+        <div><strong>Receptor:</strong> ${d.receptor.nombre}</div>
+        <div><strong>Total:</strong> <span style="color:#1e293b;font-weight:700">$${(d.montoTotalOperacion||0).toFixed(2)}</span></div>
+        <div><strong>IVA:</strong> <span style="color:#1B4E8B;font-weight:700">$${(d.totalIva||0).toFixed(2)}</span></div>
+        <div><strong>Tipo:</strong> ${d.tipoNombre} (${d.tipoDte})</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function importarDteSeleccionados(){
+  if(!dtePreviewQueue.length){ toast('No hay DTE en la cola','err'); return; }
+  let importados = 0;
+  dtePreviewQueue.forEach(dte=>{
+    // Evitar duplicados por codGeneracion
+    const yaExiste = dteMes.find(d=>d.codGeneracion===dte.codGeneracion);
+    if(yaExiste){ return; }
+
+    const key = 'dte'+Date.now()+Math.random().toString(36).slice(2,6);
+    const dteData = {
+      codGeneracion: dte.codGeneracion,
+      numeroControl: dte.numeroControl,
+      fecEmi: dte.fecEmi,
+      tipoDte: dte.tipoDte,
+      tipoNombre: dte.tipoNombre,
+      montoTotalOperacion: dte.montoTotalOperacion,
+      totalIva: dte.totalIva,
+      receptor: dte.receptor,
+      origen: 'importado'
+    };
+    dteMes.push({id:key,...dteData});
+
+    // Guardar en Firebase
+    if(negocioID){
+      db.ref('negocios/'+negocioID+'/contabilidad/dte/'+key).set(dteData);
+    }
+
+    // Generar asiento automático desde el DTE
+    generarAsientoDesdeDte(dteData, key);
+    importados++;
+  });
+
+  dtePreviewQueue = [];
+  renderDtePreview();
+  procesarTodo();
+  toast(importados+' DTE importados correctamente','ok');
+}
+
+function generarAsientoDesdeDte(dte, dteKey){
+  if(dte.tipoNombre==='NC') return; // Nota de crédito: asiento de reversión
+  const total = dte.montoTotalOperacion||0;
+  const iva = dte.totalIva||0;
+  const neto = total - iva;
+
+  const asiento = {
+    fecha: dte.fecEmi,
+    descripcion: `Venta ${dte.tipoNombre} — ${dte.receptor.nombre} — N°${dte.numeroControl}`,
+    tipo: 'dte_importado',
+    ref_dte: dte.codGeneracion,
+    partidas:[
+      {cuenta:'1100',nombre:'Caja General',debe:total,haber:0},
+      {cuenta:'4100',nombre:'Ventas',debe:0,haber:neto},
+      {cuenta:'2200',nombre:'IVA Débito Fiscal',debe:0,haber:iva},
+    ]
+  };
+  const key = 'as_dte_'+dteKey;
+  asientosMes.push({id:key,...asiento});
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/asientos/'+key).set(asiento);
+}
+
+function limpiarDtePreview(){
+  dtePreviewQueue=[];
+  renderDtePreview();
+  document.getElementById('dte-file-input').value='';
+}
+
+function renderDteTabla(){
+  // Actualiza stats
+  const total = dteMes.reduce((a,d)=>a+(parseFloat(d.montoTotalOperacion)||0),0);
+  const iva = dteMes.reduce((a,d)=>a+(parseFloat(d.totalIva)||0),0);
+  const tipos = [...new Set(dteMes.map(d=>d.tipoNombre))].join(', ');
+  document.getElementById('dte-stat-count').textContent = dteMes.length;
+  document.getElementById('dte-stat-total').textContent = '$'+total.toFixed(2);
+  document.getElementById('dte-stat-iva').textContent = '$'+iva.toFixed(2);
+  document.getElementById('dte-stat-tipos').textContent = tipos||'—';
+  document.getElementById('res-dte-count').textContent = dteMes.length;
+
+  const rows = dteMes.map(d=>{
+    const isNC = d.tipoNombre==='NC';
+    return `<tr>
+      <td style="font-size:10px;color:#64748b;font-family:monospace">${(d.codGeneracion||'—').slice(0,20)}...</td>
+      <td style="font-size:10px;font-family:monospace">${d.numeroControl||'—'}</td>
+      <td>${d.fecEmi||'—'}</td>
+      <td><span class="badge ${isNC?'b-red':'b-teal'}">${d.tipoNombre||d.tipoDte}</span></td>
+      <td>${d.receptor?.nombre||'—'}</td>
+      <td class="td-num ${isNC?'td-red':'td-green'}" style="text-align:right">${isNC?'-':''}$${(parseFloat(d.montoTotalOperacion)||0).toFixed(2)}</td>
+      <td class="td-num" style="text-align:right;color:#1B4E8B">$${(parseFloat(d.totalIva)||0).toFixed(2)}</td>
+      <td>${
+        d.origen==='emision_dte'
+          ? '<span class="badge" style="background:#fce7f3;color:#be185d">Emitido MODUS</span>'
+          : d.origen==='borrador'
+          ? '<span class="badge" style="background:#f1f5f9;color:#64748b">Borrador</span>'
+          : '<span class="badge b-green">Importado MH</span>'
+      } ${
+        d.estado==='enviado'?'<span class="badge b-green" style="font-size:8px">✓ Enviado</span>':
+        d.estado==='demo'?'<span class="badge" style="background:#dbeafe;color:#1d4ed8;font-size:8px">Demo</span>':
+        d.estado==='rechazado'?'<span class="badge" style="background:#fee2e2;color:#dc2626;font-size:8px">Rechazado</span>':''
+      }</td>
+    </tr>`;
+  });
+  document.getElementById('dte-tbody').innerHTML = rows.length ? rows.join('') :
+    '<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Sin DTE en este período. <a href="#" onclick="showPage(&quot;importar-dte&quot;)" style="color:#1B4E8B;font-weight:700">Importar DTE</a> o <a href="dte.html" id="link-emitir-dte-tabla" style="color:#be185d;font-weight:700">Emitir desde PARCHE SYS (bajo licencia de MODUS)</a></td></tr>';
+}
+
+function exportarDteExcel(){
+  if(!dteMes.length){toast('Sin DTE para exportar','err');return;}
+  const rows = dteMes.map((d,i)=>({
+    'N°':i+1,
+    'Código Generación':d.codGeneracion||'',
+    'N° Control':d.numeroControl||'',
+    'Fecha':d.fecEmi||'',
+    'Tipo':d.tipoNombre||'',
+    'Receptor':d.receptor?.nombre||'',
+    'NIT Receptor':d.receptor?.nit||'',
+    'Monto Total':d.montoTotalOperacion||0,
+    'IVA':d.totalIva||0,
+  }));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'DTE Importados');
+  XLSX.writeFile(wb,'PARCHE_SYS_DTE_'+mesActual+'.xlsx');
+  toast('Excel de DTE descargado','ok');
+}
+
+// ══════════════════════════════════════════════
+//  RESUMEN
+// ══════════════════════════════════════════════
+function calcularResumen(){
+  const ventas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const ivaDebito = pedidosMes.reduce((a,p)=>{
+    const iva = parseFloat(p.iva);
+    if(!isNaN(iva)) return a+iva;
+    return a+(parseFloat(p.total||0)/1.13*0.13);
+  },0);
+  const ivaCredito = comprasMes.filter(c=>c.tipo==='gravada').reduce((a,c)=>a+(parseFloat(c.iva_credito)||0),0);
+  const ivaAPagar = Math.max(0, ivaDebito - ivaCredito);
+  const pagoCuenta = ventas * 0.0175;
+  const retTotales = retencionesMes.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+
+  document.getElementById('res-ventas-total').textContent = '$'+ventas.toFixed(2);
+  document.getElementById('res-iva-debito').textContent = '$'+ivaDebito.toFixed(2);
+  document.getElementById('res-iva-credito').textContent = '$'+ivaCredito.toFixed(2);
+  document.getElementById('res-iva-pagar').textContent = '$'+ivaAPagar.toFixed(2);
+  document.getElementById('res-pago-cuenta').textContent = '$'+pagoCuenta.toFixed(2);
+  document.getElementById('res-ret-isr').textContent = '$'+retTotales.toFixed(2);
+
+  // Obligaciones
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const nextM = parseInt(m)===12?'01':String(parseInt(m)+1).padStart(2,'0');
+  const nextY = parseInt(m)===12?parseInt(y)+1:y;
+  const vence = '10/'+nextM+'/'+nextY;
+
+  document.getElementById('lista-obligaciones').innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px">
+      <div><div style="font-size:12px;font-weight:700;color:#c2410c">F-07 IVA a pagar</div><div style="font-size:11px;color:#64748b">Vence: ${vence}</div></div>
+      <div class="td-num" style="color:#c2410c">$${ivaAPagar.toFixed(2)}</div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px">
+      <div><div style="font-size:12px;font-weight:700;color:#15803d">F-11 Pago a Cuenta</div><div style="font-size:11px;color:#64748b">Vence: ${vence}</div></div>
+      <div class="td-num" style="color:#15803d">$${Math.max(0,pagoCuenta-retTotales).toFixed(2)}</div>
+    </div>
+    ${retTotales>0?`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px">
+      <div><div style="font-size:12px;font-weight:700;color:#dc2626">F-14 Retenciones</div><div style="font-size:11px;color:#64748b">Vence: ${vence}</div></div>
+      <div class="td-num" style="color:#dc2626">$${retTotales.toFixed(2)}</div>
+    </div>`:''}
+  `;
+
+  // Chart por tipo DTE
+  const cf = pedidosMes.filter(p=>!p.tipo_dte||p.tipo_dte==='CF').reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const cr = pedidosMes.filter(p=>p.tipo_dte==='CR').reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const totalVentas = cf+cr||1;
+  document.getElementById('res-chart-dte').innerHTML = ventas>0?`
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Consumidor Final (CF)</span><span class="td-num">$${cf.toFixed(2)}</span></div>
+      <div style="background:#e2e8f0;border-radius:6px;height:8px;overflow:hidden;margin-bottom:12px"><div style="background:#1B4E8B;height:100%;width:${(cf/totalVentas*100).toFixed(1)}%;transition:.4s"></div></div>
+    </div>
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span>Crédito Fiscal (CCF)</span><span class="td-num">$${cr.toFixed(2)}</span></div>
+      <div style="background:#e2e8f0;border-radius:6px;height:8px;overflow:hidden"><div style="background:#2563eb;height:100%;width:${(cr/totalVentas*100).toFixed(1)}%;transition:.4s"></div></div>
+    </div>
+  `:'<div style="font-size:12px;color:#94a3b8">Sin ventas en este período.</div>';
+}
+
+// ── LIBRO VENTAS ──
+function switchLibroVentas(tipo){
+  tipoLibroVentas=tipo;
+  ['cf','cr'].forEach(t=>document.getElementById('tab-lv-'+t).classList.toggle('active',t===tipo));
+  renderLibroVentas();
+}
+
+function renderLibroVentas(){
+  const esCF = tipoLibroVentas==='cf';
+  // Encabezados de columna
+  document.getElementById('lv-thead').innerHTML = esCF ?
+    '<tr><th>#</th><th>Fecha</th><th>N° Correlativo / DTE</th><th>Cliente</th><th style="text-align:right">Gravado s/IVA</th><th style="text-align:right">IVA Déb.</th><th style="text-align:right">Exento</th><th style="text-align:right">Total</th><th>Fuente</th></tr>' :
+    '<tr><th>#</th><th>Fecha</th><th>N° Correlativo / DTE</th><th>Cliente</th><th>NIT</th><th>NRC</th><th style="text-align:right">Gravado s/IVA</th><th style="text-align:right">IVA Déb.</th><th style="text-align:right">Total</th><th>Fuente</th></tr>';
+
+  const data = pedidosMes.filter(p=> esCF ? (!p.tipo_dte||p.tipo_dte==='CF') : p.tipo_dte==='CR');
+  let totVentas=0,totGrav=0,totIVA=0,totExento=0;
+
+  const rows = data.map((p,i)=>{
+    const total=parseFloat(p.total)||0;
+    const iva = isNaN(parseFloat(p.iva)) ? total/1.13*0.13 : parseFloat(p.iva);
+    const grav = isNaN(parseFloat(p.gravado)) ? total-iva : parseFloat(p.gravado);
+    const exento = parseFloat(p.exento)||0;
+
+    // Usar correlativo real si existe, de lo contrario fallback con número
+    const correlativo = p.correlativo && p.correlativo.length > 8
+      ? p.correlativo
+      : (esCF ? 'CF-'+String(i+1).padStart(5,'0') : 'CCF-'+String(i+1).padStart(5,'0'));
+
+    // Determinar si viene de DTE importado
+    const dteMatch = dteMes.find(d=>d.numeroControl===p.correlativo||d.numeroControl===correlativo);
+    const fuenteBadge = dteMatch
+      ? '<span class="badge b-teal" style="font-size:9px">MH</span>'
+      : '<span class="badge b-gray" style="font-size:9px">POS</span>';
+
+    totVentas+=total; totGrav+=grav; totIVA+=iva; totExento+=exento;
+    if(esCF){
+      return `<tr><td style="color:#94a3b8">${i+1}</td><td>${p.fecha||'—'}</td><td style="font-family:monospace;font-size:11px">${correlativo}</td><td>${p.cliente||'Consumidor Final'}</td><td class="td-num" style="text-align:right">$${grav.toFixed(2)}</td><td class="td-num td-purple" style="text-align:right;color:#1B4E8B">$${iva.toFixed(2)}</td><td class="td-num" style="text-align:right">$${exento.toFixed(2)}</td><td class="td-num td-green" style="text-align:right">$${total.toFixed(2)}</td><td>${fuenteBadge}</td></tr>`;
+    } else {
+      return `<tr><td style="color:#94a3b8">${i+1}</td><td>${p.fecha||'—'}</td><td style="font-family:monospace;font-size:11px">${correlativo}</td><td>${p.cliente||'—'}</td><td style="font-size:11px;color:#64748b">${p.nit_cliente||'—'}</td><td style="font-size:11px;color:#64748b">${p.nrc_cliente||'—'}</td><td class="td-num" style="text-align:right">$${grav.toFixed(2)}</td><td class="td-num" style="text-align:right;color:#1B4E8B">$${iva.toFixed(2)}</td><td class="td-num td-green" style="text-align:right">$${total.toFixed(2)}</td><td>${fuenteBadge}</td></tr>`;
+    }
+  });
+  document.getElementById('lv-tbody').innerHTML = rows.length ? rows.join('') : `<tr><td colspan="${esCF?9:10}" style="text-align:center;padding:32px;color:#94a3b8">Sin comprobantes para este período y tipo.</td></tr>`;
+  document.getElementById('lv-count').textContent = data.length+' comprobantes';
+  document.getElementById('lv-tot-ventas').textContent = '$'+totVentas.toFixed(2);
+  document.getElementById('lv-tot-grav').textContent = '$'+totGrav.toFixed(2);
+  document.getElementById('lv-tot-iva').textContent = '$'+totIVA.toFixed(2);
+  document.getElementById('lv-tot-exento').textContent = '$'+totExento.toFixed(2);
+}
+
+// ── LIBRO COMPRAS ──
+function renderLibroCompras(){
+  let tot=0,base=0,iva=0,exento=0;
+  const rows = comprasMes.map((c,i)=>{
+    const total=parseFloat(c.total)||0;
+    const ivaC=parseFloat(c.iva_credito)||0;
+    const baseC=total-ivaC;
+    tot+=total; base+=baseC; iva+=ivaC;
+    const origenBadge = c.origen_dte
+      ? '<span class="badge b-teal" style="font-size:9px">DTE MH</span>'
+      : '<span class="badge b-gray" style="font-size:9px">Manual</span>';
+    return `<tr><td style="color:#94a3b8">${i+1}</td><td>${c.fecha||'—'}</td><td>${c.proveedor||'—'}</td><td style="font-size:11px;color:#64748b">${c.nit||'—'}</td><td style="font-size:11px;font-family:monospace">${c.num_comp||'—'}</td><td class="td-num" style="text-align:right">$${total.toFixed(2)}</td><td class="td-num td-blue" style="text-align:right">$${ivaC.toFixed(2)}</td><td>${origenBadge}</td><td><button class="btn btn-danger btn-sm" onclick="eliminarCompra('${c.id}')">🗑</button></td></tr>`;
+  });
+  document.getElementById('lc-tbody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="9" style="text-align:center;padding:32px;color:#94a3b8">Sin compras registradas para este período.</td></tr>';
+  document.getElementById('lc-count').textContent = comprasMes.length+' comprobantes';
+  document.getElementById('lc-tot').textContent = '$'+tot.toFixed(2);
+  document.getElementById('lc-base').textContent = '$'+base.toFixed(2);
+  document.getElementById('lc-iva').textContent = '$'+iva.toFixed(2);
+  document.getElementById('lc-exento').textContent = '$'+exento.toFixed(2);
+}
+
+// ── RETENCIONES RECIBIDAS ──
+function switchRetenciones(tipo){
+  tipoRetenciones=tipo;
+  ['recibidas','efectuadas'].forEach(t=>{
+    document.getElementById('tab-ret-'+t).classList.toggle('active',t===tipo);
+    document.getElementById('panel-ret-'+t).style.display=t===tipo?'block':'none';
+  });
+}
+
+function calcRetenciones(){
+  let total=0,base=0,count=0;
+  const cf = pedidosMes.filter(p=>p.tipo_dte==='CR');
+  count = cf.length;
+  base = cf.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  total = retencionesMes.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+
+  document.getElementById('ret-total-mes').textContent = '$'+total.toFixed(2);
+  document.getElementById('ret-cf-count').textContent = count;
+  document.getElementById('ret-base').textContent = '$'+base.toFixed(2);
+  document.getElementById('ret-acumulado').textContent = '$'+total.toFixed(2);
+
+  const rows = retencionesMes.map((r,i)=>`
+    <tr>
+      <td>${r.fecha||'—'}</td><td>${r.empresa||'—'}</td><td style="font-size:11px;color:#64748b">${r.nit||'—'}</td>
+      <td style="font-size:11px;font-family:monospace">${r.num_doc||'—'}</td>
+      <td class="td-num" style="text-align:right">$${parseFloat(r.monto_base||0).toFixed(2)}</td>
+      <td class="td-num td-red" style="text-align:right">$${parseFloat(r.isr_retenido||0).toFixed(2)}</td>
+      <td><span class="badge b-green">Registrado</span></td>
+    </tr>`);
+  document.getElementById('ret-tbody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Sin retenciones registradas.</td></tr>';
+}
+
+// ── RETENCIONES EFECTUADAS (NUEVO) ──
+function calcRetencionesEfectuadas(){
+  let total=0,base=0;
+  retencionesEfectuadas.forEach(r=>{
+    base+=parseFloat(r.monto_base||0);
+    total+=parseFloat(r.isr_retenido||0);
+  });
+  document.getElementById('rete-total-mes').textContent = '$'+total.toFixed(2);
+  document.getElementById('rete-count').textContent = retencionesEfectuadas.length;
+  document.getElementById('rete-base').textContent = '$'+base.toFixed(2);
+  document.getElementById('rete-por-enterar').textContent = '$'+total.toFixed(2);
+
+  const rows = retencionesEfectuadas.map(r=>`
+    <tr>
+      <td>${r.fecha||'—'}</td><td>${r.empresa||'—'}</td><td style="font-size:11px;color:#64748b">${r.nit||'—'}</td>
+      <td style="font-size:11px">${r.concepto||'Honorarios'}</td>
+      <td class="td-num" style="text-align:right">$${parseFloat(r.monto_base||0).toFixed(2)}</td>
+      <td class="td-num td-blue" style="text-align:right">$${parseFloat(r.isr_retenido||0).toFixed(2)}</td>
+      <td><span class="badge b-blue">Por enterar</span></td>
+    </tr>`);
+  document.getElementById('rete-tbody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="7" style="text-align:center;padding:32px;color:#94a3b8">Sin retenciones efectuadas.</td></tr>';
+}
+
+// ── PAGO A CUENTA ──
+function calcPagoCuenta(){
+  const ventas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const pagoCuenta = ventas * 0.0175;
+  const retRecibidas = retencionesMes.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+  const neto = Math.max(0, pagoCuenta - retRecibidas);
+
+  document.getElementById('pc-ingresos').textContent = '$'+ventas.toFixed(2);
+  document.getElementById('pc-pago').textContent = '$'+pagoCuenta.toFixed(2);
+  document.getElementById('pc-ret-clientes').textContent = '$'+retRecibidas.toFixed(2);
+  document.getElementById('pc-neto').textContent = '$'+neto.toFixed(2);
+
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('pc-calculo').innerHTML = `
+    <table style="width:100%;font-size:13px">
+      <tr><td style="padding:6px 0;color:#64748b">Ingresos brutos del mes (${meses[parseInt(m)-1]} ${y})</td><td class="td-num" style="text-align:right">$${ventas.toFixed(2)}</td></tr>
+      <tr><td style="padding:6px 0;color:#64748b">Tasa Pago a Cuenta (Art. 151 Ley ISR)</td><td class="td-num" style="text-align:right">1.75%</td></tr>
+      <tr style="border-top:1px solid #e2e8f0"><td style="padding:8px 0;font-weight:700">Pago a Cuenta calculado</td><td class="td-num td-blue" style="text-align:right;font-size:16px">$${pagoCuenta.toFixed(2)}</td></tr>
+      <tr><td style="padding:6px 0;color:#64748b">(-) Retenciones de clientes recibidas</td><td class="td-num td-green" style="text-align:right">-$${retRecibidas.toFixed(2)}</td></tr>
+      <tr style="border-top:2px solid #1e293b;border-bottom:2px solid #1e293b"><td style="padding:10px 0;font-weight:800;font-size:14px">Monto neto a pagar (F-11)</td><td class="td-num td-red" style="text-align:right;font-size:18px;font-weight:800">$${neto.toFixed(2)}</td></tr>
+    </table>
+    <div style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#15803d">
+      📅 <strong>Vencimiento:</strong> Día 10 del mes siguiente. Declara en el portal del Ministerio de Hacienda (hacienda.gob.sv).
+    </div>
+  `;
+}
+
+// ── FORMULARIOS ──
+function generarF07(){
+  const ventas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const gravadas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.gravado)||parseFloat(p.total||0)/1.13),0);
+  const ivaDebito = gravadas * 0.13;
+  const ivaCredito = comprasMes.filter(c=>c.tipo==='gravada').reduce((a,c)=>a+(parseFloat(c.iva_credito)||0),0);
+  const remanente = Math.max(0, ivaCredito - ivaDebito);
+  const ivaPagar = Math.max(0, ivaDebito - ivaCredito);
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  document.getElementById('f07-contenido').innerHTML = `
+    <div style="border:2px solid #1e293b;border-radius:10px;padding:16px;font-size:13px">
+      <div style="text-align:center;font-weight:800;font-size:14px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
+        REPÚBLICA DE EL SALVADOR — MINISTERIO DE HACIENDA<br>
+        <span style="font-size:12px;font-weight:600;color:#64748b">DECLARACIÓN MENSUAL DEL IMPUESTO A LA TRANSFERENCIA<br>DE BIENES MUEBLES Y A LA PRESTACIÓN DE SERVICIOS</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;padding:10px;background:#f8fafc;border-radius:8px">
+        <div><span style="font-size:10px;color:#94a3b8">PERÍODO TRIBUTARIO</span><br><strong>${meses[parseInt(m)-1]} ${y}</strong></div>
+        <div><span style="font-size:10px;color:#94a3b8">CONTRIBUYENTE</span><br><strong>${datosBiz.nombre||'—'}</strong></div>
+        <div><span style="font-size:10px;color:#94a3b8">NIT</span><br><strong>${datosBiz.nit||'—'}</strong></div>
+        <div><span style="font-size:10px;color:#94a3b8">NRC</span><br><strong>${datosBiz.nrc||'—'}</strong></div>
+      </div>
+      <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e2e8f0">
+        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">SECCIÓN A — DÉBITO FISCAL</div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Ventas gravadas a consumidor final</span><span class="td-num">$${pedidosMes.filter(p=>!p.tipo_dte||p.tipo_dte==='CF').reduce((a,p)=>a+(parseFloat(p.total)||0),0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Ventas a crédito fiscal (CCF)</span><span class="td-num">$${pedidosMes.filter(p=>p.tipo_dte==='CR').reduce((a,p)=>a+(parseFloat(p.total)||0),0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:800;border-top:1px solid #e2e8f0;margin-top:4px"><span>TOTAL DÉBITO FISCAL (13%)</span><span class="td-num" style="color:#1B4E8B">$${ivaDebito.toFixed(2)}</span></div>
+      </div>
+      <div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e2e8f0">
+        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">SECCIÓN B — CRÉDITO FISCAL</div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0"><span>Compras gravadas</span><span class="td-num">$${comprasMes.filter(c=>c.tipo==='gravada').reduce((a,c)=>a+(parseFloat(c.total)||0),0).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-weight:800;border-top:1px solid #e2e8f0;margin-top:4px"><span>TOTAL CRÉDITO FISCAL</span><span class="td-num" style="color:#2563eb">$${ivaCredito.toFixed(2)}</span></div>
+      </div>
+      <div style="background:${ivaPagar>0?'#fff7ed':'#f0fdf4'};border:2px solid ${ivaPagar>0?'#f97316':'#16a34a'};border-radius:10px;padding:14px;text-align:center">
+        <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:4px">${ivaPagar>0?'IVA A PAGAR':'REMANENTE DE CRÉDITO FISCAL'}</div>
+        <div style="font-size:28px;font-weight:900;font-family:'DM Sans',sans-serif;color:${ivaPagar>0?'#c2410c':'#15803d'}">$${(ivaPagar||remanente).toFixed(2)}</div>
+      </div>
+      ${dteMes.length>0?`<div style="margin-top:10px;padding:8px 12px;background:var(--teal-l);border:1px solid #99f6e4;border-radius:8px;font-size:11px;color:var(--teal)">✓ Calculado con ${dteMes.length} DTE importados oficiales de MH</div>`:''}
+    </div>
+  `;
+}
+
+function generarF14(){
+  const ret = retencionesMes;
+  const retEf = retencionesEfectuadas;
+  const totalRecibidas = ret.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+  const totalEfectuadas = retEf.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  document.getElementById('f14-contenido').innerHTML = `
+    <div style="border:2px solid #1e293b;border-radius:10px;padding:16px;font-size:13px">
+      <div style="text-align:center;font-weight:800;font-size:14px;margin-bottom:16px">
+        F-14 — INFORME MENSUAL DE RETENCIONES<br>
+        <span style="font-size:11px;font-weight:600;color:#64748b">Art. 156 Ley ISR — ${meses[parseInt(m)-1]} ${y}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>Contribuyente</span><strong>${datosBiz.nombre||'—'}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>NIT</span><strong>${datosBiz.nit||'—'}</strong></div>
+      <div style="margin:12px 0;padding:10px 0;border-bottom:1px solid #e2e8f0">
+        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Retenciones recibidas de clientes (1%)</div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>N° retenciones recibidas</span><strong>${ret.length}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>ISR retenido (1%)</span><strong class="td-red">$${totalRecibidas.toFixed(2)}</strong></div>
+      </div>
+      <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid #e2e8f0">
+        <div style="font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;margin-bottom:8px">Retenciones efectuadas a proveedores (10%)</div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>N° retenciones efectuadas</span><strong>${retEf.length}</strong></div>
+        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>ISR retenido y a enterar</span><strong class="td-blue">$${totalEfectuadas.toFixed(2)}</strong></div>
+      </div>
+      <div style="margin-top:12px;padding:12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;text-align:center">
+        <div style="font-size:10px;color:#dc2626;font-weight:700;text-transform:uppercase">Total a Declarar en F-14</div>
+        <div style="font-size:26px;font-weight:900;color:#dc2626;font-family:'DM Sans',sans-serif">$${(totalRecibidas+totalEfectuadas).toFixed(2)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function generarF11(){
+  const ventas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const pagoCuenta = ventas * 0.0175;
+  const ret = retencionesMes.reduce((a,r)=>a+(parseFloat(r.isr_retenido)||0),0);
+  const neto = Math.max(0, pagoCuenta - ret);
+  const [y,m] = mesActual.split('-');
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  document.getElementById('f11-contenido').innerHTML = `
+    <div style="border:2px solid #1e293b;border-radius:10px;padding:16px;font-size:13px">
+      <div style="text-align:center;font-weight:800;font-size:14px;margin-bottom:16px">
+        F-11 — PAGO A CUENTA E ISR RETENIDO<br>
+        <span style="font-size:11px;font-weight:600;color:#64748b">Art. 151 Ley ISR — ${meses[parseInt(m)-1]} ${y}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>Contribuyente</span><strong>${datosBiz.nombre||'—'}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>NIT</span><strong>${datosBiz.nit||'—'}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>Ingresos brutos del período</span><strong>$${ventas.toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>Pago a Cuenta 1.75%</span><strong style="color:#d97706">$${pagoCuenta.toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0"><span>(-) Retenciones recibidas</span><strong class="td-green">-$${ret.toFixed(2)}</strong></div>
+      <div style="margin-top:12px;padding:12px;background:#fffbeb;border:2px solid #f59e0b;border-radius:8px;text-align:center">
+        <div style="font-size:10px;color:#92400e;font-weight:700;text-transform:uppercase">Monto Neto a Enterar</div>
+        <div style="font-size:26px;font-weight:900;color:#d97706;font-family:'DM Sans',sans-serif">$${neto.toFixed(2)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── ESTADOS FINANCIEROS — AHORA DESDE PLAN DE CUENTAS ──
+function renderEstados(){
+  const ventas = pedidosMes.reduce((a,p)=>a+(parseFloat(p.total)||0),0);
+  const ivaD = ventas/1.13*0.13;
+  const ingNeto = ventas - ivaD;
+  const compras = comprasMes.reduce((a,c)=>a+(parseFloat(c.total)||0),0);
+  const utilidad = ingNeto - compras;
+
+  document.getElementById('estado-resultados-wrap').innerHTML = `
+    <div style="font-size:13px">
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:#64748b">Ventas brutas</span><span class="td-num">$${ventas.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:#64748b">(-) IVA Débito Fiscal</span><span class="td-num td-red">-$${ivaD.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid #e2e8f0;font-weight:700"><span>Ingresos netos</span><span class="td-num td-green">$${ingNeto.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0"><span style="color:#64748b">(-) Costo de compras</span><span class="td-num td-red">-$${compras.toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px;background:${utilidad>=0?'#f0fdf4':'#fef2f2'};border-radius:8px;margin-top:8px;font-weight:800;font-size:15px">
+        <span>Utilidad del Período</span>
+        <span class="td-num" style="color:${utilidad>=0?'#15803d':'#dc2626'}">$${utilidad.toFixed(2)}</span>
+      </div>
+    </div>
+  `;
+
+  // Balance real desde saldos del plan de cuentas
+  const activos = planCuentas.filter(c=>c.tipo==='activo');
+  const pasivos = planCuentas.filter(c=>c.tipo==='pasivo');
+  const patrimonio = planCuentas.filter(c=>c.tipo==='patrimonio');
+
+  const totActivo = activos.reduce((a,c)=>a+(parseFloat(c.saldo)||0),0);
+  const totPasivo = pasivos.reduce((a,c)=>a+(parseFloat(c.saldo)||0),0);
+  const totPatrimonio = patrimonio.reduce((a,c)=>a+(parseFloat(c.saldo)||0),0);
+
+  // Si no hay saldos ingresados, usar valores del período como aproximación
+  const usarPeriodo = totActivo===0 && totPasivo===0 && totPatrimonio===0;
+  const ivaAcumulado = pedidosMes.reduce((a,p)=>a+(parseFloat(p.iva)||0),0);
+
+  const renderCuentas = (lista) => lista.length === 0
+    ? '<div style="color:#94a3b8;font-size:11px;padding:4px 0 4px 12px">Sin cuentas con saldo</div>'
+    : lista.map(c=>`<div style="display:flex;justify-content:space-between;padding:4px 0 4px 12px;font-size:12px"><span style="color:#64748b">${c.codigo} — ${c.nombre}</span><span class="td-num" style="font-size:12px;${parseFloat(c.saldo||0)>=0?'color:#15803d':'color:#dc2626'}">$${parseFloat(c.saldo||0).toFixed(2)}</span></div>`).join('');
+
+  document.getElementById('balance-general-wrap').innerHTML = usarPeriodo ? `
+    <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;font-size:11px;color:#92400e;margin-bottom:12px">
+      ⚠️ No hay saldos ingresados en el plan de cuentas. Mostrando estimación basada en el período.
+    </div>
+    <div style="font-size:13px">
+      <div style="font-weight:700;color:#2563eb;margin-bottom:6px">ACTIVO</div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0 5px 12px"><span style="color:#64748b">Caja / ingresos del período</span><span class="td-num td-green">$${ventas.toFixed(2)}</span></div>
+      <div style="font-weight:700;color:#dc2626;margin:10px 0 6px">PASIVO</div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0 5px 12px"><span style="color:#64748b">IVA Débito por pagar</span><span class="td-num td-red">$${ivaAcumulado.toFixed(2)}</span></div>
+      <div style="font-weight:700;color:#16a34a;margin:10px 0 6px">PATRIMONIO</div>
+      <div style="display:flex;justify-content:space-between;padding:5px 0 5px 12px"><span style="color:#64748b">Utilidad del período</span><span class="td-num" style="color:${utilidad>=0?'#15803d':'#dc2626'}">$${utilidad.toFixed(2)}</span></div>
+    </div>
+  ` : `
+    <div style="font-size:13px">
+      <div style="font-weight:700;color:#2563eb;margin-bottom:6px;display:flex;justify-content:space-between">
+        <span>ACTIVO</span><span class="td-num td-green">$${totActivo.toFixed(2)}</span>
+      </div>
+      ${renderCuentas(activos)}
+      <div style="font-weight:700;color:#dc2626;margin:12px 0 6px;display:flex;justify-content:space-between">
+        <span>PASIVO</span><span class="td-num td-red">$${totPasivo.toFixed(2)}</span>
+      </div>
+      ${renderCuentas(pasivos)}
+      <div style="font-weight:700;color:#16a34a;margin:12px 0 6px;display:flex;justify-content:space-between">
+        <span>PATRIMONIO</span><span class="td-num td-green">$${totPatrimonio.toFixed(2)}</span>
+      </div>
+      ${renderCuentas(patrimonio)}
+      <div style="border-top:2px solid #1e293b;margin-top:12px;padding-top:8px;display:flex;justify-content:space-between;font-weight:800;font-size:14px">
+        <span>PASIVO + PATRIMONIO</span>
+        <span class="td-num ${Math.abs(totActivo-(totPasivo+totPatrimonio))<0.01?'td-green':'td-red'}">$${(totPasivo+totPatrimonio).toFixed(2)}</span>
+      </div>
+      ${Math.abs(totActivo-(totPasivo+totPatrimonio))>0.01?`<div style="margin-top:8px;padding:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626">⚠️ Diferencia: $${Math.abs(totActivo-(totPasivo+totPatrimonio)).toFixed(2)} — Revisa los saldos del plan de cuentas.</div>`:'<div style="margin-top:8px;padding:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#15803d">✓ Balance cuadrado</div>'}
+    </div>
+  `;
+}
+
+// ── PLAN DE CUENTAS ──
+function cargarPlanDefecto(){
+  planCuentas = [
+    {id:'1',codigo:'1100',nombre:'Caja General',tipo:'activo',saldo:0},
+    {id:'2',codigo:'1101',nombre:'Bancos',tipo:'activo',saldo:0},
+    {id:'3',codigo:'1200',nombre:'Cuentas por Cobrar',tipo:'activo',saldo:0},
+    {id:'4',codigo:'1300',nombre:'Inventario de Mercancías',tipo:'activo',saldo:0},
+    {id:'5',codigo:'2100',nombre:'Cuentas por Pagar',tipo:'pasivo',saldo:0},
+    {id:'6',codigo:'2200',nombre:'IVA Débito Fiscal',tipo:'pasivo',saldo:0},
+    {id:'7',codigo:'2300',nombre:'ISR por Pagar',tipo:'pasivo',saldo:0},
+    {id:'8',codigo:'2400',nombre:'Pago a Cuenta por Pagar',tipo:'pasivo',saldo:0},
+    {id:'9',codigo:'3100',nombre:'Capital Social',tipo:'patrimonio',saldo:0},
+    {id:'10',codigo:'3200',nombre:'Utilidad del Ejercicio',tipo:'patrimonio',saldo:0},
+    {id:'11',codigo:'4100',nombre:'Ventas',tipo:'ingreso',saldo:0},
+    {id:'12',codigo:'4200',nombre:'IVA Crédito Fiscal',tipo:'ingreso',saldo:0},
+    {id:'13',codigo:'5100',nombre:'Costo de Ventas',tipo:'gasto',saldo:0},
+    {id:'14',codigo:'5200',nombre:'Gastos de Administración',tipo:'gasto',saldo:0},
+    {id:'15',codigo:'5300',nombre:'Gastos de Venta',tipo:'gasto',saldo:0},
+  ];
+  renderPlanCuentas('all');
+}
+
+function filtrarCuentas(tipo){
+  document.querySelectorAll('.tab-bar .tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-pc-'+tipo).classList.add('active');
+  renderPlanCuentas(tipo);
+}
+
+function renderPlanCuentas(tipo){
+  const data = tipo==='all' ? planCuentas : planCuentas.filter(c=>c.tipo===tipo);
+  const tipoLabels={activo:'ct-activo',pasivo:'ct-pasivo',patrimonio:'ct-patrimon',ingreso:'ct-ingreso',gasto:'ct-gasto'};
+  const rows = data.map(c=>`
+    <tr>
+      <td><span style="font-family:'DM Sans',sans-serif;font-weight:700;color:#64748b">${c.codigo}</span></td>
+      <td style="font-weight:600">${c.nombre}</td>
+      <td><span class="cuenta-tipo ${tipoLabels[c.tipo]||''}">${c.tipo}</span></td>
+      <td class="td-num ${parseFloat(c.saldo||0)>=0?'td-green':'td-red'}" style="text-align:right">$${parseFloat(c.saldo||0).toFixed(2)}</td>
+      <td><button class="btn btn-danger btn-sm" onclick="eliminarCuenta('${c.id}')">🗑</button></td>
+    </tr>`);
+  document.getElementById('pc-tbody').innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5" style="text-align:center;padding:28px;color:#94a3b8">Sin cuentas.</td></tr>';
+}
+
+// ── PARTIDA DOBLE ──
+function cargarPartidaDefecto(){ cargarPartida(); }
+
+function cargarPartida(){
+  document.getElementById('partidas-wrap').innerHTML = `${crearFilaPartida(0)}${crearFilaPartida(1)}`;
+  recalcAsiento();
+}
+
+function crearFilaPartida(i){
+  const cuentasOpts = planCuentas.map(c=>`<option value="${c.codigo}">${c.codigo} — ${c.nombre}</option>`).join('');
+  return `
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:8px;align-items:flex-end" id="partida-${i}">
+      <div><label class="fl">Cuenta</label>
+        <select class="fi" style="font-size:12px" onchange="recalcAsiento()">
+          <option value="">Seleccione...</option>${cuentasOpts}
+        </select>
+      </div>
+      <div><label class="fl">Debe $</label><input type="number" class="fi" step="0.01" placeholder="0.00" oninput="recalcAsiento()"></div>
+      <div><label class="fl">Haber $</label><input type="number" class="fi" step="0.01" placeholder="0.00" oninput="recalcAsiento()"></div>
+      <button class="btn btn-danger btn-sm" onclick="this.parentElement.remove();recalcAsiento()" style="margin-bottom:1px">×</button>
+    </div>`;
+}
+
+function agregarPartida(){
+  const wrap = document.getElementById('partidas-wrap');
+  const div = document.createElement('div');
+  div.innerHTML = crearFilaPartida(Date.now());
+  wrap.appendChild(div.firstElementChild);
+  recalcAsiento();
+}
+
+function recalcAsiento(){
+  let debe=0,haber=0;
+  document.querySelectorAll('#partidas-wrap > div').forEach(row=>{
+    const inputs=row.querySelectorAll('input[type=number]');
+    debe+=parseFloat(inputs[0]?.value||0);
+    haber+=parseFloat(inputs[1]?.value||0);
+  });
+  document.getElementById('as-total-debe').textContent='$'+debe.toFixed(2);
+  document.getElementById('as-total-haber').textContent='$'+haber.toFixed(2);
+  const diff=Math.abs(debe-haber);
+  document.getElementById('as-diferencia').textContent='$'+diff.toFixed(2);
+  document.getElementById('as-diferencia').style.color=diff<0.01?'#15803d':'#dc2626';
+}
+
+// Genera un asiento por cada pedido (no uno global)
+function generarAsientosAutomaticos(){
+  if(pedidosMes.length===0){toast('No hay ventas en este período','err');return;}
+
+  // Limpiar asientos automáticos previos del período
+  asientosMes = asientosMes.filter(a=>a.tipo!=='automatico');
+
+  pedidosMes.forEach((p,i)=>{
+    const total = parseFloat(p.total)||0;
+    const iva = isNaN(parseFloat(p.iva)) ? total/1.13*0.13 : parseFloat(p.iva);
+    const neto = total - iva;
+    const correlativo = p.correlativo || (p.tipo_dte==='CR'?'CCF':'CF')+'-'+String(i+1).padStart(5,'0');
+
+    const asiento = {
+      fecha: p.fecha || mesActual+'-01',
+      descripcion: `Venta ${p.tipo_dte||'CF'} — ${p.cliente||'Consumidor Final'} — ${correlativo}`,
+      tipo: 'automatico',
+      partidas:[
+        {cuenta:'1100',nombre:'Caja General',debe:total,haber:0},
+        {cuenta:'4100',nombre:'Ventas',debe:0,haber:neto},
+        {cuenta:'2200',nombre:'IVA Débito Fiscal',debe:0,haber:iva},
+      ]
+    };
+    const key = 'auto_'+mesActual+'_'+i;
+    asientosMes.push({id:key,...asiento});
+    if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/asientos/'+key).set(asiento);
+  });
+
+  renderAsientos();
+  toast(pedidosMes.length+' asientos generados (uno por venta)','ok');
+}
+
+function renderAsientos(){
+  if(!asientosMes.length){
+    document.getElementById('lista-asientos').innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">No hay asientos para este período.</div>';
+    return;
+  }
+  document.getElementById('lista-asientos').innerHTML = asientosMes.map((a,i)=>`
+    <div class="asiento-card">
+      <div class="asiento-hdr">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="asiento-num">${String(i+1).padStart(3,'0')}</span>
+          <span class="asiento-desc">${a.descripcion}</span>
+          ${a.tipo==='dte_importado'?'<span class="badge b-teal" style="font-size:9px">DTE MH</span>':''}
+          ${a.tipo==='automatico'?'<span class="badge b-purple" style="font-size:9px">Auto</span>':''}
+        </div>
+        <span class="asiento-date">${a.fecha||'—'}</span>
+      </div>
+      <table style="width:100%">
+        <thead><tr><th>Cuenta</th><th>Nombre</th><th style="text-align:right">Debe</th><th style="text-align:right">Haber</th></tr></thead>
+        <tbody>
+          ${(a.partidas||[]).map(p=>`
+            <tr>
+              <td style="font-family:monospace;font-size:11px;color:#1B4E8B">${p.cuenta}</td>
+              <td>${p.nombre}</td>
+              <td class="td-num td-green" style="text-align:right">${p.debe>0?'$'+p.debe.toFixed(2):'—'}</td>
+              <td class="td-num td-red" style="text-align:right">${p.haber>0?'$'+p.haber.toFixed(2):'—'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  `).join('');
+}
+
+// ── GUARDAR FORMS ──
+function calcularIVACompra(){
+  const total=parseFloat(document.getElementById('comp-total').value)||0;
+  const tipo=document.getElementById('comp-tipo').value;
+  const base=tipo==='gravada'?total/1.13:total;
+  const iva=tipo==='gravada'?base*0.13:0;
+  document.getElementById('comp-base-calc').textContent='$'+base.toFixed(2);
+  document.getElementById('comp-iva-calc').textContent='$'+iva.toFixed(2);
+}
+
+function abrirModalCompra(){
+  document.getElementById('comp-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('comp-base-calc').textContent='$0.00';
+  document.getElementById('comp-iva-calc').textContent='$0.00';
+  abrirModal('modal-compra');
+}
+
+function guardarCompra(){
+  const total=parseFloat(document.getElementById('comp-total').value)||0;
+  const tipo=document.getElementById('comp-tipo').value;
+  if(!total||!document.getElementById('comp-proveedor').value){toast('Completa los campos requeridos','err');return;}
+  const base=tipo==='gravada'?total/1.13:total;
+  const iva=tipo==='gravada'?base*0.13:0;
+  const compra={
+    fecha:document.getElementById('comp-fecha').value,
+    proveedor:document.getElementById('comp-proveedor').value,
+    nit:document.getElementById('comp-nit').value,
+    num_comp:document.getElementById('comp-num').value,
+    descripcion:document.getElementById('comp-desc').value,
+    tipo,total,base_imponible:parseFloat(base.toFixed(2)),iva_credito:parseFloat(iva.toFixed(2)),
+    origen_manual:true
+  };
+  const key = 'c'+(Date.now());
+  comprasMes.push({id:key,...compra});
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/compras/'+key).set(compra);
+  cerrarModal('modal-compra');
+  procesarTodo();
+  toast('Compra registrada','ok');
+}
+
+function eliminarCompra(id){
+  if(!confirm('¿Eliminar esta compra?'))return;
+  comprasMes=comprasMes.filter(c=>c.id!==id);
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/compras/'+id).remove();
+  procesarTodo();
+  toast('Eliminado','ok');
+}
+
+function abrirModalAsiento(){
+  const hoy=new Date().toISOString().slice(0,10);
+  document.getElementById('as-fecha').value=hoy;
+  document.getElementById('as-desc').value='';
+  cargarPartida();
+  abrirModal('modal-asiento');
+}
+
+function guardarAsiento(){
+  const desc=document.getElementById('as-desc').value;
+  const fecha=document.getElementById('as-fecha').value;
+  if(!desc){toast('Ingresa una descripción','err');return;}
+  let debe=0,haber=0;
+  const partidas=[];
+  document.querySelectorAll('#partidas-wrap > div').forEach(row=>{
+    const sel=row.querySelector('select');
+    const inputs=row.querySelectorAll('input[type=number]');
+    if(!sel?.value)return;
+    const d=parseFloat(inputs[0]?.value||0);
+    const h=parseFloat(inputs[1]?.value||0);
+    debe+=d;haber+=h;
+    const cta=planCuentas.find(c=>c.codigo===sel.value);
+    partidas.push({cuenta:sel.value,nombre:cta?.nombre||sel.value,debe:d,haber:h});
+  });
+  if(Math.abs(debe-haber)>0.01){toast('El asiento no cuadra. Debe = Haber','err');return;}
+  const asiento={fecha,descripcion:desc,tipo:'manual',partidas};
+  const key='as'+(Date.now());
+  asientosMes.push({id:key,...asiento});
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/asientos/'+key).set(asiento);
+  cerrarModal('modal-asiento');
+  renderAsientos();
+  toast('Asiento guardado','ok');
+}
+
+function abrirModalCuenta(){abrirModal('modal-cuenta');}
+function guardarCuenta(){
+  const codigo=document.getElementById('cta-codigo').value;
+  const nombre=document.getElementById('cta-nombre').value;
+  const tipo=document.getElementById('cta-tipo').value;
+  const saldo=parseFloat(document.getElementById('cta-saldo').value)||0;
+  if(!codigo||!nombre){toast('Completa los campos','err');return;}
+  const key='cta'+(Date.now());
+  const cta={id:key,codigo,nombre,tipo,saldo};
+  planCuentas.push(cta);
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/cuentas/'+key).set({codigo,nombre,tipo,saldo});
+  cerrarModal('modal-cuenta');
+  renderPlanCuentas('all');
+  renderEstados(); // actualizar balance
+  toast('Cuenta agregada','ok');
+}
+
+function eliminarCuenta(id){
+  if(!confirm('¿Eliminar esta cuenta?'))return;
+  planCuentas=planCuentas.filter(c=>c.id!==id);
+  if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/cuentas/'+id).remove();
+  renderPlanCuentas('all');
+  renderEstados();
+  toast('Eliminado','ok');
+}
+
+// ── RETENCIONES ──
+let _tipoRetencionModal = 'recibida';
+function abrirModalRetencion(tipo='recibida'){
+  _tipoRetencionModal = tipo;
+  document.getElementById('ret-tipo-modal').value = tipo;
+  document.getElementById('ret-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ret-monto').value = '';
+  document.getElementById('ret-isr-calc').value = '';
+
+  if(tipo==='efectuada'){
+    document.getElementById('modal-ret-titulo').textContent = 'Retención ISR Efectuada (10%)';
+    document.getElementById('ret-empresa-lbl').textContent = 'Proveedor / Beneficiario *';
+    document.getElementById('ret-monto-lbl').textContent = 'Monto Honorarios $*';
+    document.getElementById('ret-isr-lbl').textContent = 'ISR a Retener (10%)';
+    document.getElementById('ret-concepto-wrap').style.display='block';
+  } else {
+    document.getElementById('modal-ret-titulo').textContent = 'Retención ISR Recibida (1%)';
+    document.getElementById('ret-empresa-lbl').textContent = 'Empresa Retenedora *';
+    document.getElementById('ret-monto-lbl').textContent = 'Monto Base $*';
+    document.getElementById('ret-isr-lbl').textContent = 'ISR Retenido (1%)';
+    document.getElementById('ret-concepto-wrap').style.display='none';
+  }
+  abrirModal('modal-retencion');
+}
+
+function calcRetISR(){
+  const monto=parseFloat(document.getElementById('ret-monto').value)||0;
+  const tasa = _tipoRetencionModal==='efectuada' ? 0.10 : 0.01;
+  document.getElementById('ret-isr-calc').value=(monto*tasa).toFixed(2);
+}
+
+function guardarRetencion(){
+  const empresa=document.getElementById('ret-empresa').value;
+  const monto=parseFloat(document.getElementById('ret-monto').value)||0;
+  if(!empresa||!monto){toast('Completa los campos','err');return;}
+  const tipo = document.getElementById('ret-tipo-modal').value;
+  const tasa = tipo==='efectuada' ? 0.10 : 0.01;
+  const ret={
+    fecha:document.getElementById('ret-fecha').value,
+    empresa,nit:document.getElementById('ret-nit').value,
+    num_doc:document.getElementById('ret-num').value,
+    concepto:document.getElementById('ret-concepto').value,
+    monto_base:monto,isr_retenido:parseFloat((monto*tasa).toFixed(2)),
+    tipo
+  };
+  const key='ret'+(Date.now());
+
+  if(tipo==='efectuada'){
+    retencionesEfectuadas.push({id:key,...ret});
+    if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/retenciones_efectuadas/'+key).set(ret);
+  } else {
+    retencionesMes.push({id:key,...ret});
+    if(negocioID) db.ref('negocios/'+negocioID+'/contabilidad/retenciones/'+key).set(ret);
+  }
+  cerrarModal('modal-retencion');
+  calcRetenciones();
+  calcRetencionesEfectuadas();
+  generarF14();
+  calcPagoCuenta();
+  generarF11();
+  toast('Retención registrada','ok');
+}
+
+// ── EXPORTS ──
+function exportarLibroExcel(tipo){
+  const rows = tipo==='ventas' ? pedidosMes.map((p,i)=>({
+    'N°':i+1,'Fecha':p.fecha||'','Correlativo':p.correlativo||'','Tipo DTE':p.tipo_dte||'CF','Cliente':p.cliente||'CF',
+    'Total':parseFloat(p.total||0),'IVA':parseFloat(p.iva||0),'Gravado':parseFloat(p.gravado||0)
+  })) : comprasMes.map((c,i)=>({
+    'N°':i+1,'Fecha':c.fecha||'','Proveedor':c.proveedor||'','N° Comprobante':c.num_comp||'','Total':parseFloat(c.total||0),'IVA Crédito':parseFloat(c.iva_credito||0)
+  }));
+  if(!rows.length){toast('Sin datos para exportar','err');return;}
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Libro '+tipo);
+  XLSX.writeFile(wb,'PARCHE_SYS_Libro_'+tipo+'_'+mesActual+'.xlsx');
+  toast('Excel descargado','ok');
+}
+
+function exportarLibroPDF(tipo){toast('Usa Ctrl+P para imprimir esta página como PDF','ok');}
+function exportarEstadosPDF(){toast('Usa Ctrl+P para imprimir como PDF','ok');}
+function exportarExcel(){exportarLibroExcel('ventas');}
+
+// ── CONCILIACIÓN BANCARIA (stub) ──
+function importarCSVBanco(input){
+  toast('Función de conciliación en desarrollo','ok');
+}
+
+// ── HELPERS ──
+function abrirModal(id){document.getElementById(id).classList.add('open');}
+function cerrarModal(id){document.getElementById(id).classList.remove('open');}
+function toast(msg,tipo='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='show '+(tipo==='ok'?'ok':'err');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+</script>
+
+<!-- PARCHE SYS DTE Adapter — Integración modular sin modificar el core -->
+<script src="dte-adapter.js"></script>
+
+<div id="mob-overlay" onclick="toggleSidebar()"></div>
+<script>
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('mob-open');
+  document.getElementById('mob-overlay').classList.toggle('open');
+}
+// Close sidebar when a nav item is clicked on mobile
+document.querySelectorAll('.sb-item').forEach(function(el){
+  el.addEventListener('click',function(){
+    if(window.innerWidth<=768){
+      document.getElementById('sidebar').classList.remove('mob-open');
+      document.getElementById('mob-overlay').classList.remove('open');
+    }
+  });
+});
+</script>
+</body>
+</html>

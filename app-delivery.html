@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PARCHE SYS · Delivery App</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+:root {
+  --blue:#1B4E8B; --blue-mid:#2563AA; --purple:#8b5cf6;
+  --green:#10b981; --red:#ef4444; --amber:#f59e0b;
+  --text:#0f2240; --muted:#4a6080; --border:#cbd5e8; --bg:#f3f6fa;
+  --font-main: 'Outfit', sans-serif;
+  --safe-top:env(safe-area-inset-top, 0px);
+  --safe-bottom:env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body,html{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--font-main);-webkit-font-smoothing:antialiased}
+
+#app { display:flex;flex-direction:column;height:100%;padding-top:var(--safe-top); }
+
+/* HEADER */
+.hdr { background:var(--purple); padding:16px 20px; color:white; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(139,92,246,0.2); }
+.hdr-title { font-size:18px; font-weight:900; }
+.hdr-btn { width:36px; height:36px; border-radius:10px; background:rgba(255,255,255,0.2); border:none; color:white; display:flex; align-items:center; justify-content:center; }
+
+/* TABS */
+.tabs { display:flex; background:white; border-bottom:1px solid var(--border); }
+.tab { flex:1; padding:14px; text-align:center; font-size:12px; font-weight:800; color:var(--muted); border-bottom:3px solid transparent; }
+.tab.active { color:var(--purple); border-bottom-color:var(--purple); }
+
+/* LIST */
+#scroll-area { flex:1; overflow-y:auto; padding:16px; padding-bottom:calc(20px + var(--safe-bottom)); }
+.ord-card { background:white; border:1px solid var(--border); border-radius:18px; padding:16px; margin-bottom:14px; box-shadow:0 2px 8px rgba(0,0,0,0.03); }
+.ord-head { display:flex; justify-content:space-between; margin-bottom:10px; align-items:center; }
+.ord-num { font-weight:900; color:var(--purple); font-size:14px; }
+.ord-status { font-size:9px; font-weight:900; padding:3px 8px; border-radius:20px; text-transform:uppercase; }
+
+.status-asignado { background:#fef3c7; color:#92400e; }
+.status-en_ruta { background:#dbeafe; color:#1e40af; }
+.status-entregado { background:#dcfce7; color:#166534; }
+
+.ord-client { font-weight:900; font-size:15px; margin-bottom:4px; }
+.ord-addr { font-size:12px; color:var(--muted); line-height:1.4; display:flex; gap:6px; }
+.ord-actions { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-top:15px; }
+.act-btn { padding:10px; border-radius:12px; border:1.5px solid var(--border); background:white; font-size:11px; font-weight:800; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.act-btn.wa { border-color:#25d366; color:#25d366; }
+.act-btn.route { border-color:var(--purple); color:var(--purple); }
+.act-btn.finish { background:var(--purple); color:white; border:none; }
+
+#toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--text); color:white; padding:10px 20px; border-radius:12px; font-size:13px; font-weight:800; display:none; z-index:1000; }
+</style>
+</head>
+<body>
+
+<div id="app">
+    <header class="hdr">
+        <div class="hdr-title"><i class="fa-solid fa-motorcycle"></i> PARCHE SYS Delivery</div>
+        <button class="hdr-btn" onclick="location.href='portal-food-movil.html?negocio='+negID"><i class="fa-solid fa-house"></i></button>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('activos', this)">Activos</div>
+        <div class="tab" onclick="switchTab('historial', this)">Entregados</div>
+    </div>
+
+    <div id="scroll-area">
+        <div id="orders-list"></div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* Firebase centralizado en firebase-config.js */
+if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
+/* Firebase centralizado en firebase-config.js */
+const negID = new URLSearchParams(window.location.search).get('negocio') || localStorage.getItem('modus_food_negocio');
+const empParam = new URLSearchParams(window.location.search).get('emp') || null;
+
+// Verificar acceso: debe tener rol delivery o admin, o sesión food_operador válida
+var _deliveryOp = null;
+if(negID){
+  try{
+    var opSesStr = localStorage.getItem('food_operador_' + negID);
+    if(opSesStr) _deliveryOp = JSON.parse(opSesStr);
+  }catch(e){}
+
+  // Si la sesión no tiene módulo delivery ni es admin/propietario/supervisor → redirigir
+  if(_deliveryOp){
+    var rolOp = _deliveryOp.rol || 'empleado';
+    var modOp = _deliveryOp.modulos || {};
+    var tieneDelivery = modOp.delivery === true || modOp['reparto_ruta'] === true;
+    var isManager = (rolOp==='propietario'||rolOp==='admin'||rolOp==='supervisor');
+    if(!tieneDelivery && !isManager){
+      document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:Outfit,sans-serif;gap:16px"><div style="font-size:48px">🔒</div><div style="font-weight:800;font-size:18px;color:#1e293b">Acceso restringido</div><div style="font-size:13px;color:#64748b;text-align:center;max-width:280px">Tu perfil no tiene acceso al módulo de Delivery. Contacta al administrador.</div><button onclick="history.back()" style="padding:12px 24px;background:#8b5cf6;color:white;border:none;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer">Volver</button></div>';
+      throw new Error('Acceso denegado');
+    }
+    // Mostrar nombre del repartidor en header
+    var hdrTitle = document.querySelector('.hdr-title');
+    if(hdrTitle && _deliveryOp.nombre){
+      hdrTitle.innerHTML = '<i class="fa-solid fa-motorcycle"></i> ' + _deliveryOp.nombre;
+    }
+    localStorage.setItem('modus_food_negocio', negID);
+  }
+}
+
+let _orders = [], _tab = 'activos';
+
+function switchTab(t, el) {
+    _tab = t;
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    renderOrders();
+}
+
+async function init() {
+    db.ref(`negocios/${negID}/pedidos`).on('value', s => {
+        _orders = [];
+        s.forEach(c => {
+            let o = c.val();
+            if(o.canal === 'domicilio') _orders.push({...o, id: c.key});
+        });
+        renderOrders();
+    });
+}
+
+function renderOrders() {
+    const cont = document.getElementById('orders-list');
+    let filtered = _orders.filter(o => {
+        if(_tab === 'activos') return o.estado !== 'entregado' && o.estado !== 'pagado';
+        return o.estado === 'entregado' || o.estado === 'pagado';
+    });
+    
+    filtered.sort((a,b) => (b.timestamp||0) - (a.timestamp||0));
+
+    if(!filtered.length) {
+        cont.innerHTML = `<div style="text-align:center;padding:100px 20px;color:var(--subtle);font-size:13px">Sin pedidos ${_tab}.</div>`;
+        return;
+    }
+
+    cont.innerHTML = filtered.map(o => `
+        <div class="ord-card">
+            <div class="ord-head">
+                <span class="ord-num">${o.orden || o.id}</span>
+                <span class="ord-status status-${o.estado}">${(o.estado||'pendiente').replace('_',' ')}</span>
+            </div>
+            <div class="ord-client">${o.cliente || 'Sin nombre'}</div>
+            <div class="ord-addr"><i class="fa-solid fa-location-dot"></i> ${o.direccion || 'Dirección no especificada'}</div>
+            <div style="font-size:14px; font-weight:900; margin-top:10px; color:var(--purple)">Total: $${parseFloat(o.total||0).toFixed(2)}</div>
+            
+            <div class="ord-actions">
+                <button class="act-btn wa" onclick="contactar('${o.telefono}')"><i class="fa-brands fa-whatsapp"></i> Chat</button>
+                <button class="act-btn route" onclick="verMapa('${o.direccion}')"><i class="fa-solid fa-map-location-dot"></i> Mapa</button>
+                ${o.estado === 'en_ruta' ? 
+                    `<button class="act-btn finish" onclick="completar('${o.id}')"><i class="fa-solid fa-check"></i> Entregado</button>` :
+                    `<button class="act-btn finish" style="background:var(--blue)" onclick="iniciarRuta('${o.id}')"><i class="fa-solid fa-motorcycle"></i> En Ruta</button>`
+                }
+            </div>
+        </div>
+    `).join('');
+}
+
+function contactar(tel) {
+    if(!tel) return toast('Sin teléfono');
+    window.open(`https://wa.me/503${tel.replace(/\D/g,'')}`);
+}
+
+function verMapa(dir) {
+    if(!dir) return toast('Sin dirección');
+    window.open(`https://www.google.com/maps/search/${encodeURIComponent(dir)}`);
+}
+
+async function iniciarRuta(id) {
+    var updates = { estado: 'en_ruta', hora_ruta: new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}) };
+    if(_deliveryOp){
+      updates.repartidor     = _deliveryOp.nombre || 'Repartidor';
+      updates.repartidor_key = _deliveryOp.empKey  || null;
+    }
+    await db.ref(`negocios/${negID}/pedidos/${id}`).update(updates);
+    // También actualizar en repartidores si tiene empKey
+    if(_deliveryOp && _deliveryOp.empKey){
+      db.ref(`negocios/${negID}/repartidores/${_deliveryOp.empKey}`).update({
+        estado:'en_ruta', pedido_activo:id, nombre:_deliveryOp.nombre
+      });
+    }
+    toast('¡En ruta! 🛵');
+}
+
+async function completar(id) {
+    if(confirm('¿Confirmar entrega exitosa?')) {
+        var updates = { estado:'entregado', hora_entrega: new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}) };
+        if(_deliveryOp){
+          updates.repartidor     = _deliveryOp.nombre || 'Repartidor';
+          updates.repartidor_key = _deliveryOp.empKey  || null;
+        }
+        await db.ref(`negocios/${negID}/pedidos/${id}`).update(updates);
+        if(_deliveryOp && _deliveryOp.empKey){
+          db.ref(`negocios/${negID}/repartidores/${_deliveryOp.empKey}`).update({
+            estado:'disponible', pedido_activo:null
+          });
+        }
+        toast('Pedido completado ✅');
+    }
+}
+
+function toast(m) {
+    const t = document.getElementById('toast');
+    t.textContent = m; t.style.display='block';
+    setTimeout(()=>t.style.display='none', 2000);
+}
+
+init();
+</script>
+</body>
+</html>

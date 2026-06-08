@@ -1,0 +1,494 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS Â· Mesas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F7F2;--sur:white;--bd:#D6E2D8;--bd2:#B8CFC0;
+  --ink:#0D1F12;--mid:#2D4A36;--muted:#6B7F6F;
+  --green:#1A6B32;--gl:#E8F5EC;--gd:#0F4520;
+  --amber:#B5860A;--al:#FFF8E6;
+  --orange:#E85D04;--ol:#FFF0E6;
+  --red:#C0190F;--rl:#FEE8E7;
+  --blue:#1D6FA4;--bl:#E8F3FB;
+  --font:'DM Sans',system-ui,sans-serif;
+  --radius:12px;--shadow:0 2px 12px rgba(13,31,18,.08);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column}
+
+/* â”€â”€ TOPBAR â”€â”€ */
+.tb{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-l{display:flex;align-items:center;gap:10px}
+.tb-logo{width:34px;height:34px;background:var(--ink);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.tb-logo i{color:white;font-size:14px}
+.tb-title{font-size:14px;font-weight:800;color:var(--ink)}
+.tb-sub{font-size:10px;color:var(--muted)}
+.tb-r{display:flex;align-items:center;gap:8px}
+.tbb{padding:7px 13px;border-radius:9px;border:1.5px solid var(--bd);background:var(--sur);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);transition:.12s;display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+.tbb:hover{border-color:var(--green);color:var(--green)}
+.tbb.primary{background:var(--ink);color:white;border-color:var(--ink)}
+.tbb.primary:hover{background:var(--mid)}
+#tb-clock{font-size:12px;font-weight:700;color:var(--muted)}
+
+/* â”€â”€ STATS BAR â”€â”€ */
+.stats-bar{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 18px;display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none}
+.stats-bar::-webkit-scrollbar{display:none}
+.stat-chip{display:flex;align-items:center;gap:7px;padding:7px 14px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg);white-space:nowrap;flex-shrink:0}
+.stat-chip .sc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.stat-chip .sc-n{font-size:18px;font-weight:900;line-height:1}
+.stat-chip .sc-l{font-size:10px;font-weight:700;color:var(--muted);margin-left:2px}
+.stat-chip.libre .sc-dot{background:#22C55E}
+.stat-chip.libre .sc-n{color:var(--green)}
+.stat-chip.ocupada .sc-dot{background:var(--orange)}
+.stat-chip.ocupada .sc-n{color:var(--orange)}
+.stat-chip.cuenta .sc-dot{background:var(--red)}
+.stat-chip.cuenta .sc-n{color:var(--red)}
+.stat-chip.total .sc-n{color:var(--ink)}
+.legend-sep{width:1px;height:24px;background:var(--bd);flex-shrink:0;margin:0 4px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.l-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.l-libre{background:var(--gl);border:2px solid #B8D9BF}
+.l-ocupada{background:var(--ol);border:2px solid #F5C9A0}
+.l-cuenta{background:var(--rl);border:2px solid #F5B8B5}
+.l-listo{background:var(--gl);border:2px solid var(--green)}
+
+/* â”€â”€ MAIN SPLIT â”€â”€ */
+.main{flex:1;display:grid;grid-template-columns:1fr 300px;min-height:0;overflow:hidden}
+@media(max-width:700px){.main{grid-template-columns:1fr}}
+
+/* â”€â”€ SALON (left) â”€â”€ */
+.salon{overflow:auto;padding:18px;display:flex;flex-direction:column;gap:14px}
+.salon-header{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.salon-title{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
+.zona-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none}
+.zona-tabs::-webkit-scrollbar{display:none}
+.zona-tab{padding:5px 13px;border-radius:20px;border:1.5px solid var(--bd);background:var(--sur);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;white-space:nowrap;transition:.12s}
+.zona-tab.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+/* Mesa grid */
+.mesa-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+
+/* Mesa card */
+.mesa-card{border-radius:14px;border:2px solid var(--bd);background:var(--sur);padding:14px 12px 12px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:6px;min-height:110px}
+.mesa-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.mesa-card.libre{border-color:#B8D9BF;background:var(--gl)}
+.mesa-card.libre:hover{border-color:var(--green)}
+.mesa-card.ocupada{border-color:#F5C9A0;background:var(--ol)}
+.mesa-card.cuenta{border-color:#F5B8B5;background:var(--rl)}
+.mesa-card.listo{border-color:var(--green);background:var(--gl);box-shadow:0 0 0 2px rgba(26,107,50,.2)}
+.mesa-card.seleccionada{box-shadow:0 0 0 3px var(--ink)}
+.mesa-num{font-size:24px;font-weight:900;color:var(--ink);line-height:1}
+.mesa-estado{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:4px}
+.mesa-card.libre .mesa-estado{color:#16A34A}
+.mesa-card.ocupada .mesa-estado{color:var(--orange)}
+.mesa-card.cuenta .mesa-estado{color:var(--red)}
+.mesa-card.listo .mesa-estado{color:var(--green)}
+.mesa-info{font-size:10px;color:var(--muted);line-height:1.4;min-height:14px}
+.mesa-timer{font-size:10px;font-weight:700;font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:4px;margin-top:auto}
+.mesa-card.libre .mesa-timer{color:#B8CFC0}
+.mesa-card.ocupada .mesa-timer{color:var(--amber)}
+.mesa-card.cuenta .mesa-timer{color:var(--red)}
+.mesa-cap{position:absolute;top:9px;right:10px;font-size:9px;font-weight:700;color:var(--muted);display:flex;align-items:center;gap:2px}
+.listo-dot{position:absolute;top:9px;left:10px;width:8px;height:8px;background:var(--green);border-radius:50%;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* â”€â”€ DETAIL PANEL (right) â”€â”€ */
+.detail{background:var(--sur);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+@media(max-width:700px){.detail{display:none}}
+.detail-head{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.detail-head h3{font-size:14px;font-weight:800;color:var(--ink)}
+.detail-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.detail-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;color:var(--muted);text-align:center;padding:20px}
+.detail-empty .dei{font-size:36px;opacity:.35}
+
+/* Detail sections */
+.ds-label{font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.ds-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:4px 0;border-bottom:1px solid var(--bg)}
+.ds-row:last-child{border-bottom:none}
+.ds-row .dk{color:var(--muted)}
+.ds-row .dv{font-weight:700;color:var(--ink)}
+.estado-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:20px}
+.eb-libre{background:var(--gl);color:var(--green)}
+.eb-ocupada{background:var(--ol);color:var(--orange)}
+.eb-cuenta{background:var(--rl);color:var(--red)}
+.eb-listo{background:var(--gl);color:var(--gd);border:1px solid #B8D9BF}
+
+/* Order items in detail */
+.ord-items{display:flex;flex-direction:column;gap:5px}
+.ord-item-row{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:8px;padding:7px 10px}
+.oi-cant{width:22px;height:22px;border-radius:6px;background:var(--sur);border:1px solid var(--bd);font-size:11px;font-weight:900;color:var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.oi-name{flex:1;font-size:12px;font-weight:600;color:var(--ink)}
+.oi-price{font-size:11px;font-weight:800;color:var(--muted)}
+
+/* Detail actions */
+.detail-foot{padding:12px 16px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:7px}
+.d-btn{width:100%;padding:10px;border-radius:10px;border:none;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.d-btn-green{background:var(--gl);color:var(--green)}
+.d-btn-green:hover{background:var(--green);color:white}
+.d-btn-red{background:var(--rl);color:var(--red)}
+.d-btn-red:hover{background:var(--red);color:white}
+.d-btn-ink{background:var(--ink);color:white}
+.d-btn-ink:hover{background:var(--mid)}
+.d-btn-amber{background:var(--al);color:var(--amber)}
+.d-btn-amber:hover{background:var(--amber);color:white}
+
+/* â”€â”€ ADD MESA MODAL â”€â”€ */
+.overlay{display:none;position:fixed;inset:0;background:rgba(13,31,18,.7);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--sur);border-radius:18px;width:100%;max-width:400px;overflow:hidden}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:14px;font-weight:800;color:var(--ink)}
+.modal-close{width:28px;height:28px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.fl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px}
+.fi{width:100%;padding:9px 11px;border:1.5px solid var(--bd);border-radius:9px;font-size:13px;font-family:var(--font);color:var(--ink);outline:none;background:var(--bg);transition:.15s}
+.fi:focus{border-color:var(--green);background:white}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--bd);display:flex;gap:8px}
+.mf-btn{flex:1;padding:10px;border-radius:10px;border:none;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;transition:.15s}
+.mf-cancel{background:var(--bg);color:var(--muted);border:1.5px solid var(--bd)}
+.mf-save{background:var(--ink);color:white}
+.mf-save:hover{background:var(--mid)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:white;padding:10px 20px;border-radius:11px;font-size:12px;font-weight:700;z-index:99999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <div class="tb-logo"><i class="fa-solid fa-table-cells-large"></i></div>
+    <div>
+      <div class="tb-title">Mapa de Mesas</div>
+      <div class="tb-sub" id="tb-neg">PARCHE SYS</div>
+    </div>
+  </div>
+  <div class="tb-r">
+    <span id="tb-clock"></span>
+    <a class="tbb" href="pos-food.html?negocio=" id="link-pos"><i class="fa-solid fa-cash-register"></i> POS</a>
+    <a class="tbb" href="cocina.html?negocio=" id="link-cocina"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
+    <a class="tbb" href="portal-food.html?negocio=" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
+    <button class="tbb primary" onclick="abrirAddMesa()"><i class="fa-solid fa-plus"></i> Agregar mesa</button>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-chip total"><div class="sc-n" id="sc-total">0</div><div class="sc-l">Total</div></div>
+  <div class="stat-chip libre"><div class="sc-dot"></div><div class="sc-n" id="sc-libre">0</div><div class="sc-l">Libres</div></div>
+  <div class="stat-chip ocupada"><div class="sc-dot"></div><div class="sc-n" id="sc-ocupada">0</div><div class="sc-l">Ocupadas</div></div>
+  <div class="stat-chip cuenta"><div class="sc-dot"></div><div class="sc-n" id="sc-cuenta">0</div><div class="sc-l">Pidiendo cuenta</div></div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><div class="l-dot l-libre"></div>Libre</div>
+  <div class="legend-item"><div class="l-dot l-ocupada"></div>Ocupada</div>
+  <div class="legend-item"><div class="l-dot l-cuenta"></div>Pidiendo cuenta</div>
+  <div class="legend-item"><div class="l-dot l-listo"></div>Plato listo</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- SALON -->
+  <div class="salon">
+    <div class="salon-header">
+      <div class="salon-title"><i class="fa-solid fa-door-open"></i> SalÃ³n</div>
+      <div class="zona-tabs" id="zona-tabs">
+        <button class="zona-tab active" onclick="setZona('Todas',this)">Todas</button>
+      </div>
+    </div>
+    <div class="mesa-grid" id="mesa-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:12px">Cargando mesas...</div>
+    </div>
+  </div>
+
+  <!-- DETAIL PANEL -->
+  <div class="detail">
+    <div class="detail-head">
+      <h3 id="dp-title">Selecciona una mesa</h3>
+      <span class="estado-badge eb-libre" id="dp-estado-badge" style="display:none"></span>
+    </div>
+    <div class="detail-body" id="detail-body">
+      <div class="detail-empty">
+        <div class="dei">ðŸ½ï¸</div>
+        <p style="font-size:12px">Toca una mesa para ver su estado y pedido activo</p>
+      </div>
+    </div>
+    <div class="detail-foot" id="detail-foot" style="display:none"></div>
+  </div>
+</div>
+
+<!-- ADD MESA MODAL -->
+<div class="overlay" id="add-overlay" onclick="if(event.target===this)cerrarAddMesa()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="add-modal-title">Agregar mesa</h3>
+      <button class="modal-close" onclick="cerrarAddMesa()">âœ•</button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <label class="fl">NÃºmero de mesa</label>
+        <input class="fi" id="add-num" type="number" min="1" placeholder="Ej: 13">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div>
+          <label class="fl">Capacidad (personas)</label>
+          <input class="fi" id="add-cap" type="number" min="1" placeholder="4">
+        </div>
+        <div>
+          <label class="fl">Zona</label>
+          <input class="fi" id="add-zona" placeholder="Terraza, interior...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-btn mf-cancel" onclick="cerrarAddMesa()">Cancelar</button>
+      <button class="mf-btn mf-save" onclick="guardarMesa()">Guardar mesa</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Shared Config -->
+<script src="firebase-config.js"></script>
+<script>
+// negocioID and db are already inherited from firebase-config.js
+if(!negocioID){ location.href='index.html'; }
+
+var _mesas={};
+var _pedidos={};
+var _mesaSeleccionada=null;
+var _zonaActual='Todas';
+
+/* â”€â”€ INIT â”€â”€ */
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('link-pos').href='pos-food.html?negocio='+negocioID;
+  document.getElementById('link-cocina').href='cocina.html?negocio='+negocioID;
+  document.getElementById('link-portal').href='portal-food.html?negocio='+negocioID;
+  setInterval(function(){
+    var n=new Date();
+    document.getElementById('tb-clock').textContent=n.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    updateTimers();
+  },1000);
+  db.ref('negocios/'+negocioID+'/info').once('value',function(s){
+    var inf=s.val()||{};
+    document.getElementById('tb-neg').textContent=inf.nombre||'Restaurante';
+    // Auto-create mesas if none exist
+    db.ref('negocios/'+negocioID+'/mesas').once('value',function(ms){
+      if(!ms.exists()){
+        var num=parseInt(inf.num_mesas)||8;
+        var batch={};
+        for(var i=1;i<=num;i++){
+          batch[i]={numero:i,estado:'libre',capacidad:4,zona:'Principal',pedido_activo_id:null,timestamp:0};
+        }
+        db.ref('negocios/'+negocioID+'/mesas').set(batch);
+      }
+    });
+  });
+  db.ref('negocios/'+negocioID+'/mesas').on('value',function(snap){
+    _mesas={};
+    snap.forEach(function(c){_mesas[c.key]=c.val();});
+    renderZonas();
+    renderMesas();
+    updateStats();
+    if(_mesaSeleccionada)renderDetail(_mesaSeleccionada);
+  });
+  db.ref('negocios/'+negocioID+'/pedidos').on('value',function(snap){
+    _pedidos={};
+    snap.forEach(function(c){_pedidos[c.key]=c.val();});
+    if(_mesaSeleccionada)renderDetail(_mesaSeleccionada);
+  });
+});
+
+/* â”€â”€ ZONAS â”€â”€ */
+function renderZonas(){
+  var zonas=new Set(['Todas']);
+  Object.values(_mesas).forEach(function(m){if(m.zona)zonas.add(m.zona);});
+  var cont=document.getElementById('zona-tabs');
+  cont.innerHTML='';
+  zonas.forEach(function(z){
+    var btn=document.createElement('button');
+    btn.className='zona-tab'+(z===_zonaActual?' active':'');
+    btn.textContent=z;
+    btn.onclick=function(){setZona(z,btn);};
+    cont.appendChild(btn);
+  });
+}
+
+function setZona(z,btn){
+  _zonaActual=z;
+  document.querySelectorAll('.zona-tab').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderMesas();
+}
+
+/* â”€â”€ MESAS â”€â”€ */
+function renderMesas(){
+  var g=document.getElementById('mesa-grid');
+  var mesas=Object.entries(_mesas)
+    .filter(function(e){return _zonaActual==='Todas'||e[1].zona===_zonaActual;})
+    .sort(function(a,b){return parseInt(a[0])-parseInt(b[0]);});
+  if(!mesas.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:12px">Sin mesas en esta zona</div>';return;}
+  g.innerHTML=mesas.map(function(e){
+    var id=e[0];var m=e[1];
+    var estado=m.estado||'libre';
+    var sel=_mesaSeleccionada==id?'seleccionada':'';
+    // Check if there's a listo cocina_order for this mesa
+    var pedActivo=m.pedido_activo_id?_pedidos[m.pedido_activo_id]:null;
+    var esListo=pedActivo&&pedActivo.estado==='listo';
+    var estadoClase=esListo?'listo':estado;
+    var elapsed=m.timestamp?Math.floor((Date.now()-m.timestamp)/1000):0;
+    var timerTxt=m.timestamp&&estado!=='libre'?'<i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(elapsed):'';
+    var listoDot=esListo?'<div class="listo-dot"></div>':'';
+    var info=estado==='ocupada'&&pedActivo?('<div style="font-size:9px;font-weight:700;color:var(--orange);margin-top:2px">'+escHtml(pedActivo.cliente||'')+'</div>'):
+      estado==='libre'?'<div style="font-size:9px;color:var(--muted)">Disponible</div>':
+      estado==='cuenta'?'<div style="font-size:9px;font-weight:700;color:var(--red)">Solicita cuenta</div>':'';
+    return '<div class="mesa-card '+estadoClase+' '+sel+'" id="mc-'+id+'" onclick="selMesa(\''+id+'\')">'
+      +listoDot
+      +'<div class="mesa-cap"><i class="fa-solid fa-user" style="font-size:8px"></i> '+(m.capacidad||4)+'</div>'
+      +'<div class="mesa-num">'+id+'</div>'
+      +'<div class="mesa-estado">'+{libre:'âœ“ Libre',ocupada:'â— Ocupada',cuenta:'! Cuenta',listo:'âœ“ Listo'}[estadoClase]+'</div>'
+      +info
+      +'<div class="mesa-timer" id="mt-'+id+'">'+timerTxt+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+function updateTimers(){
+  Object.entries(_mesas).forEach(function(e){
+    var id=e[0];var m=e[1];
+    if(m.estado==='libre'||!m.timestamp)return;
+    var elapsed=Math.floor((Date.now()-m.timestamp)/1000);
+    var el=document.getElementById('mt-'+id);
+    if(el)el.innerHTML='<i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(elapsed);
+  });
+}
+
+function selMesa(id){
+  _mesaSeleccionada=id;
+  document.querySelectorAll('.mesa-card').forEach(function(c){c.classList.remove('seleccionada');});
+  var card=document.getElementById('mc-'+id);
+  if(card)card.classList.add('seleccionada');
+  renderDetail(id);
+}
+
+/* â”€â”€ DETAIL â”€â”€ */
+function renderDetail(id){
+  var m=_mesas[id];
+  if(!m){return;}
+  var estado=m.estado||'libre';
+  var pedActivo=m.pedido_activo_id?_pedidos[m.pedido_activo_id]:null;
+  var esListo=pedActivo&&pedActivo.estado==='listo';
+  var estadoMostrar=esListo?'listo':estado;
+
+  // Title + badge
+  document.getElementById('dp-title').textContent='Mesa '+id+(m.zona?' Â· '+m.zona:'');
+  var badge=document.getElementById('dp-estado-badge');
+  badge.style.display='';
+  badge.className='estado-badge '+{libre:'eb-libre',ocupada:'eb-ocupada',cuenta:'eb-cuenta',listo:'eb-listo'}[estadoMostrar];
+  badge.textContent={libre:'Libre',ocupada:'Ocupada',cuenta:'Pidiendo cuenta',listo:'Plato listo'}[estadoMostrar];
+
+  var body=document.getElementById('detail-body');
+  var foot=document.getElementById('detail-foot');
+  foot.style.display='';
+
+  // Info rows
+  var elapsed=m.timestamp&&estado!=='libre'?fmtTime(Math.floor((Date.now()-m.timestamp)/1000)):'â€”';
+  var infoHtml='<div><div class="ds-label">InformaciÃ³n</div>'
+    +'<div class="ds-row"><span class="dk">Capacidad</span><span class="dv"><i class="fa-solid fa-user" style="font-size:10px;color:var(--muted)"></i> '+(m.capacidad||4)+' personas</span></div>'
+    +'<div class="ds-row"><span class="dk">Zona</span><span class="dv">'+(m.zona||'â€”')+'</span></div>'
+    +'<div class="ds-row"><span class="dk">Tiempo</span><span class="dv">'+elapsed+'</span></div>'
+    +(m.mesero?'<div class="ds-row"><span class="dk">Mesero</span><span class="dv">'+escHtml(m.mesero)+'</span></div>':'')
+    +'</div>';
+
+  // Pedido activo
+  var pedHtml='';
+  if(pedActivo&&estado!=='libre'){
+    var items=(pedActivo.items||[]).map(function(it){
+      return '<div class="ord-item-row"><div class="oi-cant">'+it.cant+'</div><div class="oi-name">'+escHtml(it.desc)+'</div><div class="oi-price">$'+(it.cant*it.precio).toFixed(2)+'</div></div>';
+    }).join('');
+    pedHtml='<div><div class="ds-label">Orden activa â€” '+escHtml(pedActivo.orden||'')+'</div>'
+      +'<div class="ord-items">'+items+'</div>'
+      +'<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--bd);display:flex;justify-content:space-between">'
+      +'<span style="font-size:11px;font-weight:700;color:var(--muted)">Total</span>'
+      +'<span style="font-size:14px;font-weight:900;color:var(--ink)">$'+parseFloat(pedActivo.total||0).toFixed(2)+'</span>'
+      +'</div></div>';
+  }
+
+  body.innerHTML=infoHtml+pedHtml;
+
+  // Footer buttons
+  var btns='';
+  if(estado==='libre'){
+    btns='<button class="d-btn d-btn-ink" onclick="irPOS(\''+id+'\')"><i class="fa-solid fa-plus"></i> Nueva orden en esta mesa</button>';
+  } else if(estado==='ocupada'){
+    btns='<button class="d-btn d-btn-amber" onclick="pedirCuenta(\''+id+'\')"><i class="fa-solid fa-file-invoice-dollar"></i> Solicitar cuenta</button>'
+      +'<button class="d-btn d-btn-green" onclick="irPOS(\''+id+'\')"><i class="fa-solid fa-plus"></i> Agregar a la orden</button>';
+  } else if(estado==='cuenta'||estado==='listo'){
+    btns='<button class="d-btn d-btn-ink" onclick="irPOS(\''+id+'\')"><i class="fa-solid fa-file-invoice"></i> Ir al POS / emitir DTE</button>'
+      +'<button class="d-btn d-btn-green" onclick="liberarMesa(\''+id+'\')"><i class="fa-solid fa-check"></i> Liberar mesa</button>';
+  }
+  btns+='<button class="d-btn d-btn-red" onclick="confirmarLiberarMesa(\''+id+'\',true)" style="margin-top:2px"><i class="fa-solid fa-rotate-left"></i> Liberar y limpiar</button>';
+  foot.innerHTML=btns;
+}
+
+function irPOS(mesaId){
+  window.location.href='pos-food.html?negocio='+negocioID+'&mesa='+mesaId;
+}
+
+function pedirCuenta(id){
+  db.ref('negocios/'+negocioID+'/mesas/'+id).update({estado:'cuenta'});
+  toast('ðŸ§¾ Mesa '+id+' marcada â€” solicita cuenta','ok');
+}
+
+function liberarMesa(id){
+  db.ref('negocios/'+negocioID+'/mesas/'+id).update({estado:'libre',pedido_activo_id:null,mesero:null,timestamp:0});
+  toast('âœ“ Mesa '+id+' liberada','ok');
+}
+
+function confirmarLiberarMesa(id,force){
+  if(!confirm('Â¿Liberar y limpiar mesa '+id+'? Se quitarÃ¡ el pedido activo.'))return;
+  liberarMesa(id);
+}
+
+/* â”€â”€ ADD MESA â”€â”€ */
+function abrirAddMesa(){document.getElementById('add-overlay').classList.add('open');document.getElementById('add-num').focus();}
+function cerrarAddMesa(){document.getElementById('add-overlay').classList.remove('open');}
+function guardarMesa(){
+  var num=parseInt(document.getElementById('add-num').value);
+  var cap=parseInt(document.getElementById('add-cap').value)||4;
+  var zona=document.getElementById('add-zona').value.trim()||'Principal';
+  if(!num){toast('Ingresa un nÃºmero de mesa','err');return;}
+  db.ref('negocios/'+negocioID+'/mesas/'+num).set({numero:num,estado:'libre',capacidad:cap,zona:zona,pedido_activo_id:null,timestamp:0});
+  cerrarAddMesa();
+  toast('âœ“ Mesa '+num+' agregada','ok');
+}
+
+/* â”€â”€ STATS â”€â”€ */
+function updateStats(){
+  var vals=Object.values(_mesas);
+  document.getElementById('sc-total').textContent=vals.length;
+  document.getElementById('sc-libre').textContent=vals.filter(function(m){return m.estado==='libre';}).length;
+  document.getElementById('sc-ocupada').textContent=vals.filter(function(m){return m.estado==='ocupada';}).length;
+  document.getElementById('sc-cuenta').textContent=vals.filter(function(m){return m.estado==='cuenta';}).length;
+}
+
+/* â”€â”€ UTILS â”€â”€ */
+function fmtTime(s){var m=Math.floor(s/60);var ss=s%60;return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,t){var el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(t==='err'?' err':'');clearTimeout(el._t);el._t=setTimeout(function(){el.className='toast';},3000);}
+</script>
+</body>
+</html>
+

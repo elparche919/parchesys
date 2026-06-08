@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PARCHE SYS Â· Mapa Interactivo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --bg: #F0F4F1;
+      --sur: #FFFFFF;
+      --ink: #0D1F12;
+      --green: #10B981;
+      --green-d: #065F46;
+      --bd: rgba(13,31,18,0.08);
+      --font: 'Inter', sans-serif;
+      --fh: 'Outfit', sans-serif;
+      --shadow: 0 10px 30px rgba(0,0,0,0.05);
+      
+      --libre: #10B981;
+      --ocupada: #F59E0B;
+      --cuenta: #EF4444;
+      --listo: #3B82F6;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { 
+      font-family: var(--font); 
+      background: var(--bg); 
+      color: var(--ink); 
+      height: 100vh; 
+      display: flex; 
+      flex-direction: column; 
+      overflow: hidden;
+    }
+
+    /* â”€â”€ HEADER â”€â”€ */
+    .tb { 
+      background: var(--sur); 
+      padding: 12px 24px; 
+      border-bottom: 1px solid var(--bd); 
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between;
+      z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+    }
+    .tb-l { display: flex; align-items: center; gap: 12px; }
+    .tb-logo { width: 36px; height: 36px; background: var(--ink); border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+    .tb-logo i { color: white; font-size: 16px; }
+    .tb-title { font-family: var(--fh); font-weight: 800; font-size: 18px; }
+    
+    .tb-actions { display: flex; align-items: center; gap: 10px; }
+    .btn { 
+      padding: 10px 18px; border-radius: 12px; font-weight: 700; font-size: 13px; 
+      cursor: pointer; transition: 0.2s; border: 1.5px solid var(--bd); background: var(--sur);
+      display: flex; align-items: center; gap: 8px; color: var(--ink); text-decoration: none;
+    }
+    .btn:hover { border-color: var(--green); color: var(--green); }
+    .btn.primary { background: var(--ink); color: white; border-color: var(--ink); }
+    .btn.primary:hover { background: #1a2b1e; }
+    .btn.active { background: var(--green); color: white; border-color: var(--green); }
+
+    /* â”€â”€ TOOLBAR â”€â”€ */
+    .toolbar {
+      padding: 8px 16px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--bd); display: flex; align-items: center; gap: 20px;
+    }
+    .legend { display: flex; align-items: center; gap: 12px; font-size: 11px; font-weight: 700; color: #6B7280; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+    /* â”€â”€ CANVAS AREA â”€â”€ */
+    .canvas-bg { 
+      flex: 1; position: relative; overflow: auto; touch-action: none;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
+      background-size: 30px 30px;
+      display: block; /* Prevents center-cut-off bug */
+    }
+    .main-canvas {
+      width: 2400px; height: 1600px; background: transparent; 
+      position: relative; overflow: visible;
+      transform-origin: top left;
+      transition: transform 0.1s linear;
+    }
+
+    /* â”€â”€ TABLES â”€â”€ */
+    .mesa {
+      position: absolute; width: 60px; height: 60px; touch-action: none;
+      background: #fdfdfd; border: 3px solid #E5E7EB; border-radius: 12px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      cursor: pointer; transition: 0.2s; user-select: none;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .mesa:hover { transform: scale(1.05); z-index: 10; border-color: #9CA3AF; }
+    .mesa.selected { border-color: var(--green); box-shadow: 0 0 0 4px rgba(16,185,129,0.2); z-index: 20; }
+    .mesa.dragging { opacity: 0.8; cursor: grabbing; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); transform: scale(1.08); transition: none; }
+    
+    .mesa-id { font-family: var(--fh); font-weight: 800; font-size: 18px; line-height: 1; }
+    .mesa-cap { font-size: 9px; font-weight: 700; opacity: 0.5; margin-top: 2px; }
+
+    /* Types */
+    .mesa.round { border-radius: 50%; }
+    .mesa.horiz { width: 100px; height: 60px; }
+    .mesa.vert { width: 60px; height: 100px; }
+    .mesa.large { width: 120px; height: 120px; }
+
+    /* States */
+    .mesa.libre { border-color: #D1FAE5; background: #F0FDF4; }
+    .mesa.libre .mesa-id { color: #065F46; }
+    .mesa.ocupada { border-color: #FEF3C7; background: #FFFBEB; }
+    .mesa.ocupada .mesa-id { color: #92400E; }
+    .mesa.cuenta { border-color: #FEE2E2; background: #FEF2F2; animation: blink 1.2s infinite; }
+    .mesa.cuenta .mesa-id { color: #991B1B; }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+    /* â”€â”€ TABS (SALONES) â”€â”€ */
+    .rooms-bar { display: flex; gap: 8px; overflow-x: auto; padding: 12px 20px; background: white; border-bottom: 1px solid var(--bd); align-items:center; }
+    .room-tab {
+      padding: 8px 16px; border-radius: 99px; font-weight: 700; font-size: 12px; cursor: pointer;
+      background: #F3F4F6; color: #4B5563; border: 1.5px solid transparent; transition: 0.2s; white-space: nowrap;
+    }
+    .room-tab:hover { background: #E5E7EB; }
+    .room-tab.active { background: #ECFDF5; color: var(--green-d); border-color: var(--green); }
+    .btn-add-room { padding: 8px 12px; margin-left: 10px; border-radius: 99px; font-size: 12px; font-weight: 800; background: none; border: 1.5px dashed var(--green); color: var(--green); cursor: pointer; }
+    .btn-add-room:hover { background: #ECFDF5; }
+
+    /* â”€â”€ OVERLAYS â”€â”€ */
+    .edit-grid { position: absolute; inset: 0; pointer-events: none; border: 1px dashed rgba(0,0,0,0.1); }
+    
+    /* â”€â”€ PANEL DERECHO â”€â”€ */
+    .side-panel {
+      position: fixed; top: 0; right: 0; bottom: 0; z-index: 2000;
+      width: 320px; background: var(--sur); border-left: 1px solid var(--bd);
+      display: flex; flex-direction: column; overflow: hidden;
+      transform: translateX(100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: -10px 0 40px rgba(0,0,0,0.1);
+    }
+    .side-panel.open { transform: translateX(0); }
+    .p-head { padding: 24px; border-bottom: 1px solid var(--bd); }
+    .p-head h3 { font-family: var(--fh); font-weight: 800; }
+    .p-body { padding: 24px; flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+    
+    .field-group { display: flex; flex-direction: column; gap: 6px; }
+    .lbl { font-size: 11px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.05em; }
+    .inp { 
+      padding: 12px; border-radius: 12px; border: 1.5px solid var(--bd); 
+      font-size: 14px; font-weight: 600; font-family: var(--font); outline: none;
+    }
+    .inp:focus { border-color: var(--green); }
+
+    .shape-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .shape-btn { 
+      padding: 12px; border-radius: 12px; border: 1.5px solid var(--bd); cursor: pointer; text-align: center;
+      font-size: 20px; transition: 0.2s;
+    }
+    .shape-btn:hover { border-color: var(--green); background: #F0FDF4; }
+    .shape-btn.active { border-color: var(--green); background: var(--green); color: white; }
+
+    .bottom-actions { padding: 20px; border-top: 1px solid var(--bd); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  </style>
+</head>
+<body>
+
+  <div class="tb">
+    <div class="tb-l">
+      <div class="tb-logo"><i class="fa-solid fa-utensils"></i></div>
+      <div>
+        <div class="tb-title" id="biz-name">PARCHE SYS</div>
+        <div style="font-size:11px; color:#6B7280; font-weight:600">Mapa de Mesas Interactivo</div>
+      </div>
+    </div>
+    <div class="tb-actions">
+      <button class="btn" id="btn-add-mesa" onclick="addNuevaMesa()" style="display:none; border-color:var(--green); color:var(--green)">
+        <i class="fa-solid fa-plus"></i> Nueva Mesa
+      </button>
+      <button class="btn" id="btn-edit-mode" onclick="toggleEditMode()">
+        <i class="fa-solid fa-pencil"></i> Modo Editor
+      </button>
+      <button class="btn" id="btn-bg-lienzo" onclick="cambiarFondoLienzo()" style="display:none; color:#6B7280; border-color:#d1d5db">
+        <i class="fa-solid fa-image"></i> Editar Lienzo
+      </button>
+      <div style="width:1px; height:24px; background:var(--bd); margin:0 5px"></div>
+      <a class="btn" href="pos-food.html?negocio=" id="link-pos"><i class="fa-solid fa-cash-register"></i> POS</a>
+      <a class="btn primary" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
+    </div>
+  </div>
+
+  <!-- SELECTOR DE SALONES -->
+  <div class="rooms-bar" id="rooms-container">
+    <div style="font-size:12px; color:var(--m-subtle); padding-right:10px;"><i class="fa-solid fa-door-open"></i> Salones:</div>
+    <!-- Tabs injected here -->
+  </div>
+
+  <div class="toolbar">
+    <div class="legend">
+      <div class="l-item"><span class="dot" style="background:#10B981"></span> Libre</div>
+      <div class="l-item"><span class="dot" style="background:#F59E0B"></span> Ocupada</div>
+      <div class="l-item"><span class="dot" style="background:#EF4444"></span> Cuenta</div>
+      <div class="l-item"><span class="dot" style="border:2px solid #ccc; background:#fff"></span> Desconectada</div>
+    </div>
+    <div style="margin-left:auto; display:flex; gap:10px">
+      <button class="btn" style="padding:6px 12px" onclick="zoomIn()"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+      <button class="btn" style="padding:6px 12px" onclick="zoomOut()"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+      <button class="btn" style="padding:6px 12px" onclick="resetZoom()"><i class="fa-solid fa-expand"></i></button>
+    </div>
+  </div>
+
+  <div class="canvas-bg" id="canvas-container">
+    <div class="main-canvas" id="canvas">
+      <!-- Mesas se cargan aquÃ­ -->
+    </div>
+  </div>
+
+  <div class="side-panel" id="side-panel">
+    <div class="p-head">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>Editor de Mesa</h3>
+        <button style="border:none; background:none; cursor:pointer; font-size:18px" onclick="closeEditor()">âœ•</button>
+      </div>
+    </div>
+    <div class="p-body">
+      <div class="field-group">
+        <label class="lbl">Número de Mesa</label>
+        <input class="inp" id="edit-num" type="number" readonly>
+      </div>
+      <div class="field-group">
+        <label class="lbl">Capacidad (Pax)</label>
+        <input class="inp" id="edit-cap" type="number" value="4">
+      </div>
+      <div class="field-group">
+        <label class="lbl">Forma y Tamaño</label>
+        <div class="shape-grid">
+          <div class="shape-btn" data-shape="square" onclick="setShape('square', this)"><i class="fa-solid fa-square"></i></div>
+          <div class="shape-btn" data-shape="round" onclick="setShape('round', this)"><i class="fa-solid fa-circle"></i></div>
+          <div class="shape-btn" data-shape="horiz" onclick="setShape('horiz', this)"><i class="fa-solid fa-minus" style="transform:scaleY(3)"></i></div>
+          <div class="shape-btn" data-shape="vert" onclick="setShape('vert', this)"><i class="fa-solid fa-minus" style="transform:rotate(90deg) scaleY(3)"></i></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="lbl">Zona / Sector</label>
+        <input class="inp" id="edit-zona" placeholder="Ej: Terraza">
+      </div>
+    </div>
+    <div class="bottom-actions">
+      <button class="btn" style="border-color:#EF4444; color:#EF4444" onclick="deleteMesa()">Borrar</button>
+      <button class="btn primary" onclick="saveMesaChanges()">Guardar</button>
+    </div>
+  </div>
+
+  <script src="firebase-config.js"></script>
+  <script src="modus-return.js"></script>
+  <script>
+    // Auth handled by firebase-config.js
+
+    var _mesas = {};
+    var _pedidos = {};
+    var _editMode = false;
+    var _zoom = 1;
+    var _selectedMesaId = null;
+    var _isDragging = false;
+    var _currentDragMesa = null;
+    var _offset = { x: 0, y: 0 };
+    var _currentZona = "Principal";
+    
+    // Canvas dimensions
+    const CANVAS_WIDTH = 1200;
+    const CANVAS_HEIGHT = 800;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('link-pos').href = 'pos-food.html?negocio=' + negocioID;
+      
+      // Industrial Navigation
+      const btnPortal = document.getElementById('link-portal');
+      if(btnPortal) {
+        btnPortal.href = 'portal-food.html?negocio=' + negocioID;
+      }
+
+      // Cargar Info y Fondos
+      db.ref('negocios/'+negocioID+'/info').on('value', s => {
+        let inf = s.val() || {};
+        document.getElementById('biz-name').textContent = inf.nombre || 'PARCHE SYS';
+      });
+      db.ref('negocios/'+negocioID+'/config/fondos_salones').on('value', s => {
+        window._fondosSalones = s.val() || {};
+        renderMesas(); // Recarga con todo y fondo
+      });
+
+      // Cargar Mesas
+      db.ref('negocios/'+negocioID+'/mesas').on('value', snap => {
+        _mesas = snap.val() || {};
+        renderMesas();
+      });
+
+      // Cargar Pedidos para estados
+      db.ref('negocios/'+negocioID+'/pedidos').on('value', snap => {
+        _pedidos = snap.val() || {};
+        renderMesas();
+      });
+
+      setupDragging();
+      centerCanvas();
+    });
+
+    function toggleEditMode() {
+      _editMode = !_editMode;
+      const btn = document.getElementById('btn-edit-mode');
+      const addBtn = document.getElementById('btn-add-mesa');
+      const bgBtn = document.getElementById('btn-bg-lienzo');
+      if(_editMode) {
+        btn.classList.add('active');
+        btn.innerHTML = '<i class="fa-solid fa-check"></i> Finalizar Diseño';
+        addBtn.style.display = 'flex';
+        bgBtn.style.display = 'flex';
+      } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fa-solid fa-pencil"></i> Modo Editor';
+        addBtn.style.display = 'none';
+        bgBtn.style.display = 'none';
+        closeEditor();
+      }
+    }
+
+    function addNuevaMesa() {
+      const existingIds = Object.keys(_mesas).map(k => parseInt(k)).filter(k => !isNaN(k));
+      const nextId = existingIds.length ? Math.max(...existingIds) + 1 : 1;
+      
+      const newMesa = {
+        capacidad: 4,
+        estado: 'libre',
+        forma: 'square',
+        x: 500,
+        y: 300,
+        zona: _currentZona,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      };
+
+      db.ref(`negocios/${negocioID}/mesas/${nextId}`).set(newMesa);
+      _selectedMesaId = nextId;
+      openEditor(nextId);
+    }
+
+    function renderMesas() {
+      const canvas = document.getElementById('canvas');
+      const currentScroll = { left: canvas.scrollLeft, top: canvas.scrollTop };
+      
+      // Solo recrear si no estamos arrastrando
+      if(_isDragging) return;
+
+      canvas.innerHTML = '';
+      if(_editMode) canvas.innerHTML += '<div class="edit-grid"></div>';
+
+      buildRoomTabs();
+
+      // Fondos de Lienzo
+      if(window._fondosSalones && window._fondosSalones[_currentZona]) {
+        canvas.style.backgroundImage = `url('${window._fondosSalones[_currentZona]}')`;
+        canvas.style.backgroundSize = 'contain';
+        canvas.style.backgroundRepeat = 'no-repeat';
+        canvas.style.backgroundPosition = 'center';
+      } else {
+        canvas.style.backgroundImage = 'none';
+      }
+
+      Object.entries(_mesas).forEach(([id, m]) => {
+        let mz = m.zona || 'Principal';
+        if(mz !== _currentZona) return; // Filtrar por salón actual
+
+        const div = document.createElement('div');
+        div.className = `mesa ${m.forma || 'square'} ${m.estado || 'libre'}`;
+        div.id = `mesa-${id}`;
+        div.style.left = `${m.x || 100}px`;
+        div.style.top = `${m.y || 100}px`;
+        if(_selectedMesaId == id) div.classList.add('selected');
+
+        div.innerHTML = `
+          <span class="mesa-id">${id}</span>
+          <span class="mesa-cap"><i class="fa-solid fa-user"></i> ${m.capacidad || 4}</span>
+        `;
+
+        div.onclick = (e) => handleMesaClick(id, e);
+        div.onmousedown = (e) => handleMesaDown(id, e);
+        div.ontouchstart = (e) => { e.preventDefault(); handleMesaDown(id, e.touches[0]); };
+
+        canvas.appendChild(div);
+      });
+    }
+
+    /* ── SALONES & LIENZOS ── */
+    function cambiarFondoLienzo() {
+      if(!_editMode) return;
+      const actual = (window._fondosSalones && window._fondosSalones[_currentZona]) || '';
+      const resp = prompt(`URL del plano/imagen para el lienzo del salón '${_currentZona}' (deja vacío para quitarlo):`, actual);
+      if(resp !== null) {
+        db.ref(`negocios/${negocioID}/config/fondos_salones/${_currentZona}`).set(resp.trim());
+      }
+    }
+
+    function handleMesaClick(id, e) {
+      if(_isDragging) return;
+      
+      _selectedMesaId = id;
+      document.querySelectorAll('.mesa').forEach(m => m.classList.remove('selected'));
+      document.getElementById(`mesa-${id}`).classList.add('selected');
+
+      if(_editMode) {
+        openEditor(id);
+      } else {
+        // En modo normal, ir al POS
+        window.location.href = `pos-food.html?negocio=${negocioID}&mesa=${id}`;
+      }
+    }
+
+    function openEditor(id) {
+      const m = _mesas[id];
+      _selectedMesaId = id;
+      document.getElementById('edit-num').value = id;
+      document.getElementById('edit-cap').value = m.capacidad || 4;
+      document.getElementById('edit-zona').value = m.zona || '';
+      
+      document.querySelectorAll('.shape-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.shape == (m.forma || 'square'));
+      });
+
+      document.getElementById('side-panel').classList.add('open');
+    }
+
+    function closeEditor() {
+      document.getElementById('side-panel').classList.remove('open');
+      _selectedMesaId = null;
+      renderMesas();
+    }
+
+    function setShape(shape, el) {
+      document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      if(_selectedMesaId && _editMode) {
+        db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).update({ forma: shape });
+      }
+    }
+
+    function saveMesaChanges() {
+      if(!_selectedMesaId) return;
+      const num = _selectedMesaId;
+      const cap = document.getElementById('edit-cap').value;
+      const zona = document.getElementById('edit-zona').value;
+      const forma = document.querySelector('.shape-btn.active').dataset.shape;
+
+      db.ref(`negocios/${negocioID}/mesas/${num}`).update({
+        capacidad: parseInt(cap),
+        zona: zona,
+        forma: forma
+      });
+
+      _currentZona = zona; // Cambio directo para que la vea si le cambiÃ³ el salÃ³n
+      closeEditor();
+    }
+
+    function deleteMesa() {
+      if(!confirm('Â¿Eliminar la mesa ' + _selectedMesaId + '?')) return;
+      db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).remove();
+      closeEditor();
+    }
+
+    /* â”€â”€ ROOMS LOGIC â”€â”€ */
+    function buildRoomTabs() {
+      const container = document.getElementById('rooms-container');
+      const zones = new Set();
+      Object.values(_mesas).forEach(m => {
+        if(m.zona) zones.add(m.zona);
+      });
+      if(zones.size === 0) zones.add('Principal');
+      if(!zones.has(_currentZona)) _currentZona = Array.from(zones)[0] || 'Principal';
+
+      let html = '<div style="font-size:12px; color:#9ca3af; padding-right:10px; font-weight:800"><i class="fa-solid fa-door-open"></i> SALONES:</div>';
+      zones.forEach(z => {
+        html += `<div class="room-tab ${z === _currentZona ? 'active' : ''}" onclick="switchRoom('${z}')">${z}</div>`;
+      });
+      
+      if(_editMode) {
+        html += `<button class="btn-add-room" onclick="addRoom()"><i class="fa-solid fa-plus"></i> Crear Salón</button>`;
+      }
+      container.innerHTML = html;
+    }
+
+    function switchRoom(zonaStr) {
+      if(_isDragging) return;
+      _currentZona = zonaStr;
+      _selectedMesaId = null;
+      renderMesas();
+    }
+
+    function addRoom() {
+      const resp = prompt("Nombre del nuevo salón (Ej. Terraza 2):");
+      if(!resp) return;
+      _currentZona = resp.trim();
+      addNuevaMesa(); // crea al menos una mesa para que el salón exista en DB iterativamente
+    }
+
+    /* â”€â”€ DRAGGING LOGIC â”€â”€ */
+    function handleMesaDown(id, e) {
+      if(!_editMode) return;
+      _isDragging = true;
+      _currentDragMesa = id;
+      const div = document.getElementById(`mesa-${id}`);
+      div.classList.add('dragging');
+      
+      const rect = div.getBoundingClientRect();
+      _offset.x = ((e.clientX !== undefined ? e.clientX : e.touches?.[0].clientX) - rect.left) / _zoom;
+      _offset.y = ((e.clientY !== undefined ? e.clientY : e.touches?.[0].clientY) - rect.top) / _zoom;
+    }
+
+    function setupDragging() {
+      const canvas = document.getElementById('canvas');
+      
+      const moveHandler = (e) => {
+        if(!_isDragging || !_currentDragMesa) return;
+        
+        let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const canvasRect = canvas.getBoundingClientRect();
+        let x = (clientX - canvasRect.left) / _zoom - _offset.x;
+        let y = (clientY - canvasRect.top) / _zoom - _offset.y;
+
+        // Limites amplios
+        x = Math.max(0, Math.min(x, 2400 - 60));
+        y = Math.max(0, Math.min(y, 1600 - 60));
+        
+        // Snap to grid
+        x = Math.round(x / 10) * 10;
+        y = Math.round(y / 10) * 10;
+
+        const div = document.getElementById(`mesa-${_currentDragMesa}`);
+        if(div) {
+          div.style.left = `${x}px`;
+          div.style.top = `${y}px`;
+        }
+      };
+
+      const upHandler = () => {
+        if(!_isDragging) return;
+        
+        const div = document.getElementById(`mesa-${_currentDragMesa}`);
+        if(!div) return;
+        const x = parseInt(div.style.left);
+        const y = parseInt(div.style.top);
+
+        db.ref(`negocios/${negocioID}/mesas/${_currentDragMesa}`).update({ x, y });
+
+        _isDragging = false;
+        _currentDragMesa = null;
+        div.classList.remove('dragging');
+      };
+
+      document.addEventListener('mousemove', moveHandler);
+      document.addEventListener('touchmove', moveHandler, { passive: false });
+      
+      document.addEventListener('mouseup', upHandler);
+      document.addEventListener('touchend', upHandler);
+    }
+
+    /* â”€â”€ ZOOM & PAN â”€â”€ */
+    function zoomIn() { _zoom += 0.1; updateZoom(); }
+    function zoomOut() { if(_zoom > 0.5) _zoom -= 0.1; updateZoom(); }
+    function resetZoom() { _zoom = 1; updateZoom(); centerCanvas(); }
+    function updateZoom() {
+      document.getElementById('canvas').style.transform = `scale(${_zoom})`;
+    }
+
+    function centerCanvas() {
+      const container = document.getElementById('canvas-container');
+      container.scrollLeft = (CANVAS_WIDTH - container.clientWidth) / 2;
+      container.scrollTop = (CANVAS_HEIGHT - container.clientHeight) / 2;
+    }
+  </script>
+</body>
+</html>
+

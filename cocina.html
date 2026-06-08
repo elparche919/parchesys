@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS · Cocina KDS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0D1410; --sur:#141C16; --sur2:#1C2820; --bd:#2A3C2E; --bd2:#3A5040;
+  --ink:#ECF4EE; --mid:#9CBFA4; --muted:#5A7860;
+  --green:#22C55E;--gl:rgba(34,197,94,.15);--gd:#16A34A;
+  --amber:#F59E0B;--al:rgba(245,158,11,.15);
+  --orange:#F97316;--ol:rgba(249,115,22,.15);
+  --red:#EF4444;--rl:rgba(239,68,68,.15);
+  --blue:#3B82F6;--bl:rgba(59,130,246,.15);
+  --font:'DM Sans',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column}
+
+/* TOPBAR */
+.tb{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-l{display:flex;align-items:center;gap:12px}
+.tb-logo{width:36px;height:36px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-logo i{font-size:16px;color:#0D1410}
+.tb-title{font-size:14px;font-weight:800;color:var(--ink);line-height:1}
+.tb-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.tb-r{display:flex;align-items:center;gap:10px}
+#tb-clock{font-size:22px;font-weight:800;color:var(--ink);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#tb-date{font-size:10px;color:var(--muted);text-align:right;margin-top:1px}
+.tb-stats{display:flex;gap:8px}
+.stat-pill{background:var(--sur2);border:1px solid var(--bd);border-radius:9px;padding:6px 12px;display:flex;flex-direction:column;align-items:center;min-width:52px}
+.stat-pill .sn{font-size:18px;font-weight:900;line-height:1}
+.stat-pill .sl{font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.stat-pill.s-pending .sn{color:var(--amber)}
+.stat-pill.s-prep .sn{color:var(--orange)}
+.stat-pill.s-ready .sn{color:var(--green)}
+.stat-pill.s-web .sn{color:#f472b6}
+
+/* ── ORDENES WEB ENTRANTES BANNER ── */
+.web-inbox{
+  flex-shrink:0; background:#1a0a2e; border-bottom:2px solid #7c3aed;
+  padding:0; overflow:hidden; transition:max-height 0.4s ease;
+  max-height:0;
+}
+.web-inbox.has-orders{ max-height:340px; }
+.wi-header{
+  padding:8px 18px; display:flex; align-items:center; justify-content:space-between;
+  background:linear-gradient(90deg,#2d1060,#1a0a2e);
+  border-bottom:1px solid rgba(124,58,237,0.4);
+}
+.wi-title{
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:.05em;
+}
+.wi-pulse{
+  width:10px;height:10px;border-radius:50%;background:#f472b6;
+  animation:wipulse 1s ease-in-out infinite;
+}
+@keyframes wipulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:.6}}
+.wi-count{
+  background:#7c3aed;color:white;border-radius:20px;padding:2px 10px;
+  font-size:12px;font-weight:900;margin-left:6px;
+}
+.wi-scroll{
+  display:flex; gap:10px; padding:10px 18px; overflow-x:auto; scrollbar-width:none;
+}
+.wi-scroll::-webkit-scrollbar{display:none}
+
+/* TARJETA ORDEN WEB */
+.web-order-card{
+  background:#2d1060; border:1px solid #7c3aed; border-radius:12px;
+  padding:12px 14px; min-width:240px; max-width:260px; flex-shrink:0;
+  display:flex; flex-direction:column; gap:8px; position:relative;
+}
+.woc-head{ display:flex; align-items:center; justify-content:space-between; }
+.woc-id{ font-size:15px; font-weight:900; color:#e9d5ff; letter-spacing:.5px; }
+.woc-badge{
+  font-size:9px; font-weight:800; padding:2px 8px; border-radius:20px;
+  text-transform:uppercase; letter-spacing:.05em;
+}
+.woc-badge.domicilio{ background:rgba(249,115,22,.2); color:#fb923c; border:1px solid rgba(249,115,22,.4); }
+.woc-badge.llevar,.woc-badge.recoger{ background:rgba(250,204,21,.2); color:#facc15; border:1px solid rgba(250,204,21,.4); }
+.woc-client{
+  font-size:12px; color:#c084fc; font-weight:700;
+  display:flex; align-items:center; gap:5px;
+}
+.woc-items{ font-size:12px; color:#e9d5ff; line-height:1.5; flex:1; }
+.woc-items span{ color:#a78bfa; font-weight:800; margin-right:4px; }
+.woc-total{ font-size:13px; font-weight:900; color:#f472b6; }
+.woc-actions{ display:flex; gap:6px; margin-top:4px; }
+.woc-btn-tomar{
+  flex:1; padding:8px; border-radius:8px; border:none;
+  background:linear-gradient(135deg,#7c3aed,#a855f7); color:white;
+  font-size:12px; font-weight:800; cursor:pointer; text-transform:uppercase;
+  letter-spacing:.04em; transition:.2s; display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.woc-btn-tomar:hover{ background:linear-gradient(135deg,#6d28d9,#9333ea); transform:translateY(-1px); }
+.woc-btn-ignorar{
+  width:34px; border-radius:8px; border:1px solid rgba(239,68,68,.3);
+  background:rgba(239,68,68,.1); color:#ef4444; font-size:13px; cursor:pointer; transition:.2s;
+}
+.woc-btn-ignorar:hover{ background:rgba(239,68,68,.25); }
+.woc-tiempo{
+  position:absolute; top:10px; right:48px; font-size:10px; font-weight:800;
+  color:#a78bfa; font-variant-numeric:tabular-nums;
+}
+
+/* FILTER BAR */
+.filter-bar{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:6px 18px;display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-btn{padding:5px 13px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);white-space:nowrap;transition:.12s;display:inline-flex;align-items:center;gap:5px}
+.filter-btn:hover{border-color:var(--bd2);color:var(--mid)}
+.filter-btn.active{background:var(--sur2);border-color:var(--bd2);color:var(--ink)}
+.filter-btn .fb-count{background:var(--bd2);border-radius:10px;padding:1px 6px;font-size:9px}
+.filter-btn.f-all.active{border-color:var(--green);color:var(--green)}
+.filter-btn.f-mesa.active{border-color:var(--blue);color:var(--blue)}
+.filter-btn.f-llevar.active{border-color:var(--amber);color:var(--amber)}
+.filter-btn.f-domicilio.active{border-color:var(--orange);color:var(--orange)}
+
+/* BOARD */
+.board{flex:1;overflow-y:auto;padding:8px;display:grid;gap:8px;align-content:start;background:#000000}
+.board.cols-3{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+@media(max-width:800px){.board{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:500px){.board{grid-template-columns:1fr!important}}
+
+/* ORDER CARD */
+.ord-card{background:#2a2a2a;border:1px solid #111;border-radius:4px;display:flex;flex-direction:column;overflow:hidden;min-height:250px;}
+.card-head{padding:8px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#000;}
+.card-head.time-ok{background:#4ade80}
+.card-head.time-warn{background:#facc15}
+.card-head.time-late{background:#ef4444;color:#fff}
+.ord-id{font-size:16px;font-weight:900;white-space:nowrap;letter-spacing:1px}
+.ord-timer{font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+.card-info{background:#111;padding:4px 12px;font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase}
+.card-body{padding:8px;flex:1;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.item-line{display:flex;align-items:flex-start;gap:8px;padding:2px 0;font-family:var(--font);font-size:14px;font-weight:600}
+.item-cant{min-width:20px;font-weight:900;color:#fff;display:flex;justify-content:flex-end}
+.item-name{color:#fff;line-height:1.2}
+.item-note{font-size:12px;color:#facc15;margin-left:28px}
+.card-foot{padding:8px;border-top:1px solid #111;display:flex;gap:6px;background:#1e1e1e}
+.state-btn{flex:1;padding:10px 6px;border-radius:4px;border:none;font-size:12px;font-weight:800;cursor:pointer;text-transform:uppercase}
+.btn-prep{background:#facc15;color:#000}
+.btn-listo{background:#4ade80;color:#000}
+.btn-entregado{background:var(--bl);color:var(--blue)}
+
+/* FIRE BADGE */
+.fire-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:linear-gradient(135deg,#ff4500,#ff8c00);
+  color:#fff;font-size:10px;font-weight:900;
+  padding:3px 8px;border-radius:20px;
+  text-transform:uppercase;letter-spacing:.06em;
+  animation:firePulse 1s ease-in-out infinite;
+  box-shadow:0 0 12px rgba(255,69,0,.6);
+}
+@keyframes firePulse{0%,100%{box-shadow:0 0 8px rgba(255,69,0,.6)}50%{box-shadow:0 0 20px rgba(255,140,0,.9),0 0 40px rgba(255,69,0,.4)}}
+
+/* HISTORIAL MODAL */
+.hist-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;
+  display:none;align-items:flex-start;justify-content:flex-end;
+  padding:8px;
+}
+.hist-overlay.open{display:flex}
+.hist-panel{
+  background:var(--sur);border:1px solid var(--bd);border-radius:16px;
+  width:480px;max-width:100%;height:calc(100vh - 16px);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.hist-head{
+  padding:16px 18px;border-bottom:1px solid var(--bd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.hist-head-title{font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
+.hist-close{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);
+  background:transparent;color:var(--muted);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+}
+.hist-filters{padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0}
+.hist-date{
+  flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--bd);
+  background:var(--sur2);color:var(--ink);font-size:12px;font-family:var(--font);
+}
+.hist-body{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.hist-card{
+  background:var(--sur2);border:1px solid var(--bd);border-radius:10px;
+  padding:12px 14px;display:flex;flex-direction:column;gap:6px;
+}
+.hist-card-head{display:flex;align-items:center;justify-content:space-between}
+.hist-card-id{font-size:14px;font-weight:900;color:var(--ink)}
+.hist-card-time{font-size:10px;color:var(--muted);font-weight:700}
+.hist-card-info{font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase}
+.hist-card-items{font-size:12px;color:var(--mid);line-height:1.6}
+.hist-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+.hist-loading{text-align:center;padding:30px;color:var(--muted);font-size:12px}
+
+/* EMPTY */
+.empty-board{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:60px 20px;grid-column:1/-1;color:var(--muted)}
+.empty-icon{font-size:48px;opacity:.3}
+.empty-txt{font-size:14px;font-weight:600;text-align:center}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--sur);border:1px solid var(--bd);padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;z-index:10000;transition:.4s cubic-bezier(.17,1.3,.3,1);opacity:0;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px}
+
+/* Optimizaciones para Pantallas Grandes / TV LED de 40" */
+@media (min-width: 1400px) {
+  .board.cols-3 {
+    grid-template-columns: repeat(auto-fill, minmax(345px, 1fr)) !important;
+    gap: 16px !important;
+  }
+  .ord-card {
+    min-height: 320px !important;
+  }
+  .ord-id, .ord-timer {
+    font-size: 24px !important;
+  }
+  .card-info {
+    font-size: 14.5px !important;
+    padding: 8px 14px !important;
+  }
+  .item-line {
+    font-size: 18px !important;
+    padding: 6px 0 !important;
+  }
+  .item-cant {
+    min-width: 28px !important;
+  }
+  .item-note {
+    font-size: 15px !important;
+    margin-left: 38px !important;
+  }
+  .state-btn {
+    padding: 14px 8px !important;
+    font-size: 14px !important;
+  }
+}
+
+/* Scrollbars para KDS Cocina (Pantalla de 40") */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bd2);
+  border-radius: 6px;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--mid);
+}
+</style>
+<div id="toast"></div>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <div class="tb-logo"><i class="fa-solid fa-fire-burner"></i></div>
+    <div>
+      <div class="tb-title">Pantalla de Cocina</div>
+      <div class="tb-sub" id="tb-neg-name">PARCHE SYS</div>
+      <div id="conn-status" style="font-size:8px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-top:2px">
+        <i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado
+      </div>
+    </div>
+  </div>
+  <div class="tb-r">
+    <button id="btn-sound" onclick="activarSonido()" style="padding:6px 10px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;cursor:pointer"><i class="fa-solid fa-volume-xmark"></i></button>
+    <button onclick="abrirHistorial()" style="padding:6px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
+    <a href="portal-food.html?negocio=negocio_food_sv_demo" id="link-portal" style="padding:6px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-grid-2"></i> Portal</a>
+    <div class="tb-stats">
+      <div class="stat-pill s-web">
+        <div class="sn" id="cnt-web">0</div><div class="sl">Web</div>
+      </div>
+      <div class="stat-pill s-pending">
+        <div class="sn" id="cnt-pendiente">0</div><div class="sl">Pendientes</div>
+      </div>
+      <div class="stat-pill s-prep">
+        <div class="sn" id="cnt-prep">0</div><div class="sl">En prep.</div>
+      </div>
+      <div class="stat-pill s-ready">
+        <div class="sn" id="cnt-listo">0</div><div class="sl">Listos</div>
+      </div>
+    </div>
+    <div><div id="tb-clock">--:--</div><div id="tb-date" class="tb-sub">--</div></div>
+  </div>
+</div>
+
+<!-- ██ ORDENES WEB ENTRANTES ██ -->
+<div class="web-inbox" id="web-inbox">
+  <div class="wi-header">
+    <div class="wi-title">
+      <div class="wi-pulse"></div>
+      <i class="fa-solid fa-mobile-screen-button"></i>
+      Órdenes Web — Pendientes de asignar al POS
+      <span class="wi-count" id="wi-count">0</span>
+    </div>
+    <span style="font-size:11px;color:#a78bfa;font-weight:700">← Un mesero debe tomar cada orden →</span>
+  </div>
+  <div class="wi-scroll" id="wi-scroll">
+    <!-- cards dinámicas -->
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <button class="filter-btn f-all active" onclick="setFiltro('all')">📔 Todos <span class="fb-count" id="fc-all">0</span></button>
+  <button class="filter-btn f-mesa" onclick="setFiltro('mesa')">🍽️ Mesa <span class="fb-count" id="fc-mesa">0</span></button>
+  <button class="filter-btn f-llevar" onclick="setFiltro('llevar')">🥡 Para llevar <span class="fb-count" id="fc-llevar">0</span></button>
+  <button class="filter-btn f-domicilio" onclick="setFiltro('domicilio')">🛵 Domicilio <span class="fb-count" id="fc-domicilio">0</span></button>
+</div>
+
+<!-- BOARD -->
+<div class="board cols-3" id="board">
+  <div class="empty-board">
+    <div class="empty-icon">🍳</div>
+    <div class="empty-txt">Conectando con Cocina...</div>
+  </div>
+</div>
+
+<!-- HISTORIAL MODAL -->
+<div class="hist-overlay" id="hist-overlay">
+  <div class="hist-panel">
+    <div class="hist-head">
+      <div class="hist-head-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue)"></i> Historial de Órdenes Entregadas</div>
+      <button class="hist-close" onclick="cerrarHistorial()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="hist-filters">
+      <input type="date" id="hist-fecha" class="hist-date" onchange="cargarHistorialKDS()">
+      <button onclick="cargarHistorialKDS()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--sur2);color:var(--mid);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+    </div>
+    <div class="hist-body" id="hist-body">
+      <div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Selecciona una fecha para ver el historial</div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/* Firebase centralizado en firebase-config.js */
+if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
+/* Firebase centralizado en firebase-config.js */
+
+// NegocioID fijo para este despliegue
+var params   = new URLSearchParams(window.location.search);
+var negocioID = params.get('negocio') || 'negocio_food_sv_demo';
+</script>
+<script>
+var _orders      = {};
+var _webOrders   = {};   // órdenes web pendientes de asignar
+var _itemChecks  = {};
+var _filtroActual= 'all';
+var _sonidoActivo= false;
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+/* ─── SONIDO ─── */
+function beep(freq,dur){
+  if(!_sonidoActivo) return;
+  try {
+    // Oscilador Principal (Diente de sierra)
+    var o1 = audioContext.createOscillator();
+    var g1 = audioContext.createGain();
+    o1.connect(g1);
+    g1.connect(audioContext.destination);
+    o1.type = 'sawtooth';
+    o1.frequency.setValueAtTime(freq || 880, audioContext.currentTime);
+    g1.gain.setValueAtTime(0.8, audioContext.currentTime); // Volumen alto
+    
+    // Segundo oscilador ligeramente desafinado (+6Hz) para crear una vibración / chirrido estridente
+    var o2 = audioContext.createOscillator();
+    var g2 = audioContext.createGain();
+    o2.connect(g2);
+    g2.connect(audioContext.destination);
+    o2.type = 'sawtooth';
+    o2.frequency.setValueAtTime((freq || 880) + 6, audioContext.currentTime);
+    g2.gain.setValueAtTime(0.8, audioContext.currentTime);
+    
+    o1.start();
+    o2.start();
+    o1.stop(audioContext.currentTime + (dur || 0.2));
+    o2.stop(audioContext.currentTime + (dur || 0.2));
+  } catch(e){}
+}
+
+function beepWeb(){
+  beep(660,0.15);
+  setTimeout(()=>beep(880,0.2),200);
+}
+
+function beepCambio(){
+  beep(520,0.1);
+  setTimeout(()=>beep(660,0.1),150);
+  setTimeout(()=>beep(780,0.15),300);
+}
+
+function playNewOrderSound() {
+  if(!_sonidoActivo) return;
+  try {
+    var audio = new Audio('alarma.mp3');
+    audio.volume = 1.0;
+    audio.play().catch(function() {
+      playAggressiveNewOrderBeeps();
+    });
+  } catch(e) {
+    playAggressiveNewOrderBeeps();
+  }
+}
+
+function playAggressiveNewOrderBeeps() {
+  // Secuencia rápida de 6 notas tipo alarma industrial (880Hz y 1100Hz alternados)
+  var notes = [880, 1100, 880, 1100, 880, 1100];
+  notes.forEach(function(freq, idx) {
+    setTimeout(function() {
+      beep(freq, 0.16);
+    }, idx * 150);
+  });
+}
+
+function beepFire(){
+  if(!_sonidoActivo) return;
+  try {
+    var audio = new Audio('fire.mp3');
+    audio.volume = 1.0;
+    audio.play().catch(function() {
+      playFireBeeps();
+    });
+  } catch(e) {
+    playFireBeeps();
+  }
+}
+
+function playFireBeeps() {
+  beep(400,0.08); 
+  setTimeout(()=>beep(600,0.08),100); 
+  setTimeout(()=>beep(900,0.08),200); 
+  setTimeout(()=>beep(600,0.08),300); 
+  setTimeout(()=>beep(900,0.15),400);
+}
+
+function activarSonido(){
+  audioContext.resume().then(()=>{
+    _sonidoActivo=true;
+    document.getElementById('btn-sound').innerHTML='<i class="fa-solid fa-volume-high"></i>';
+    toast('Sonido activado','ok');
+  });
+}
+
+/* ─── INICIAR ─── */
+function iniciar(){
+  db.ref('negocios/'+negocioID+'/info').once('value',s=>{
+    document.getElementById('tb-neg-name').textContent = (s.val()||{}).nombre||'PARCHE SYS';
+  });
+
+  db.ref('.info/connected').on('value',snap=>{
+    var el=document.getElementById('conn-status');
+    if(snap.val()){
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
+      el.style.color='var(--green)';
+    } else {
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
+      el.style.color='var(--red)';
+    }
+  });
+
+  // ── COCINA ORDERS (KDS normal) ──
+  var firstLoad=true;
+  db.ref('negocios/'+negocioID+'/cocina_orders').on('value',snap=>{
+    var prev=Object.assign({},_orders);
+    var prevCount=Object.keys(_orders).length;
+    _orders={};
+    snap.forEach(c=>{
+      var v=c.val();
+      if(v && v.estado!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+    });
+    var newCount=Object.keys(_orders).length;
+
+    if(!firstLoad){
+      if(newCount>prevCount){
+        playNewOrderSound();
+        toast('🔔 ¡Nuevo pedido!','ok');
+      } else {
+        // Detectar modificaciones en órdenes existentes
+        var modified=false;
+        Object.entries(_orders).forEach(([id,o])=>{
+          var p=prev[id];
+          if(p){
+            var prevItems=(p.items||[]).length;
+            var curItems=(o.items||[]).length;
+            if(curItems>prevItems){ modified=true; }
+            // Detectar FIRE recién activado
+            if(o.fire && !p.fire){
+              beepFire();
+              toast('🔥 ¡FIRE! Preparar: '+(o.mesa_num?'Mesa '+o.mesa_num:'#'+(o.orden||id.substring(0,6))),'ok');
+            }
+          }
+        });
+        if(modified){ beepCambio(); toast('✏️ Orden modificada — nuevo producto agregado','ok'); }
+      }
+    }
+    firstLoad=false;
+    renderBoard(); updateStats();
+  });
+
+  // ── ORDENES WEB ENTRANTES ──
+  var firstWebLoad=true;
+  db.ref('negocios/'+negocioID+'/ordenes_web').on('value',snap=>{
+    var prev=Object.keys(_webOrders).length;
+    _webOrders={};
+    snap.forEach(c=>{
+      var v=c.val();
+      if(v && !v.tomada_por) _webOrders[c.key]=v;
+    });
+    var count=Object.keys(_webOrders).length;
+    if(!firstWebLoad && count>prev){ beepWeb(); toast('🌐 ¡Orden web entrante!','ok'); }
+    firstWebLoad=false;
+    renderWebInbox(); updateStats();
+  });
+
+  setInterval(renderBoard,30000);
+  setInterval(renderWebInbox,10000);
+}
+
+/* ─── WEB INBOX ─── */
+function renderWebInbox(){
+  var entries=Object.entries(_webOrders).sort((a,b)=>(a[1].timestamp||0)-(b[1].timestamp||0));
+  var inbox=document.getElementById('web-inbox');
+  var scroll=document.getElementById('wi-scroll');
+  var wiCount=document.getElementById('wi-count');
+
+  wiCount.textContent=entries.length;
+
+  if(!entries.length){
+    inbox.classList.remove('has-orders');
+    scroll.innerHTML='';
+    return;
+  }
+  inbox.classList.add('has-orders');
+
+  scroll.innerHTML=entries.map(([id,o])=>{
+    var mins=Math.floor((Date.now()-(o.timestamp||Date.now()))/60000);
+    var tipoLabel = o.tipo==='domicilio' ? 'domicilio' : (o.tipo==='llevar'||o.tipo==='recoger'?'llevar':'llevar');
+    var tipoEmoji = o.tipo==='domicilio' ? '🛵' : '🥡';
+    var itemsHtml = (o.items||[]).slice(0,4).map(it=>'<span>'+it.cant+'×</span>'+it.desc).join('<br>');
+    if((o.items||[]).length>4) itemsHtml+='<br><span style="color:#a78bfa">+'+((o.items.length-4)+' más...')+'</span>';
+    return `<div class="web-order-card">
+      <div class="woc-head">
+        <div class="woc-id">#${o.orden||id.substring(0,8)}</div>
+        <div class="woc-badge ${tipoLabel}">${tipoEmoji} ${tipoLabel}</div>
+      </div>
+      <div class="woc-client"><i class="fa-solid fa-user" style="font-size:10px"></i>${o.cliente||'—'} · ${o.telefono||'—'}</div>
+      ${o.direccion?'<div style="font-size:11px;color:#a78bfa;margin-top:-4px"><i class="fa-solid fa-location-dot" style="font-size:9px"></i> '+o.direccion+'</div>':''}
+      <div class="woc-items">${itemsHtml}</div>
+      <div class="woc-total">$${parseFloat(o.total||0).toFixed(2)} · hace ${mins}min</div>
+      <div class="woc-actions">
+        <button class="woc-btn-tomar" onclick="tomarOrdenWeb('${id}')">
+          <i class="fa-solid fa-hand-pointer"></i> Tomar orden
+        </button>
+        <button class="woc-btn-ignorar" onclick="ignorarOrdenWeb('${id}')" title="Descartar">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* Mesero toma la orden web → la pasa al POS (la marca como tomada y la mueve a cocina) */
+function tomarOrdenWeb(id){
+  var o=_webOrders[id];
+  if(!o) return;
+
+  var mesero = prompt('¿Quién toma esta orden? (nombre del mesero)','Mesero');
+  if(!mesero) return;
+
+  var updates={};
+  // Marcar como tomada en ordenes_web
+  updates['negocios/'+negocioID+'/ordenes_web/'+id+'/tomada_por']   = mesero;
+  updates['negocios/'+negocioID+'/ordenes_web/'+id+'/tomada_hora']  = new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  // Asegurar que esté en cocina_orders (ya existe por el menú-cliente, pero por si acaso)
+  updates['negocios/'+negocioID+'/cocina_orders/'+id] = Object.assign({},o,{tomada_por:mesero,estado:o.estado||'pendiente'});
+  // Marcar en pedidos
+  updates['negocios/'+negocioID+'/pedidos/'+id+'/tomada_por'] = mesero;
+
+  db.ref().update(updates).then(()=>{
+    toast('✅ Orden tomada por '+mesero+' — ingresada al POS','ok');
+  }).catch(e=>{ toast('Error al tomar la orden','err'); console.error(e); });
+}
+
+function ignorarOrdenWeb(id){
+  if(!confirm('¿Descartar esta orden web? Se eliminará del listado.')) return;
+  db.ref('negocios/'+negocioID+'/ordenes_web/'+id+'/tomada_por').set('IGNORADA').then(()=>{
+    toast('Orden descartada','ok');
+  });
+}
+
+/* ─── BOARD KDS ─── */
+function renderBoard(){
+  var board=document.getElementById('board');
+  var entries=Object.entries(_orders).sort((a,b)=>(a[1].timestamp||0)-(b[1].timestamp||0));
+  if(_filtroActual!=='all') entries=entries.filter(e=>e[1].tipo===_filtroActual);
+
+  // Filtrar órdenes que contengan al menos un producto que no sea bebida
+  entries = entries.filter(function(e) {
+    var items = e[1].items || [];
+    return items.some(function(it) {
+      return (it.cat || '').trim().toUpperCase() !== 'BEBIDAS';
+    });
+  });
+
+  if(!entries.length){ board.innerHTML='<div class="empty-board"><div class="empty-icon">🍳</div><div class="empty-txt">Sin pedidos activos en cocina</div></div>'; return; }
+
+  board.innerHTML=entries.map(([id,o]) => {
+    var diff=Date.now()-(o.timestamp||Date.now());
+    var mins=Math.floor(diff/60000);
+    var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
+    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
+    var fireTag=o.fire?'<span class="fire-badge"><i class="fa-solid fa-fire"></i> FIRE</span>':'';
+    // Override card border if fire active
+    var cardStyle=o.fire?'border:2px solid #ff4500;box-shadow:0 0 16px rgba(255,69,0,.4)':'';
+    return `<div class="ord-card state-${o.estado}" style="${cardStyle}">
+      <div class="card-head ${tc}">
+        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}${fireTag}</div>
+        <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
+      </div>
+      <div class="card-info">
+        ${o.tipo==='mesa'?'MESA '+(o.mesa_num||'?'):o.tipo?o.tipo.toUpperCase():'ORDEN'}
+        ${o.cliente?' | '+o.cliente:''}
+        ${o.mesero || o.tomada_por ? ' · ' + (o.mesero || o.tomada_por) : ''}
+      </div>
+      <div class="card-body">
+        ${(o.items||[]).map((it,idx)=>{
+          var isDrink = (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+          if(isDrink) return ''; // Ocultar bebidas en KDS Cocina
+          
+          var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
+          return '<div class="item-line"><div class="item-cant">'+it.cant+'</div><div class="item-text"><div class="item-name'+(isOk?' line-through opacity-50':'')+'" style="cursor:pointer;text-decoration:'+(isOk?'line-through':'none')+';opacity:'+(isOk?'0.5':'1')+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+'</div></div></div>'
+          +(it.nota?'<div class="item-note">-- '+it.nota+'</div>':'');
+        }).join('')}
+        ${o.nota_cocina?'<div style="background:#444;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
+        ${o.nota_cliente?'<div style="background:#333;padding:6px;font-size:12px;color:#facc15;margin-top:3px;">💬 '+o.nota_cliente+'</div>':''}
+      </div>
+      <div class="card-foot">
+        ${(o.estado==='pendiente'||o.estado==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
+        ${o.estado==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
+        ${o.estado==='listo'?'<button class="state-btn btn-entregado" style="background:#38bdf8;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Entregado</button>':''}
+        <button class="state-btn" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;flex:0 0 auto;width:36px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="eliminarDeCocina(\''+id+'\')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCheck(orderId,itemIdx){
+  var o = _orders[orderId];
+  if(!o || !o.items || !o.items[itemIdx]) return;
+  var currentVal = !!o.items[itemIdx].listo;
+  var newVal = !currentVal;
+  
+  // Guardar estado localmente
+  var k = orderId+'_'+itemIdx;
+  _itemChecks[k] = newVal;
+  
+  // Actualizar en Firebase
+  db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
+    listo: newVal
+  });
+  
+  // Si se tachó (listo es true), notificar al mesero de inmediato
+  if (newVal) {
+    var mesero = o.tomada_por || o.mesero;
+    if (mesero) {
+      var channel = o.tipo || o.canal || 'mesa';
+      var mesaText = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
+      var itemName = o.items[itemIdx].desc;
+      db.ref('negocios/'+negocioID+'/notificaciones/' + mesero.toLowerCase().trim()).push({
+        tipo: 'item_listo',
+        mensaje: '🍳 Cocina ya preparó ' + o.items[itemIdx].cant + 'x ' + itemName + ' de ' + mesaText,
+        timestamp: Date.now()
+      });
+    }
+  }
+}
+
+function cambiarEstado(id,nestado){
+  if(nestado==='entregado'){
+    // Guardar en historial antes de eliminar
+    var o=_orders[id];
+    if(o){
+      var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+      var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+      db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
+        estado:'entregado',
+        hora_entrega:hora,
+        fecha_entrega:fecha,
+        ts_entrega:Date.now()
+      }));
+    }
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
+    db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+    toast('Pedido entregado y limpiado de KDS','ok');
+  } else {
+    // Update state for other transitions
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado:nestado});
+    if(nestado==='listo'){
+      var o=_orders[id];
+      var meseroTarget = o ? (o.mesero || o.tomada_por) : null;
+      if(o && meseroTarget){
+        var channel = o.tipo || o.canal || 'mesa';
+        var mesaLabel = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
+        var foodItems = (o.items||[]).filter(function(i){ return (i.cat||'').trim().toUpperCase() !== 'BEBIDAS'; });
+        var itemList = foodItems.map(function(i){ return i.cant+'x '+i.desc; }).join(', ');
+        // Usar push para no sobrescribir si hay múltiples notificaciones
+        db.ref('negocios/'+negocioID+'/notificaciones/'+meseroTarget.toLowerCase().trim()).push({
+          tipo: 'orden_lista',
+          mensaje: '🍽️ Cocina ya preparó ' + itemList + ' de ' + mesaLabel,
+          timestamp: Date.now()
+        });
+      }
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+    }
+  }
+}
+
+function eliminarDeCocina(id){
+  if(!id || id === 'undefined' || id === 'null' || id === '') {
+    toast('Error: ID de pedido no válido', 'err');
+    return;
+  }
+  if(confirm('¿Eliminar este pedido de cocina?')) {
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove().then(()=>toast('Eliminado','ok'));
+  }
+}
+
+/* ─── STATS ─── */
+function updateStats(){
+  var o=Object.values(_orders).filter(function(e) {
+    return (e.items || []).some(function(it) {
+      return (it.cat || '').trim().toUpperCase() !== 'BEBIDAS';
+    });
+  });
+  var setT=(id,v)=>{ var el=document.getElementById(id); if(el) el.textContent=v; };
+  setT('cnt-pendiente', o.filter(x=>x.estado==='pendiente').length);
+  setT('cnt-prep',      o.filter(x=>x.estado==='en_prep').length);
+  setT('cnt-listo',     o.filter(x=>x.estado==='listo').length);
+  setT('cnt-web',       Object.keys(_webOrders).length);
+  setT('fc-all',   o.length);
+  setT('fc-mesa',  o.filter(x=>x.tipo==='mesa').length);
+  setT('fc-llevar',o.filter(x=>x.tipo==='llevar').length);
+  setT('fc-domicilio',o.filter(x=>x.tipo==='domicilio').length);
+}
+
+function setFiltro(f){
+  _filtroActual=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.classList.contains('f-'+f)));
+  renderBoard();
+}
+
+/* ─── TOAST ─── */
+function toast(m,t){
+  var el=document.getElementById('toast');
+  el.textContent=m;
+  el.style.borderColor=t==='err'?'var(--red)':'var(--green)';
+  el.style.color=t==='err'?'var(--red)':'var(--green)';
+  el.style.transform='translateX(-50%) translateY(0)'; el.style.opacity='1';
+  clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.transform='translateX(-50%) translateY(100px)'; el.style.opacity='0'; },3000);
+}
+
+/* ─── HISTORIAL KDS ─── */
+function abrirHistorial(){
+  document.getElementById('hist-overlay').classList.add('open');
+  // Default to today
+  var today=new Date().toISOString().split('T')[0];
+  document.getElementById('hist-fecha').value=today;
+  cargarHistorialKDS();
+}
+function cerrarHistorial(){
+  document.getElementById('hist-overlay').classList.remove('open');
+}
+function cargarHistorialKDS(){
+  var fecha=document.getElementById('hist-fecha').value;
+  var body=document.getElementById('hist-body');
+  if(!fecha){ body.innerHTML='<div class="hist-empty">Selecciona una fecha</div>'; return; }
+  body.innerHTML='<div class="hist-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
+
+  db.ref('negocios/'+negocioID+'/historial_kds').orderByChild('fecha_entrega').equalTo(fecha).once('value',function(snap){
+    var items=[];
+    snap.forEach(function(c){ items.push(Object.assign({},c.val(),{_key:c.key})); });
+    items.reverse(); // más recientes primero
+
+    if(!items.length){
+      body.innerHTML='<div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Sin órdenes entregadas el '+fecha+'</div>';
+      return;
+    }
+
+    body.innerHTML=items.map(function(o){
+      var itemsList=(o.items||[]).map(function(it){ return it.cant+'× '+it.desc; }).join(', ');
+      var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+      return '<div class="hist-card">'
+        +'<div class="hist-card-head">'
+        +'<div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
+        +'<div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:'')+'</div>'
+        +'</div>'
+        +'<div class="hist-card-info">'+tipoLabel+(o.fire?' 🔥 FIRE':'')+'</div>'
+        +'<div class="hist-card-items">'+itemsList+'</div>'
+        +(o.nota_cocina?'<div style="font-size:11px;color:#facc15;margin-top:4px">📝 '+o.nota_cocina+'</div>':'')
+        +'</div>';
+    }).join('');
+  });
+}
+
+/* ─── CLOCK ─── */
+function updateClock(){
+  var n=new Date();
+  document.getElementById('tb-clock').textContent=n.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('tb-date').textContent=n.toLocaleDateString('es-SV',{day:'numeric',month:'short'});
+}
+setInterval(updateClock,1000);
+
+/* ─── line-through / opacity helpers ─── */
+document.addEventListener('DOMContentLoaded',()=>{ updateClock(); iniciar(); });
+</script>
+</body>
+</html>

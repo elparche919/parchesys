@@ -1,0 +1,3007 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<link rel="stylesheet" href="modus-design.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS · Gestión de Empleados (Bajo Licencia de PARCHE SYS)</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script>
+(function(){
+  emailjs.init({publicKey:'3SbfCH_BEHPJI6oLq'});
+  window.MODUS_NOTIF_EMP={
+    SERVICE:'service_gigw7gi', TEMPLATE:'template_id5s3gf',
+    enviar:function(p){
+      if(!p.to_email)return;
+      emailjs.send(this.SERVICE,this.TEMPLATE,{
+        to_email:p.to_email, to_name:p.to_name||'Empleado',
+        subject:p.subject||'Notificación PARCHE SYS', message:p.message||'',
+        negocio:p.negocio||'MODUS', accion:p.accion||'', extra:p.extra||'',
+        reply_to:'no-reply@modusapp.store'
+      }).catch(e=>console.warn('[MODUS Notif Emp]',e));
+    },
+    tareaAsignada:function(biz,emp,detalle){
+      if(!emp||!emp.email)return;
+      this.enviar({
+        to_email:emp.email, to_name:emp.nombre||'Empleado',
+        subject:'📋 Nueva tarea asignada — '+biz, negocio:biz,
+        accion:'Se te ha asignado una nueva tarea',
+        message:'Hola '+(emp.nombre||'')+',\n\nSe te ha asignado la siguiente tarea:\n\n'+detalle,
+        extra:'Fecha: '+new Date().toLocaleDateString('es-SV')
+      });
+    },
+    incidenciaCreada:function(adminEmail,biz,emp,inc){
+      if(!adminEmail)return;
+      this.enviar({
+        to_email:adminEmail, to_name:'Administrador',
+        subject:'⚠️ Nueva incidencia: '+(emp.nombre||'Empleado')+' — '+biz,
+        negocio:biz, accion:'Incidencia registrada',
+        message:'Empleado: '+(emp.nombre||'—')+'\nTipo: '+(inc.tipo||'—')+'\nDescripción: '+(inc.descripcion||'—'),
+        extra:'Urgencia: '+(inc.urgencia||'normal')+' | Fecha: '+new Date().toLocaleDateString('es-SV')
+      });
+    }
+  };
+})();
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root {
+  --m-blue: #ea580c; /* Orange Accent */
+  --m-blue-mid: #c2410c;
+  --m-blue-light: rgba(234, 88, 12, 0.12);
+  --m-blue-soft: rgba(234, 88, 12, 0.22);
+  --m-bg: #0f1115; /* Slate Black background */
+  --m-surface: #1a1d24; /* Slate Dark card background */
+  --m-text: #f8fafc;
+  --m-muted: #94a3b8;
+  --m-border: #2a2e37;
+  
+  --a: var(--m-blue);
+  --al: var(--m-blue-light);
+  --g: #10b981;
+  --gl: rgba(16, 185, 129, 0.1);
+  --r: #ef4444;
+  --rl: rgba(239, 68, 68, 0.1);
+  --y: #f59e0b;
+  --yl: rgba(245, 158, 11, 0.1);
+  --bd: var(--m-border);
+  --bg: #111317;
+  --dark: var(--m-text);
+  --font-body: 'DM Sans', sans-serif;
+}
+body{font-family:var(--font-body);background:var(--m-bg);color:var(--dark);min-height:100vh}
+
+/* ── TOPBAR ── */
+.tb{background:var(--m-surface);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:0;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.tb-l{display:flex;align-items:center;gap:12px}
+.tb-back{width:36px;height:36px;background:var(--al);border:1.5px solid var(--m-blue-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--a);font-size:13px;cursor:pointer;text-decoration:none;transition:.15s;flex-shrink:0}
+.tb-back:hover{background:var(--m-blue-mid);color:white}
+.tb-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--m-blue),var(--m-blue-mid));border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:900;color:var(--dark);line-height:1;letter-spacing:-.01em}
+.tb-sub{font-size:10px;font-weight:600;color:var(--m-muted);margin-top:1px}
+.tb-r{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.btn{padding:8px 14px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body);transition:.14s;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.btn-primary{background:var(--a);color:white;box-shadow:0 4px 12px rgba(234, 88, 12, .3)}.btn-primary:hover{background:var(--m-blue-mid)}
+.btn-ghost{background:rgba(255,255,255,0.05);color:var(--m-text);border:1.5px solid var(--bd)}.btn-ghost:hover{border-color:var(--m-blue-soft);color:var(--a);background:rgba(255,255,255,0.08)}
+.btn-green{background:var(--g);color:white}.btn-green:hover{background:#059669}
+.btn-red{background:var(--r);color:white}.btn-red:hover{background:#dc2626}
+.btn-sm{padding:5px 10px;font-size:10px}
+
+/* ── TAB NAV ── */
+.tab-bar{background:var(--m-surface);border-bottom:1px solid var(--bd);padding:8px 20px;display:flex;gap:6px;flex-wrap:wrap;overflow:visible;position:relative;z-index:100;align-items:center}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-item{padding:12px 18px;font-size:12px;font-weight:700;color:var(--m-muted);cursor:pointer;border-bottom:3px solid transparent;transition:.15s;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.tab-item:hover{color:var(--a)}
+.tab-item.active{color:var(--a);border-bottom-color:var(--a)}
+.tab-count{background:var(--al);color:var(--a);font-size:9px;font-weight:800;padding:2px 7px;border-radius:10px}
+
+/* ── PAGES ── */
+.page{display:none;padding:20px;max-width:1200px;margin:0 auto;animation:fadeUp .2s ease;position:relative;z-index:1}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── STATS GRID ── */
+.stats{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px}
+@media(max-width:1000px){.stats{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:600px){.stats{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--m-surface);border-radius:16px;padding:16px;border:1px solid var(--bd);transition:.2s;color:var(--m-text)}
+.stat:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);border-color:var(--m-blue-soft)}
+.stat-val{font-size:24px;font-weight:900;letter-spacing:-.03em;margin-bottom:2px}
+.stat-lbl{font-size:9px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.1em}
+.stat-icon{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:8px}
+
+/* ── ALERTAS ── */
+.alerts{background:var(--m-surface);border-radius:16px;border:1.5px solid rgba(245,158,11,0.3);padding:16px;margin-bottom:20px}
+.alert-title{font-size:12px;font-weight:800;color:#f59e0b;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.alert-item{display:flex;align-items:center;gap:8px;padding:7px 10px;background:rgba(245,158,11,0.08);border-radius:9px;margin-bottom:6px;font-size:11px;font-weight:600;color:#fef08a}
+.alert-item:last-child{margin-bottom:0}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── SEARCH/FILTER BAR ── */
+.bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.search-wrap{position:relative;flex:1;min-width:200px}
+.search-wrap input{width:100%;padding:9px 12px 9px 34px;border:1.5px solid var(--m-border);border-radius:10px;font-size:12px;font-weight:600;font-family:var(--font-body);outline:none;background:rgba(255,255,255,0.04);color:var(--m-text);transition:.15s}
+.search-wrap input:focus{border-color:var(--a);background:rgba(255,255,255,0.08)}
+.search-wrap i{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--m-muted);font-size:12px}
+.filter-select{padding:9px 12px;border:1.5px solid var(--m-border);border-radius:10px;font-size:11px;font-weight:700;font-family:var(--font-body);outline:none;background:var(--m-surface);color:var(--m-text);cursor:pointer}
+.filter-select:focus{border-color:var(--a)}
+
+/* ── EMPLOYEE CARDS ── */
+.emp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.emp-card{background:var(--m-surface);border-radius:18px;border:1.5px solid var(--m-border);overflow:hidden;transition:.18s;cursor:pointer;color:var(--m-text)}
+.emp-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.4);border-color:var(--m-blue-soft)}
+.emp-card-top{padding:16px 16px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--m-border)}
+.emp-avatar{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;flex-shrink:0;color:white;overflow:hidden}
+.emp-avatar img,.asist-avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.emp-info{flex:1;min-width:0}
+.emp-name{font-size:14px;font-weight:800;color:var(--m-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.emp-puesto{font-size:10px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.emp-status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.emp-card-body{padding:12px 16px}
+.emp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;font-size:11px}
+.emp-row-lbl{color:var(--m-muted);font-weight:600;display:flex;align-items:center;gap:5px}
+.emp-row-val{font-weight:700;color:var(--m-text)}
+.emp-card-foot{padding:10px 16px;background:rgba(0,0,0,0.2);border-top:1px solid var(--m-border);display:flex;gap:6px}
+.emp-foot-btn{flex:1;padding:7px;border-radius:9px;font-size:10px;font-weight:700;cursor:pointer;border:none;font-family:var(--font-body);transition:.14s;text-align:center}
+
+/* ── TABLE ── */
+.tbl-wrap{background:var(--m-surface);border-radius:16px;border:1px solid var(--m-border);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+table{width:100%;border-collapse:collapse}
+thead th{background:#151820;padding:10px 14px;font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--m-muted);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--m-border)}
+tbody td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--m-border);vertical-align:middle;color:var(--m-text)}
+tbody tr:hover{background:rgba(255,255,255,0.02)}
+tbody tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.b-green{background:rgba(16,185,129,0.15);color:#4ade80}
+.b-red{background:rgba(239,68,68,0.15);color:#fb7185}
+.b-yellow{background:rgba(245,158,11,0.15);color:#fbbf24}
+.b-blue{background:rgba(56,189,248,0.15);color:#38bdf8}
+.b-gray{background:rgba(255,255,255,0.08);color:var(--m-muted)}
+
+/* ── ASISTENCIA ── */
+.asist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.asist-card{background:var(--m-surface);border-radius:14px;border:1.5px solid var(--m-border);padding:14px;display:flex;align-items:center;gap:12px;transition:.15s;color:var(--m-text)}
+.asist-card:hover{border-color:var(--m-blue-soft);box-shadow:0 6px 18px rgba(0,0,0,.2)}
+.asist-avatar{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;color:white}
+.asist-info{flex:1}
+.asist-name{font-size:13px;font-weight:800;color:var(--m-text)}
+.asist-time{font-size:10px;font-weight:600;color:var(--m-muted);margin-top:2px}
+.asist-actions{display:flex;gap:6px;flex-direction:column}
+.asist-btn{padding:5px 10px;border-radius:7px;font-size:10px;font-weight:800;cursor:pointer;border:none;font-family:var(--font-body);white-space:nowrap}
+
+/* ── TURNOS ── */
+.turno-row{display:grid;grid-template-columns:1fr;gap:8px}
+.turno-day{background:var(--m-surface);border-radius:12px;border:1px solid var(--m-border);overflow:hidden}
+.turno-day-hdr{padding:10px 14px;background:linear-gradient(135deg,var(--m-blue),var(--m-blue-mid));color:white;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+.turno-slots{padding:8px}
+.turno-slot{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:rgba(255,255,255,0.03);border-radius:8px;margin-bottom:5px;font-size:11px;border:1px solid var(--m-border)}
+.turno-slot:last-child{margin-bottom:0}
+.ts-name{font-weight:700;color:var(--m-text)}
+.ts-time{font-weight:700;color:var(--a);background:var(--al);padding:2px 8px;border-radius:6px;font-size:10px}
+
+/* ── PLANILLA ── */
+.planilla-wrap{background:var(--m-surface);border-radius:16px;border:1px solid var(--m-border);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.planilla-header{padding:18px 20px;border-bottom:1px solid var(--m-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:rgba(0,0,0,0.15)}
+.planilla-total{background:linear-gradient(135deg,#10b981,#059669);color:white;border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:12px;margin-bottom:16px;box-shadow:0 4px 12px rgba(16,185,129,0.3)}
+.pt-icon{font-size:28px}
+.pt-val{font-size:28px;font-weight:900;letter-spacing:-.03em}
+.pt-lbl{font-size:10px;font-weight:700;opacity:.85;text-transform:uppercase;letter-spacing:.08em}
+
+/* ── PORTAL EMPLEADO ── */
+.portal-header{background:linear-gradient(135deg,var(--m-blue),var(--m-blue-mid));border-radius:20px;padding:24px;color:white;margin-bottom:20px;display:flex;align-items:center;gap:16px}
+.portal-avatar{width:56px;height:56px;background:rgba(255,255,255,.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.portal-name{font-size:20px;font-weight:900;letter-spacing:-.02em}
+.portal-role{font-size:11px;font-weight:700;opacity:.8;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.portal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px}
+.portal-card{background:var(--m-surface);border-radius:16px;border:1.5px solid var(--m-border);padding:20px;cursor:pointer;transition:.18s;text-align:center;color:var(--m-text)}
+.portal-card:hover{transform:translateY(-3px);box-shadow:0 8px 22px rgba(0,0,0,.3);border-color:var(--m-blue-soft)}
+.portal-card-icon{font-size:32px;margin-bottom:10px}
+.portal-card-title{font-size:13px;font-weight:800;color:var(--m-text);margin-bottom:4px}
+.portal-card-sub{font-size:11px;color:var(--m-muted);font-weight:500}
+
+/* ── OVERLAY / MODAL ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(15,23,42,.75);backdrop-filter:blur(6px);z-index:500;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:#151820;border-radius:22px;padding:26px;width:100%;max-width:540px;position:relative;animation:mIn .2s ease;box-shadow:0 24px 60px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;border:1px solid var(--m-border)}
+@keyframes mIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal-close{position:absolute;top:14px;right:14px;width:28px;height:28px;background:rgba(255,255,255,0.06);border:none;border-radius:8px;cursor:pointer;font-size:13px;color:var(--m-muted);display:flex;align-items:center;justify-content:center}
+.modal-close:hover{background:rgba(255,255,255,0.12);color:white}
+.modal-title{font-size:17px;font-weight:900;margin-bottom:18px;color:var(--m-text)}
+.fg{margin-bottom:13px}
+.fl{display:block;font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--m-muted);text-transform:uppercase;margin-bottom:5px}
+.fi{width:100%;padding:9px 12px;border:1.5px solid var(--m-border);border-radius:10px;font-size:13px;font-weight:600;font-family:var(--font-body);outline:none;background:#0f1115;transition:.15s;color:var(--m-text)}
+.fi:focus{border-color:var(--a);background:#0a0c0e;box-shadow:0 0 0 3px rgba(234,88,12,.1)}
+.fi::placeholder{color:#475569;font-weight:400}
+textarea.fi{resize:vertical;min-height:72px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* ── NOTIFICACIONES TIPO WA ── */
+.notif-list{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.notif-item{display:flex;gap:10px;padding:12px 14px;background:var(--m-surface);border-radius:12px;border:1px solid var(--m-border);align-items:flex-start}
+.notif-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.notif-body{flex:1}
+.notif-title{font-size:12px;font-weight:800;color:var(--m-text);margin-bottom:2px}
+.notif-msg{font-size:11px;color:var(--m-muted);font-weight:500;line-height:1.4}
+.notif-time{font-size:9px;color:var(--m-muted);font-weight:600;margin-top:4px}
+
+/* SEMAFORO */
+.sem-verde{color:#10b981;font-weight:700}
+.sem-amarillo{color:#f59e0b;font-weight:700}
+.sem-rojo{color:#ef4444;font-weight:700;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--m-surface);border:1px solid var(--m-border);border-radius:12px;padding:12px 20px;font-size:12px;font-weight:700;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s;box-shadow:0 8px 28px rgba(0,0,0,.4);color:var(--m-text)}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:rgba(16,185,129,0.3);color:#10b981;background:rgba(16,185,129,0.06)}
+#toast.err{border-color:rgba(239,68,68,0.3);color:#ef4444;background:rgba(239,68,68,0.06)}
+
+/* RESPONSIVE */
+@media(max-width:700px){
+  .tb-r .btn span{display:none}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .g2,.g3{grid-template-columns:1fr}
+}
+@media(max-width:900px){
+  .stats{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ── Incidencia descripción expandible ── */
+.inc-desc{font-size:11px;max-width:240px;cursor:pointer;position:relative}
+.inc-desc-short{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.inc-desc-short:after{content:' ▾';font-size:9px;color:var(--m-blue);font-weight:800}
+.inc-desc-full{display:none;white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-top:4px;font-size:10.5px;line-height:1.6;color:#334155;max-width:320px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.inc-desc.open .inc-desc-short:after{content:' ▴';color:var(--m-blue)}
+.inc-desc.open .inc-desc-full{display:block}
+
+/* ── Grouped Tabs ─────────────────────────────── */
+.tab-bar{flex-wrap:wrap;gap:6px;padding:10px 16px;align-items:flex-start}
+.tab-group{position:relative;display:inline-block;z-index:100}
+.tab-group-btn{
+  display:flex;align-items:center;gap:5px;
+  padding:8px 14px;border-radius:9px;
+  background:var(--bg2);border:1.5px solid var(--bd);
+  cursor:pointer;font-size:12px;font-weight:700;
+  color:var(--dark);transition:.15s;user-select:none;
+  white-space:nowrap
+}
+.tab-group-btn:hover,.tab-group-btn.active-group{
+  background:var(--m-blue-light);border-color:var(--m-blue);color:var(--m-blue)
+}
+.tab-group-items{
+  display:none;position:absolute;top:calc(100% + 8px);left:0;
+  background:white;border:1.5px solid var(--bd);
+  border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.15);
+  z-index:500;min-width:200px;overflow:hidden
+}
+.tab-group-items.open{display:block}
+.tab-group-items .tab-item{
+  border-radius:0;border-bottom:1px solid #f1f5f9;
+  padding:10px 16px;font-size:12px;white-space:nowrap
+}
+.tab-group-items .tab-item:last-child{border-bottom:none}
+.tab-group-items .tab-item:hover{background:#f8fafc}
+.tab-group-items .tab-item.active{background:var(--m-blue-light);color:var(--m-blue);font-weight:800}
+/* Dashboard tab stays standalone */
+.tab-standalone{display:inline-flex}
+
+  /* ── RESPONSIVE MÓVIL (ampliado) ── */
+  @media(max-width:640px){
+    .tb{flex-wrap:wrap;padding:10px 14px;gap:8px}
+    .tb-r{width:100%;justify-content:flex-end}
+    .page{padding:12px!important}
+    .tbl-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+    .tbl-wrap table{min-width:500px}
+    table:not(.tbl-wrap table){display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;min-width:460px}
+    .modal{max-width:100%!important;border-radius:22px 22px 0 0!important;position:fixed!important;bottom:0!important;left:0!important;right:0!important;top:auto!important;max-height:92vh!important;overflow-y:auto}
+    .overlay{align-items:flex-end!important;padding:0!important}
+    [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+    [style*="grid-template-columns:repeat(4"]{grid-template-columns:1fr 1fr!important}
+    [style*="grid-template-columns:repeat(3"]{grid-template-columns:1fr 1fr!important}
+    .g2{grid-template-columns:1fr!important}
+    .g3{grid-template-columns:1fr!important}
+  }
+  @media(max-width:400px){
+    .stats{grid-template-columns:repeat(2,1fr)!important}
+  }
+</style>
+<script src="modus-return.js"></script>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <a class="tb-back" id="tb-back-portal" href="portal-food.html" title="Volver al Portal"><i class="fa-solid fa-arrow-left"></i></a>
+    <div class="tb-icon">👤</div>
+    <div>
+      <div class="tb-title">Gestión de Empleados</div>
+      <div class="tb-sub" id="tb-empresa">MODUS · Módulo RR.HH.</div>
+    </div>
+  </div>
+  <div class="tb-r">
+    <button class="btn btn-ghost btn-sm" onclick="exportarPlanillaXLSX()"><i class="fa-solid fa-file-excel"></i> <span>Exportar</span></button>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalEmp()"><i class="fa-solid fa-plus"></i> <span>Nuevo Empleado</span></button>
+  </div>
+</div>
+
+<!-- TAB NAV -->
+<div class="tab-bar">
+
+  <!-- Dashboard standalone -->
+  <div class="tab-standalone">
+    <div class="tab-item active" onclick="showTab('dashboard');closeGroups()" id="tab-btn-dashboard">
+      <i class="fa-solid fa-chart-pie"></i> Dashboard
+    </div>
+  </div>
+
+  <!-- Grupo: Personal -->
+  <div class="tab-group" id="grp-personal">
+    <div class="tab-group-btn" onclick="toggleGroup('grp-personal')">
+      <i class="fa-solid fa-users"></i> Personal
+      <span class="tab-count" id="tc-emp">0</span>
+      <i class="fa-solid fa-chevron-down" style="font-size:9px"></i>
+    </div>
+    <div class="tab-group-items" id="items-personal">
+      <div class="tab-item" onclick="showTab('empleados');closeGroups()" id="tab-btn-empleados">👥 Empleados</div>
+      <div class="tab-item" onclick="showTab('roles');closeGroups()" id="tab-btn-roles">🛡️ Roles y Acceso</div>
+    </div>
+  </div>
+
+  <!-- Grupo: Asistencia -->
+  <div class="tab-group" id="grp-asistencia">
+    <div class="tab-group-btn" onclick="toggleGroup('grp-asistencia')">
+      <i class="fa-solid fa-clock"></i> Asistencia
+      <i class="fa-solid fa-chevron-down" style="font-size:9px"></i>
+    </div>
+    <div class="tab-group-items" id="items-asistencia">
+      <div class="tab-item" onclick="showTab('asistencia');closeGroups()" id="tab-btn-asistencia">⏰ Asistencia Diaria</div>
+      <div class="tab-item" onclick="showTab('asistencia-gps');closeGroups()" id="tab-btn-asistencia-gps">📍 Asistencia GPS</div>
+      <div class="tab-item" onclick="showTab('turnos');closeGroups()" id="tab-btn-turnos">📅 Turnos</div>
+    </div>
+  </div>
+
+  <!-- Grupo: Nómina -->
+  <div class="tab-group" id="grp-nomina">
+    <div class="tab-group-btn" onclick="toggleGroup('grp-nomina')">
+      <i class="fa-solid fa-coins"></i> Nómina
+      <span class="tab-count" id="tc-adel" style="background:#fee2e2;color:#dc2626">0</span>
+      <i class="fa-solid fa-chevron-down" style="font-size:9px"></i>
+    </div>
+    <div class="tab-group-items" id="items-nomina">
+      <div class="tab-item" onclick="showTab('planilla');closeGroups()" id="tab-btn-planilla">💰 Planilla</div>
+      <div class="tab-item" onclick="showTab('adelantos');closeGroups()" id="tab-btn-adelantos">
+        💵 Adelantos <span class="tab-count" style="background:#fee2e2;color:#dc2626" id="tc-adel2">0</span>
+      </div>
+      <div class="tab-item" onclick="showTab('horas-extra');closeGroups()" id="tab-btn-horas-extra">
+        ⏱️ Horas Extra <span class="tab-count" style="background:#fef3c7;color:#d97706" id="tc-horas">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Grupo: Gestión -->
+  <div class="tab-group" id="grp-gestion">
+    <div class="tab-group-btn" onclick="toggleGroup('grp-gestion')">
+      <i class="fa-solid fa-list-check"></i> Gestión
+      <span class="tab-count" id="tc-perm" style="background:#fee2e2;color:#dc2626">0</span>
+      <i class="fa-solid fa-chevron-down" style="font-size:9px"></i>
+    </div>
+    <div class="tab-group-items" id="items-gestion">
+      <div class="tab-item" onclick="showTab('permisos');closeGroups()" id="tab-btn-permisos">🏖️ Permisos / Vacaciones</div>
+      <div class="tab-item" onclick="showTab('tareas-admin');closeGroups()" id="tab-btn-tareas-admin">✅ Tareas</div>
+      <div class="tab-item" onclick="showTab('notificaciones');closeGroups()" id="tab-btn-notificaciones">📲 Notificaciones</div>
+    </div>
+  </div>
+
+  <!-- Grupo: Auditoría -->
+  <div class="tab-group" id="grp-auditoria">
+    <div class="tab-group-btn" onclick="toggleGroup('grp-auditoria')">
+      <i class="fa-solid fa-triangle-exclamation"></i> Auditoría
+      <span class="tab-count" id="tc-inc" style="background:#fee2e2;color:#dc2626">0</span>
+      <i class="fa-solid fa-chevron-down" style="font-size:9px"></i>
+    </div>
+    <div class="tab-group-items" id="items-auditoria">
+      <div class="tab-item" onclick="showTab('incidencias');closeGroups()" id="tab-btn-incidencias">
+        ⚠️ Incidencias <span class="tab-count" style="background:#fee2e2;color:#dc2626" id="tc-inc2">0</span>
+      </div>
+      <div class="tab-item" onclick="showTab('gastos-campo');cargarGastosCampoAdmin();closeGroups()" id="tab-btn-gastos-campo">
+        ⛽ Gastos Campo <span class="tab-count" style="background:#fff7ed;color:#c2410c" id="tc-gastos">0</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══════════ DASHBOARD ══════════ -->
+<div class="page active" id="page-dashboard">
+  
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+    
+    <!-- Columna 1: Lista de Empleados -->
+    <div style="background:var(--m-surface);border-radius:16px;border:1px solid var(--m-border);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.3)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--m-border);display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:900;color:var(--m-text)">👥 Equipo / Lista de Personal</h3>
+        <span class="badge b-blue" id="dash-total-badge">0 Activos</span>
+      </div>
+      <div id="dash-lista-empleados" style="padding:16px;max-height:500px;overflow-y:auto;display:flex;flex-direction:column;gap:10px">
+        <!-- Renderizado dinámico -->
+      </div>
+    </div>
+    
+    <!-- Columna 2: Horarios y Asistencia de Hoy -->
+    <div style="background:var(--m-surface);border-radius:16px;border:1px solid var(--m-border);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.3)">
+      <div style="padding:16px 20px;border-bottom:1px solid var(--m-border);display:flex;align-items:center;justify-content:space-between">
+        <h3 style="font-size:14px;font-weight:900;color:var(--m-text)">📅 Horarios y Asistencia de Hoy</h3>
+        <button class="btn btn-ghost btn-sm" onclick="showTab('asistencia')">Ir a Marcajes →</button>
+      </div>
+      <div id="asist-dashboard" style="padding:16px;max-height:500px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">
+        <!-- Renderizado dinámico de marcajes y horarios -->
+      </div>
+    </div>
+    
+  </div>
+  
+</div>
+
+<!-- ══════════ EMPLEADOS ══════════ -->
+<div class="page" id="page-empleados">
+  <div class="bar">
+    <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="emp-search" placeholder="Buscar empleado..." oninput="filtrarEmpleados()"></div>
+    <select class="filter-select" id="emp-filter-dept" onchange="filtrarEmpleados()">
+      <option value="">Todos los departamentos</option>
+      <option>Ventas</option><option>Producción</option><option>Administración</option><option>Bodega</option><option>Servicio al Cliente</option>
+    </select>
+    <select class="filter-select" id="emp-filter-tipo" onchange="filtrarEmpleados()">
+      <option value="">Todos los tipos</option>
+      <option>Tiempo completo</option><option>Tiempo parcial</option><option>Por hora</option>
+    </select>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalEmp()"><i class="fa-solid fa-plus"></i> Agregar</button>
+  </div>
+  <div class="emp-grid" id="emp-grid"></div>
+</div>
+
+<!-- ══════════ ASISTENCIA ══════════ -->
+<div class="page" id="page-asistencia">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800;color:var(--dark)">📅 <span id="fecha-hoy-asist"></span></div>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary btn-sm" onclick="marcarTodosEntrada()"><i class="fa-solid fa-play"></i> Marcar Entrada Masiva</button>
+    <button class="btn btn-ghost btn-sm" onclick="exportarAsistenciaXLSX()"><i class="fa-solid fa-download"></i> Exportar</button>
+  </div>
+
+  <!-- Resumen asistencia -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px" id="asist-stats"></div>
+
+  <div class="asist-grid" id="asist-list"></div>
+
+  <!-- Historial tabla -->
+  <div style="margin-top:20px">
+    <div style="font-size:13px;font-weight:800;margin-bottom:10px">Historial de Hoy</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Empleado</th><th>Entrada</th><th>Salida</th><th>Estado</th><th>Horas</th><th>Notas</th></tr></thead>
+        <tbody id="tb-asistencia"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TURNOS ══════════ -->
+<div class="page" id="page-turnos">
+  <div class="bar">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:800">Turnos</span>
+      <select class="filter-select" id="turno-mes-sel" onchange="onChangeMesTurnos()"></select>
+      <select class="filter-select" id="turno-semana-sel" onchange="renderTurnos()"></select>
+    </div>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalTurno()"><i class="fa-solid fa-plus"></i> Asignar Turno</button>
+    <button class="btn btn-ghost btn-sm" onclick="generarTurnosAutomaticos()"><i class="fa-solid fa-wand-magic-sparkles"></i> Auto-generar</button>
+  </div>
+  <div id="turnos-semana" style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-top:4px;overflow-x:auto;min-width:0"></div>
+  <div style="margin-top:16px">
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr id="tb-turnos-head"><th>Empleado</th><th>Lun</th><th>Mar</th><th>Mié</th><th>Jue</th><th>Vie</th><th>Sáb</th><th>Dom</th><th></th></tr></thead>
+        <tbody id="tb-turnos"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ PLANILLA ══════════ -->
+<div class="page" id="page-planilla">
+  <div class="bar">
+    <select class="filter-select" id="planilla-periodo" onchange="calcularPlanilla()">
+      <option value="quincenal">Quincenal</option>
+      <option value="mensual" selected>Mensual</option>
+    </select>
+    <select class="filter-select" id="planilla-mes" onchange="calcularPlanilla()">
+      <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+      <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+      <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+      <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+    </select>
+    <div style="flex:1"></div>
+    <button class="btn btn-green btn-sm" onclick="exportarPlanillaXLSX()"><i class="fa-solid fa-file-excel"></i> Exportar a Excel / Banco</button>
+  </div>
+
+  <div class="planilla-total">
+    <div class="pt-icon">💰</div>
+    <div>
+      <div class="pt-val" id="planilla-total-val">$0.00</div>
+      <div class="pt-lbl">Costo Total de Planilla</div>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:16px;flex-wrap:wrap">
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:900" id="p-empleados-n">0</div>
+        <div style="font-size:9px;opacity:.8;text-transform:uppercase;letter-spacing:.06em">Empleados</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:900" id="p-horas-n">0</div>
+        <div style="font-size:9px;opacity:.8;text-transform:uppercase;letter-spacing:.06em">Horas Extras</div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:18px;font-weight:900" id="p-deduc-n">$0</div>
+        <div style="font-size:9px;opacity:.8;text-transform:uppercase;letter-spacing:.06em">Deducciones</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="planilla-wrap">
+    <table>
+      <thead><tr><th>Empleado</th><th>Puesto</th><th>Salario Base</th><th>H. Extra</th><th>Bonos</th><th>Deducciones</th><th>AFP</th><th>ISSS</th><th>Total Neto</th><th>Acciones</th></tr></thead>
+      <tbody id="tb-planilla"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ PERMISOS ══════════ -->
+<div class="page" id="page-permisos">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Solicitudes de Permisos y Vacaciones</div>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalPermiso()"><i class="fa-solid fa-plus"></i> Nueva Solicitud</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Empleado</th><th>Tipo</th><th>Fecha Inicio</th><th>Fecha Fin</th><th>Días</th><th>Motivo</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="tb-permisos"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ PORTAL EMPLEADO ══════════ -->
+
+
+<!-- ══════════ ROLES Y ACCESO ══════════ -->
+<div class="page" id="page-roles">
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:20px">
+    <div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:14px">Roles Disponibles</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:linear-gradient(135deg,var(--m-blue),var(--m-blue-mid));color:white;border-radius:14px;padding:16px;cursor:pointer" onclick="showRoleDetail('admin')">
+          <div style="font-size:20px;margin-bottom:6px">🛡️</div>
+          <div style="font-size:13px;font-weight:800">Administrador</div>
+          <div style="font-size:10px;opacity:.8;margin-top:3px">Acceso total al sistema</div>
+        </div>
+        <div style="background:white;border:1.5px solid var(--bd);border-radius:14px;padding:16px;cursor:pointer" onclick="showRoleDetail('supervisor')">
+          <div style="font-size:20px;margin-bottom:6px">👔</div>
+          <div style="font-size:13px;font-weight:800">Supervisor</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:3px">Módulos de operación</div>
+        </div>
+        <div style="background:white;border:1.5px solid var(--bd);border-radius:14px;padding:16px;cursor:pointer" onclick="showRoleDetail('empleado')">
+          <div style="font-size:20px;margin-bottom:6px">👤</div>
+          <div style="font-size:13px;font-weight:800">Empleado</div>
+          <div style="font-size:10px;color:#94a3b8;margin-top:3px">Solo portal personal</div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:14px;font-weight:800;margin-bottom:14px">Control de Acceso por Módulo</div>
+      <div id="rol-detail" style="background:white;border-radius:16px;border:1px solid var(--bd);overflow:hidden">
+        <div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:12px;font-weight:700;color:#94a3b8">Selecciona un rol para ver permisos</div>
+        <div id="rol-permisos" style="padding:14px"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ NOTIFICACIONES ══════════ -->
+<div class="page" id="page-notificaciones">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Notificaciones tipo WhatsApp</div>
+    <div style="flex:1"></div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalNotif()"><i class="fa-solid fa-paper-plane"></i> Enviar Notificación</button>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<!-- ══════════ MODALES ══════════ -->
+
+<!-- Modal Empleado -->
+<div class="overlay" id="modal-emp">
+  <div class="modal" style="max-width:580px">
+    <button class="modal-close" onclick="cerrar('modal-emp')">✕</button>
+    <div class="modal-title" id="modal-emp-title">👤 Nuevo Empleado</div>
+    <input type="hidden" id="emp-id-edit">
+    <div class="g2">
+      <div class="fg"><label class="fl">Nombre Completo *</label><input class="fi" id="emp-nombre" placeholder="Juan García"></div>
+      <div class="fg"><label class="fl">DUI</label><input class="fi" id="emp-dui" placeholder="00000000-0"></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Teléfono *</label><input class="fi" id="emp-tel" type="tel" placeholder="7000-0000"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fi" id="emp-email" type="email" placeholder="juan@empresa.com"></div>
+    </div>
+    <div class="g3">
+      <div class="fg"><label class="fl">Puesto / Cargo *</label>
+        <select class="fi" id="emp-puesto" onchange="onPuestoChange(this.value)">
+          <optgroup label="Dirección / Gestión">
+            <option value="Dueño">👑 Dueño / Propietario</option>
+            <option value="Administrador general">🛡️ Administrador general</option>
+            <option value="Operaciones">⚙️ Director de Operaciones</option>
+            <option value="Gerente">👔 Gerente</option>
+            <option value="Supervisor">💼 Supervisor</option>
+            <option value="Encargado de turno">🕒 Encargado de turno</option>
+          </optgroup>
+          <optgroup label="Atención al Cliente">
+            <option value="Cajero">💵 Cajero</option>
+            <option value="Mesero" selected>🤵 Mesero</option>
+            <option value="Host">🛎️ Host (Recepción)</option>
+            <option value="Atención al cliente">💬 Atención al cliente</option>
+          </optgroup>
+          <optgroup label="Producción / Cocina">
+            <option value="Chef">👨‍🍳 Chef Ejecutivo</option>
+            <option value="Cocinero">🍳 Cocinero</option>
+            <option value="Ayudante de cocina">🍲 Ayudante de cocina</option>
+          </optgroup>
+          <optgroup label="Distribución / Reparto">
+            <option value="Delivery">🛵 Delivery / Motorista (Interno)</option>
+            <option value="Delivery Externo">🛵 Delivery / Motorista (Externo)</option>
+          </optgroup>
+          <optgroup label="Administración & Soporte">
+            <option value="Inventario / bodega">📦 Inventario / Bodega</option>
+            <option value="Compras">🛒 Compras</option>
+            <option value="Contabilidad">📊 Contabilidad</option>
+            <option value="Marketing">📢 Marketing</option>
+            <option value="Soporte">🔧 Soporte Técnico</option>
+            <option value="Limpieza">🧹 Limpieza</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Departamento</label>
+        <select class="fi" id="emp-dept">
+          <option value="Administración">Administración</option>
+          <option value="Servicio al Cliente">Servicio al Cliente</option>
+          <option value="Producción">Cocina / Producción</option>
+          <option value="Bodega">Bodega / Insumos</option>
+          <option value="Logística">Logística / Reparto</option>
+          <option value="Otros">Soporte y Otros</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Tipo</label>
+        <select class="fi" id="emp-tipo">
+          <option>Tiempo completo</option><option>Tiempo parcial</option><option>Por hora</option>
+        </select>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Salario Mensual ($) *</label><input class="fi" id="emp-salario" type="number" placeholder="365.00" step="0.01" oninput="calcPreviewDeducciones()"></div>
+      <div class="fg"><label class="fl">Fecha Ingreso</label><input class="fi" id="emp-fecha" type="date"></div>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px" id="sec-social-prevision">
+      <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Seguridad Social y Previsión</div>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="fg" style="margin-bottom:0"><label class="fl">N° ISSS</label><input class="fi" id="emp-isss-num" placeholder="000-000000-000-0"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">N° AFP / Cuenta</label><input class="fi" id="emp-afp-num" placeholder="000000000"></div>
+      </div>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="fg" style="margin-bottom:0"><label class="fl">AFP Institución</label>
+          <select class="fi" id="emp-afp-inst">
+            <option value="Crecer">AFP Crecer</option>
+            <option value="Confía">AFP Confía</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;padding-top:18px">
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;cursor:pointer">
+            <input type="checkbox" id="emp-aplica-isss" checked onchange="calcPreviewDeducciones()" style="width:16px;height:16px;accent-color:var(--m-blue)"> Descuento ISSS
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;cursor:pointer">
+            <input type="checkbox" id="emp-aplica-afp" checked onchange="calcPreviewDeducciones()" style="width:16px;height:16px;accent-color:var(--m-blue)"> Descuento AFP
+          </label>
+        </div>
+      </div>
+      <div id="preview-deducciones" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px 12px;font-size:11px;color:#1d4ed8;display:none"></div>
+    </div>
+    <div class="g2" id="sec-horarios">
+      <div class="fg"><label class="fl">Horario Entrada</label><input class="fi" id="emp-hora-in" type="time" value="08:00"></div>
+      <div class="fg"><label class="fl">Horario Salida</label><input class="fi" id="emp-hora-out" type="time" value="17:00"></div>
+    </div>
+    <div class="fg"><label class="fl">Rol en PARCHE SYS</label>
+      <select class="fi" id="emp-rol" onchange="onRolChange(this.value)">
+        <option value="empleado">👤 Empleado</option>
+        <option value="mesero">🧑‍🍽️ Mesero</option>
+        <option value="cajero">💳 Cajero</option>
+        <option value="cocinero">👨‍🍳 Cocinero</option>
+        <option value="delivery">🛵 Repartidor (Delivery)</option>
+        <option value="supervisor">👔 Supervisor</option>
+        <option value="admin">🛡️ Administrador</option>
+        <option value="propietario">👑 Propietario</option>
+      </select>
+    </div>
+    <div style="margin-bottom:12px">
+      <label class="fl">Foto del empleado</label>
+      <div style="display:flex;align-items:center;gap:14px;margin-top:8px">
+        <div id="emp-foto-preview" style="width:64px;height:64px;border-radius:14px;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-size:26px;overflow:hidden;flex-shrink:0;border:2px solid var(--bd)">👤</div>
+        <div>
+          <input type="file" id="emp-foto-file" accept="image/*" style="display:none" onchange="previewFoto(this)">
+          <button type="button" class="btn btn-ghost" style="font-size:11px;padding:7px 14px" onclick="document.getElementById('emp-foto-file').click()">📷 Subir foto</button>
+          <div style="font-size:10px;color:#94a3b8;margin-top:5px">JPG/PNG · máx 2MB</div>
+        </div>
+      </div>
+    </div>
+    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="font-size:10px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">📱 Acceso App Empleados — PARCHE SYS</div>
+      <div class="g2">
+        <div class="fg" style="margin-bottom:0"><label class="fl">PIN de acceso al sistema FOOD</label>
+          <input class="fi" id="emp-pin" placeholder="••••" maxlength="10" type="password" inputmode="numeric">
+          <div style="font-size:10px;color:var(--m-blue);margin-top:4px;background:var(--m-blue-light);padding:6px 10px;border-radius:8px;line-height:1.5">
+            El empleado usa su <strong>DUI</strong> + este <strong>PIN</strong> para ingresar al sistema desde el portal.<br>
+            PIN Admin por defecto: <strong>0123456789</strong> — asignarlo aquí para restablecerlo.<br>
+            PIN empleados por defecto: <strong>1234</strong>
+          </div></div>
+        <div class="fg" style="margin-bottom:0">
+          <label class="fl">Acceso App Delivery / Campo</label>
+          <select class="fi" id="emp-acceso-campo">
+            <option value="false">🚫 Sin acceso</option>
+            <option value="true">✅ Con acceso delivery</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <!-- ── MÓDULOS PARCHE SYS ── -->
+    <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:10px;font-weight:800;color:#f97316;text-transform:uppercase;letter-spacing:.1em">🍽️ Módulos PARCHE SYS</div>
+        <div style="display:flex;gap:6px">
+          <button type="button" onclick="toggleAllModulos(true)" style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:7px;background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;cursor:pointer">Todos ✓</button>
+          <button type="button" onclick="toggleAllModulos(false)" style="font-size:9px;font-weight:700;padding:3px 9px;border-radius:7px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;cursor:pointer">Ninguno ✗</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:#94a3b8;margin-bottom:10px">Los módulos desmarcados aparecerán bloqueados 🔒 en el portal y apps de este empleado.</div>
+      <!-- Módulos principales FOOD -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px" id="modulos-permisos-grid">
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Terminal POS de Restaurante">
+          <input type="checkbox" id="perm-pos" checked style="width:15px;height:15px;accent-color:#f97316"> 🖥️ Terminal POS
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Dashboard de pronósticos y analíticas">
+          <input type="checkbox" id="perm-pronostico" style="width:15px;height:15px;accent-color:#f97316"> 📊 Pronóstico
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Auditoría de operaciones">
+          <input type="checkbox" id="perm-auditoria" style="width:15px;height:15px;accent-color:#f97316"> 🔍 Auditoría
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Gestión de Menú y Platillos">
+          <input type="checkbox" id="perm-menu" style="width:15px;height:15px;accent-color:#f97316"> 🍽️ Menú / Platillos
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Inventarios e insumos del restaurante">
+          <input type="checkbox" id="perm-inventario" style="width:15px;height:15px;accent-color:#f97316"> 📦 Inventarios / Insumos
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Pantalla de Cocina KDS">
+          <input type="checkbox" id="perm-cocina" style="width:15px;height:15px;accent-color:#f97316"> 👨‍🍳 Cocina (KDS)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Mapa visual de mesas">
+          <input type="checkbox" id="perm-mapa-mesas" style="width:15px;height:15px;accent-color:#f97316"> 🗺️ Mapa de Mesas
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="Reparto en Ruta / Delivery">
+          <input type="checkbox" id="perm-delivery" style="width:15px;height:15px;accent-color:#f97316"> 🛵 Reparto en Ruta
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="POS versión móvil">
+          <input type="checkbox" id="perm-pos-movil" style="width:15px;height:15px;accent-color:#f97316"> 📱 POS Móvil
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:white;border:1px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#f97316'" onmouseout="this.style.borderColor='#e2e8f0'" title="App para cliente final">
+          <input type="checkbox" id="perm-app-cliente" style="width:15px;height:15px;accent-color:#f97316"> 🤳 App Clientes
+        </label>
+      </div>
+      <!-- ── Módulos administrativos FOOD ── -->
+      <div id="modulos-sensibles-wrap" style="margin-top:10px;padding-top:10px;border-top:1px dashed #e2e8f0">
+        <div style="font-size:9px;font-weight:800;color:#ef4444;text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">⚠️ Accesos Administrativos FOOD</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Módulo de Recursos Humanos y Empleados">
+            <input type="checkbox" id="perm-empleados" style="width:15px;height:15px;accent-color:#ea580c"> 👥 Equipo / RR.HH.
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Facturación Electrónica DTE">
+            <input type="checkbox" id="perm-dte" style="width:15px;height:15px;accent-color:#ea580c"> 🧾 Facturación DTE
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Módulo de Contabilidad SV">
+            <input type="checkbox" id="perm-contabilidad" style="width:15px;height:15px;accent-color:#ea580c"> 📊 Contabilidad SV
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Configuración de Ajustes del sistema">
+            <input type="checkbox" id="perm-ajustes" style="width:15px;height:15px;accent-color:#ea580c"> ⚙️ Ajustes
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Configuración de Empresa">
+            <input type="checkbox" id="perm-mi-empresa" style="width:15px;height:15px;accent-color:#ea580c"> 🏢 Empresa
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:9px;cursor:pointer;font-size:12px;font-weight:600;color:#1e293b;transition:.12s" onmouseover="this.style.borderColor='#fb923c'" onmouseout="this.style.borderColor='#fed7aa'" title="Perfil personal del empleado (Mi Perfil)">
+            <input type="checkbox" id="perm-mi-perfil" checked style="width:15px;height:15px;accent-color:#ea580c"> 🪪 Mi Perfil
+          </label>
+        </div>
+        <div style="font-size:9px;color:#94a3b8;margin-top:6px">Si están desmarcados, el empleado no verá estos accesos en el portal ni en portal móvil.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-emp')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="guardarEmpleado()"><i class="fa-solid fa-save"></i> Guardar Empleado</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Turno -->
+<div class="overlay" id="modal-turno">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="cerrar('modal-turno')">✕</button>
+    <div class="modal-title" id="modal-turno-title">📅 Asignar Turno</div>
+    <input type="hidden" id="turno-edit-key">
+    <div class="fg"><label class="fl">Empleado</label>
+      <select class="fi" id="turno-emp"></select>
+    </div>
+    <div class="fg">
+      <label class="fl">Fecha del turno</label>
+      <input class="fi" type="date" id="turno-fecha" onchange="onChangeFechaTurno()">
+      <div id="turno-fecha-lbl" style="font-size:10px;color:var(--m-blue);font-weight:700;margin-top:4px"></div>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Tipo de turno</label>
+        <select class="fi" id="turno-tipo">
+          <option value="mañana">Mañana (6:00-14:00)</option>
+          <option value="tarde">Tarde (14:00-22:00)</option>
+          <option value="normal">Normal (8:00-17:00)</option>
+          <option value="noche">Noche (22:00-6:00)</option>
+          <option value="personalizado">Personalizado</option>
+        </select>
+      </div>
+      <div class="fg"><label class="fl">Notas</label><input class="fi" id="turno-nota" placeholder="Observación opcional"></div>
+    </div>
+    <div class="g2" id="turno-custom" style="display:none">
+      <div class="fg"><label class="fl">Hora Inicio</label><input class="fi" id="turno-h-in" type="time"></div>
+      <div class="fg"><label class="fl">Hora Fin</label><input class="fi" id="turno-h-out" type="time"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-turno')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-eliminar-turno" style="flex:1;display:none;background:#fee2e2;color:#991b1b;border:1.5px solid #fca5a5" onclick="eliminarTurnoEdit()">🗑️ Eliminar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="guardarTurno()"><i class="fa-solid fa-save"></i> <span id="btn-turno-lbl">Asignar</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Permiso -->
+<div class="overlay" id="modal-permiso">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="cerrar('modal-permiso')">✕</button>
+    <div class="modal-title">🏖️ Solicitud de Permiso</div>
+    <div class="fg"><label class="fl">Empleado</label>
+      <select class="fi" id="perm-emp"></select>
+    </div>
+    <div class="fg"><label class="fl">Tipo</label>
+      <select class="fi" id="perm-tipo">
+        <option>Vacaciones</option><option>Permiso médico</option><option>Permiso personal</option><option>Maternidad/Paternidad</option><option>Duelo</option>
+      </select>
+    </div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Fecha Inicio</label><input class="fi" id="perm-inicio" type="date"></div>
+      <div class="fg"><label class="fl">Fecha Fin</label><input class="fi" id="perm-fin" type="date"></div>
+    </div>
+    <div class="fg"><label class="fl">Motivo</label><textarea class="fi" id="perm-motivo" placeholder="Descripción del permiso..."></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-permiso')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="guardarPermiso()"><i class="fa-solid fa-save"></i> Enviar Solicitud</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ ADELANTOS ══════════ -->
+<div class="page" id="page-adelantos">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Solicitudes de Adelanto de Salario</div>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Monto</th><th>Salario Base</th><th>Motivo</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody id="tb-adelantos"></tbody>
+  </table></div>
+</div>
+
+<!-- ══════════ HORAS EXTRA ══════════ -->
+<div class="page" id="page-horas-extra">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Registro de Horas Extra</div>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Fecha</th><th>Horas</th><th>Tipo</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody id="tb-horas"></tbody>
+  </table></div>
+</div>
+
+<!-- ══════════ INCIDENCIAS ══════════ -->
+<div class="page" id="page-incidencias">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Incidencias Reportadas</div>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Tipo</th><th>Urgencia</th><th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody id="tb-incidencias"></tbody>
+  </table></div>
+</div>
+
+<!-- ══════════ GASTOS DE CAMPO ══════════ -->
+<div class="page" id="page-gastos-campo">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Gastos de Campo — App Empleados</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <select id="gc-filtro-emp" class="inp" style="font-size:11px;padding:5px 10px;width:auto" onchange="renderGastosCampoAdmin()">
+        <option value="">Todos los empleados</option>
+      </select>
+      <select id="gc-filtro-mes" class="inp" style="font-size:11px;padding:5px 10px;width:auto" onchange="renderGastosCampoAdmin()">
+        <option value="">Todos los meses</option>
+      </select>
+    </div>
+  </div>
+  <!-- Resumen -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px;background:#fff7ed;border-bottom:1px solid #fed7aa">
+    <div style="text-align:center">
+      <div style="font-size:10px;font-weight:700;color:#c2410c;text-transform:uppercase;letter-spacing:.1em">Total pendiente</div>
+      <div style="font-size:22px;font-weight:900;color:#ea580c" id="gc-total-pend">$0.00</div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.1em">Total aprobado</div>
+      <div style="font-size:22px;font-weight:900;color:#16a34a" id="gc-total-aprob">$0.00</div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.1em">Registros</div>
+      <div style="font-size:22px;font-weight:900;color:#475569" id="gc-count">0</div>
+    </div>
+  </div>
+  <!-- Tabla -->
+  <div class="tbl-wrap"><table>
+    <thead><tr>
+      <th>Empleado</th><th>Categoría</th><th>Monto</th>
+      <th>Descripción</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+    </tr></thead>
+    <tbody id="tb-gastos-campo"></tbody>
+  </table></div>
+  <!-- Nota finanzas -->
+  <div style="padding:12px 16px;background:#f0fdf4;border-top:1px solid #bbf7d0;font-size:11px;color:#15803d;font-weight:600">
+    ℹ️ Los gastos aprobados se reflejan automáticamente en el módulo de Finanzas bajo "Gastos de Campo".
+    Los pendientes puedes aprobarlos aquí y quedarán registrados.
+    <button onclick="exportarGastosCampoCSV()" style="margin-left:12px;padding:4px 12px;background:#dcfce7;color:#15803d;border:1px solid #86efac;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer">📥 Exportar CSV</button>
+  </div>
+</div>
+
+<!-- ══════════ TAREAS ADMIN ══════════ -->
+<div class="page" id="page-tareas-admin">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Asignar Tareas a Empleados</div>
+    <button class="btn btn-primary btn-sm" onclick="abrirModalTarea()"><i class="fa-solid fa-plus"></i> Nueva Tarea</button>
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Tarea</th><th>Fecha</th><th>Prioridad</th><th>Estado</th><th>Acciones</th></tr></thead>
+    <tbody id="tb-tareas"></tbody>
+  </table></div>
+</div>
+
+<!-- ══════════ ASISTENCIA GPS ══════════ -->
+<div class="page" id="page-asistencia-gps">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Asistencia con GPS</div>
+    <input type="date" class="fi" id="gps-fecha" style="width:160px" onchange="cargarAsistenciaGPS()">
+  </div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Empleado</th><th>Entrada</th><th>Ubicación Entrada</th><th>Salida</th><th>Ubicación Salida</th><th>Precisión</th></tr></thead>
+    <tbody id="tb-asistencia-gps"></tbody>
+  </table></div>
+</div>
+
+<!-- Modal Nueva Tarea -->
+<div class="overlay" id="modal-tarea-admin">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="cerrar('modal-tarea-admin')">✕</button>
+    <div class="modal-title">✅ Nueva Tarea</div>
+    <div class="fg"><label class="fl">Empleado *</label><select class="fi" id="ta-emp"></select></div>
+    <div class="fg"><label class="fl">Descripción de la tarea *</label><textarea class="fi" id="ta-desc" placeholder="¿Qué debe hacer el empleado?"></textarea></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Fecha límite</label><input class="fi" type="date" id="ta-fecha"></div>
+      <div class="fg"><label class="fl">Prioridad</label>
+        <select class="fi" id="ta-prioridad">
+          <option value="baja">🟢 Baja</option>
+          <option value="media" selected>🟡 Media</option>
+          <option value="alta">🔴 Alta</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-tarea-admin')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="guardarTarea()"><i class="fa-solid fa-save"></i> Asignar Tarea</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Vacaciones Empleado -->
+<div class="overlay" id="modal-vacaciones">
+  <div class="modal" style="max-width:400px">
+    <button class="modal-close" onclick="cerrar('modal-vacaciones')">✕</button>
+    <div class="modal-title">🏖️ Días de Vacaciones</div>
+    <div id="vac-emp-nombre" style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:16px"></div>
+    <div class="g2">
+      <div class="fg"><label class="fl">Días disponibles</label><input class="fi" type="number" id="vac-disponibles" min="0"></div>
+      <div class="fg"><label class="fl">Días usados</label><input class="fi" type="number" id="vac-usados" min="0"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-vacaciones')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="guardarVacaciones()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Notificación -->
+<div class="overlay" id="modal-notif">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="cerrar('modal-notif')">✕</button>
+    <div class="modal-title">📲 Enviar Notificación</div>
+    <div class="fg"><label class="fl">Para</label>
+      <select class="fi" id="notif-para">
+        <option value="todos">Todos los empleados</option>
+        <option value="individual">Empleado específico</option>
+      </select>
+    </div>
+    <div class="fg" id="notif-emp-wrap" style="display:none"><label class="fl">Empleado</label><select class="fi" id="notif-emp-sel"></select></div>
+    <div class="fg"><label class="fl">Tipo</label>
+      <select class="fi" id="notif-tipo">
+        <option value="turno">🔄 Cambio de turno</option>
+        <option value="pago">💰 Pago procesado</option>
+        <option value="recordatorio">⏰ Recordatorio</option>
+        <option value="alerta">🚨 Alerta importante</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Mensaje</label><textarea class="fi" id="notif-msg" placeholder='Ej: "Mañana entras a las 8:00 am"' style="min-height:90px"></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:4px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-notif')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:2" onclick="enviarNotificacion()"><i class="fa-solid fa-paper-plane"></i> Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalle empleado -->
+<div class="overlay" id="modal-detalle">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="cerrar('modal-detalle')">✕</button>
+    <div id="detalle-content"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Shared Config -->
+<script src="firebase-config.js"></script>
+<script>
+// ── ESTADO GLOBAL ──
+// negocioID and db are already inherited from firebase-config.js
+if(!negocioID){ window.location.href='index.html'; }
+// ── MODUS RETURN: registrar sesión activa y cablear botón volver ──
+if(typeof ModusReturn!=='undefined'){ModusReturn.init(negocioID);ModusReturn.wireButton('tb-back-portal');}
+else{var _tbk=document.getElementById('tb-back-portal');if(_tbk){_tbk.href='portal-food.html?negocio='+negocioID+'#resumen';_tbk.onclick=null;}}
+
+// ── STATE ──
+let empleados={};
+let asistenciaHoy={};
+let turnos={};
+let permisos={};
+let notificaciones_emp=[];
+
+// ── INIT ──
+function init(){
+  document.getElementById('fecha-hoy-asist').textContent=new Date().toLocaleDateString('es-SV',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const mesActual=new Date().getMonth()+1;
+  document.getElementById('planilla-mes').value=mesActual;
+
+  var _bizNombreEmp='MODUS', _adminEmailEmp='';
+  db.ref(`negocios/${negocioID}/info`).once('value',s=>{
+    const inf=s.val()||{};
+    _bizNombreEmp = inf.nombre||'MODUS';
+    _adminEmailEmp = inf.email||'';
+    document.getElementById('tb-empresa').textContent=_bizNombreEmp+' · RR.HH.';
+  });
+
+  db.ref(`negocios/${negocioID}/empleados`).on('value',s=>{
+    empleados=s.val()||{};
+    renderEmpleados();
+    renderAsistencia();
+    renderPlanilla();
+    renderTurnos();
+    renderPortalSelector();
+    actualizarStats();
+    llenarSelectoresEmp();
+  });
+
+  db.ref(`negocios/${negocioID}/asistencia_hoy`).on('value',s=>{
+    asistenciaHoy=s.val()||{};
+    renderAsistencia();
+    actualizarStats();
+  });
+
+  db.ref(`negocios/${negocioID}/permisos_emp`).on('value',s=>{
+    permisos=s.val()||{};
+    renderPermisos();
+    actualizarStats();
+  });
+
+  db.ref(`negocios/${negocioID}/turnos_emp`).on('value',s=>{
+    turnos=s.val()||{};
+    initTurnoSelectors();
+    renderTurnos();
+  });
+
+  db.ref(`negocios/${negocioID}/notificaciones_emp`).on('value',s=>{
+    notificaciones_emp=[];
+    s.forEach(c=>notificaciones_emp.unshift({id:c.key,...c.val()}));
+    renderNotificaciones();
+  });
+
+  cargarDatosDemo();
+  // Iniciar módulos nuevos después de cargar empleados
+  setTimeout(initNuevosModulos, 800);
+}
+
+// ── DEMO DATA (si no hay empleados en BD) ──
+function cargarDatosDemo(){
+  setTimeout(()=>{
+    if(Object.keys(empleados).length===0){
+      const demo={
+        'emp_001':{nombre:'María García',dui:'01234567-8',tel:'7123-4567',email:'maria@empresa.com',puesto:'Vendedora',dept:'Ventas',tipo:'Tiempo completo',salario:450,fecha:'2023-03-15',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#1B4E8B'},
+        'emp_002':{nombre:'Carlos Morales',dui:'02345678-9',tel:'7234-5678',email:'carlos@empresa.com',puesto:'Supervisor de Producción',dept:'Producción',tipo:'Tiempo completo',salario:600,fecha:'2022-08-01',hora_in:'07:00',hora_out:'16:00',rol:'supervisor',color:'#10b981'},
+        'emp_003':{nombre:'Ana Rodríguez',dui:'03456789-0',tel:'7345-6789',email:'ana@empresa.com',puesto:'Asistente Administrativa',dept:'Administración',tipo:'Tiempo completo',salario:400,fecha:'2024-01-10',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#f59e0b'},
+        'emp_004':{nombre:'Roberto Flores',dui:'04567890-1',tel:'7456-7890',email:'roberto@empresa.com',puesto:'Bodeguero',dept:'Bodega',tipo:'Tiempo parcial',salario:300,fecha:'2023-11-05',hora_in:'06:00',hora_out:'14:00',rol:'empleado',color:'#ec4899'},
+        'emp_005':{nombre:'Lucía Martínez',dui:'05678901-2',tel:'7567-8901',email:'lucia@empresa.com',puesto:'Atención al Cliente',dept:'Servicio al Cliente',tipo:'Tiempo completo',salario:380,fecha:'2024-02-20',hora_in:'09:00',hora_out:'18:00',rol:'empleado',color:'#1B4E8B'},
+      };
+      db.ref(`negocios/${negocioID}/empleados`).set(demo);
+
+      const hoy=new Date().toISOString().split('T')[0];
+      const asistDemo={
+        'emp_001':{hora_entrada:'08:05',hora_salida:'',estado:'presente',tardanza:false},
+        'emp_002':{hora_entrada:'07:00',hora_salida:'',estado:'presente',tardanza:false},
+        'emp_003':{hora_entrada:'08:22',hora_salida:'',estado:'tardanza',tardanza:true,minutos_tarde:22},
+        'emp_004':{hora_entrada:'',hora_salida:'',estado:'ausente',tardanza:false},
+        'emp_005':{hora_entrada:'09:00',hora_salida:'',estado:'presente',tardanza:false},
+      };
+      db.ref(`negocios/${negocioID}/asistencia_hoy`).set(asistDemo);
+
+      const permDemo={
+        'perm_001':{emp_id:'emp_001',emp_nombre:'María García',tipo:'Vacaciones',inicio:'2026-03-20',fin:'2026-03-24',dias:5,motivo:'Vacaciones anuales',estado:'pendiente',fecha_sol:new Date().toISOString()},
+        'perm_002':{emp_id:'emp_003',emp_nombre:'Ana Rodríguez',tipo:'Permiso médico',inicio:'2026-03-18',fin:'2026-03-18',dias:1,motivo:'Cita médica',estado:'aprobado',fecha_sol:new Date().toISOString()},
+      };
+      db.ref(`negocios/${negocioID}/permisos_emp`).set(permDemo);
+
+      const notifDemo=[
+        {titulo:'Cambio de turno',mensaje:'Mañana entras a las 8:00 am, Carlos',tipo:'turno',empleado:'Carlos Morales',fecha:new Date().toISOString()},
+        {titulo:'Pago procesado',mensaje:'Tu salario de marzo fue depositado 💰',tipo:'pago',empleado:'Todos',fecha:new Date(Date.now()-86400000).toISOString()},
+        {titulo:'Recordatorio',mensaje:'Reunión de equipo el viernes a las 3pm',tipo:'recordatorio',empleado:'Todos',fecha:new Date(Date.now()-172800000).toISOString()},
+      ];
+      notifDemo.forEach(n=>db.ref(`negocios/${negocioID}/notificaciones_emp`).push(n));
+    }
+  },1500);
+}
+
+// ── TABS ──
+function showTab(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  document.getElementById('tab-btn-'+id).classList.add('active');
+}
+
+// ── STATS ──
+function actualizarStats(){
+  const total=Object.keys(empleados).length;
+  const presentes=Object.values(asistenciaHoy).filter(a=>a.estado==='presente'||a.estado==='tardanza').length;
+  const ausentes=Object.values(asistenciaHoy).filter(a=>a.estado==='ausente').length;
+  const tardanzas=Object.values(asistenciaHoy).filter(a=>a.tardanza).length;
+  const pendPermisos=Object.values(permisos).filter(p=>p.estado==='pendiente').length;
+  const planilla=Object.values(empleados).reduce((s,e)=>s+(parseFloat(e.salario)||0),0);
+
+  // Intentar actualizar contadores de stats si existen en el DOM
+  ['s-total','s-presentes','s-ausentes','s-tardanzas','s-planilla','s-permisos'].forEach(id => {
+    var el = document.getElementById(id);
+    if (el) {
+      if (id === 's-planilla') el.textContent = '$' + planilla.toLocaleString();
+      else if (id === 's-total') el.textContent = total;
+      else if (id === 's-presentes') el.textContent = presentes;
+      else if (id === 's-ausentes') el.textContent = ausentes;
+      else if (id === 's-tardanzas') el.textContent = tardanzas;
+      else if (id === 's-permisos') el.textContent = pendPermisos;
+    }
+  });
+
+  var tcEmp = document.getElementById('tc-emp'); if(tcEmp) tcEmp.textContent=total;
+  var tcPerm = document.getElementById('tc-perm'); if(tcPerm) tcPerm.textContent=pendPermisos;
+
+  // Actualizar la insignia de total del dashboard si existe
+  var totalBadge = document.getElementById('dash-total-badge');
+  if (totalBadge) totalBadge.textContent = `${total} Activos`;
+
+  // Renderizar la lista de empleados en el Dashboard
+  const listEl = document.getElementById('dash-lista-empleados');
+  if (listEl) {
+    const emps = Object.entries(empleados);
+    if (!emps.length) {
+      listEl.innerHTML = '<p style="text-align:center;color:var(--m-muted);font-size:12px;padding:20px">Sin empleados registrados</p>';
+    } else {
+      listEl.innerHTML = emps.map(([id, e]) => {
+        var avatarHtml = e.foto_url 
+          ? `<img src="${e.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:12px">`
+          : `<div style="width:100%;height:100%;border-radius:12px;background:${e.color||'#ea580c'};display:flex;align-items:center;justify-content:center;color:white;font-size:15px;font-weight:900">${e.nombre.charAt(0)}</div>`;
+        return `
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:rgba(255,255,255,0.02);border-radius:14px;border:1px solid var(--m-border)">
+            <div style="width:40px;height:40px;border-radius:12px;flex-shrink:0;overflow:hidden">${avatarHtml}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:800;color:var(--m-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nombre}</div>
+              <div style="font-size:10px;color:var(--m-muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-top:2px">${e.puesto}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:10px;color:var(--m-muted);font-weight:700">Depto:</div>
+              <div style="font-size:11px;font-weight:700;color:var(--a);margin-top:1px">${e.dept||'—'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Renderizar marcajes y horarios de asistencia de hoy en asist-dashboard
+  const ad=document.getElementById('asist-dashboard');
+  if(ad) {
+    const emps=Object.entries(empleados);
+    if(!emps.length){
+      ad.innerHTML='<p style="text-align:center;color:var(--m-muted);font-size:12px;padding:20px">Sin marcajes hoy</p>';
+    } else {
+      ad.innerHTML=emps.map(([id,e]) => {
+        const a=asistenciaHoy[id]||{estado:'sin_registro'};
+        const col=a.estado==='presente'?'#10b981':a.estado==='tardanza'?'#f59e0b':a.estado==='ausente'?'#ef4444':'var(--m-muted)';
+        const statusLabel = a.estado==='presente'?'PRESENTE':a.estado==='tardanza'?'TARDANZA':a.estado==='ausente'?'AUSENTE':'SIN MARCAJE';
+        const isExterno = (e.puesto === 'Delivery Externo');
+        const horarioText = isExterno ? 'Moto Reparto Externo' : `Horario: ${e.hora_in||'08:00'} - ${e.hora_out||'17:00'}`;
+        
+        var avatarHtml = e.foto_url 
+          ? `<img src="${e.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:8px">`
+          : `<div style="width:100%;height:100%;border-radius:8px;background:${e.color||'#ea580c'};display:flex;align-items:center;justify-content:center;color:white;font-size:11px;font-weight:900">${e.nombre.charAt(0)}</div>`;
+
+        return `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:12px;background:rgba(255,255,255,0.01);border:1px solid var(--m-border)">
+            <div style="width:32px;height:32px;border-radius:8px;flex-shrink:0;overflow:hidden">${avatarHtml}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:800;color:var(--m-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.nombre}</div>
+              <div style="font-size:9.5px;color:var(--m-muted);margin-top:2px;font-weight:600">${horarioText}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <span class="badge" style="background:rgba(0,0,0,0.2);color:${col};border:1px solid ${col}40;font-size:9px;padding:2px 8px">${statusLabel}</span>
+              <div style="font-size:9px;font-weight:700;color:${col};margin-top:4px">${a.hora_entrada ? 'Entrada: ' + a.hora_entrada : '—'}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// ── RENDER EMPLEADOS ──
+function renderEmpleados(){
+  const grid=document.getElementById('emp-grid');
+  const entries=Object.entries(empleados);
+  if(!entries.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8"><div style="font-size:40px;margin-bottom:10px">👥</div><div style="font-size:13px;font-weight:700">Sin empleados. ¡Agrega el primero!</div></div>';return;}
+  const search=(document.getElementById('emp-search').value||'').toLowerCase();
+  const dept=document.getElementById('emp-filter-dept').value;
+  const tipo=document.getElementById('emp-filter-tipo').value;
+  const filtered=entries.filter(([id,e])=>{
+    if(search&&!e.nombre.toLowerCase().includes(search)&&!(e.puesto||'').toLowerCase().includes(search))return false;
+    if(dept&&e.dept!==dept)return false;
+    if(tipo&&e.tipo!==tipo)return false;
+    return true;
+  });
+  if(!filtered.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#94a3b8;font-size:13px;font-weight:700">Sin resultados</div>';return;}
+  grid.innerHTML=filtered.map(([id,e])=>{
+    const a=asistenciaHoy[id]||{};
+    const col=a.estado==='presente'?'#10b981':a.estado==='tardanza'?'#f59e0b':a.estado==='ausente'?'#ef4444':'#94a3b8';
+    const stLbl=a.estado==='presente'?'Presente':a.estado==='tardanza'?'Tardanza':a.estado==='ausente'?'Ausente':'Sin registro';
+    const rolBadge=e.rol==='propietario'?'<span style="font-size:9px;font-weight:800;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;border:1px solid #fde68a">👑 Propietario</span>':e.rol==='admin'?'<span style="font-size:9px;font-weight:800;background:#EBF2FB;color:#1B4E8B;padding:2px 7px;border-radius:20px">🛡️ Admin</span>':e.rol==='supervisor'?'<span style="font-size:9px;font-weight:800;background:#f0fdf4;color:#166534;padding:2px 7px;border-radius:20px">👔 Supervisor</span>':'';
+    const cardBorder=e.rol==='propietario'?'border:2px solid #fbbf24':'';
+    return `<div class="emp-card" style="${cardBorder}" onclick="verDetalleEmp('${id}')">
+      <div class="emp-card-top">
+        <div class="emp-avatar" style="background:${e.color||'#1B4E8B'}">${e.foto_url?'<img src="'+e.foto_url+'">':e.nombre.charAt(0)}</div>
+        <div class="emp-info">
+          <div class="emp-name">${e.nombre} ${rolBadge}</div>
+          <div class="emp-puesto">${e.puesto||'—'}</div>
+        </div>
+        <div class="emp-status" style="background:${col}" title="${stLbl}"></div>
+      </div>
+      <div class="emp-card-body">
+        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-building" style="color:#94a3b8"></i> Dept.</span><span class="emp-row-val">${e.dept||'—'}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-dollar-sign" style="color:#94a3b8"></i> Salario</span><span class="emp-row-val">$${(parseFloat(e.salario)||0).toFixed(2)}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-clock" style="color:#94a3b8"></i> Horario</span><span class="emp-row-val">${e.hora_in||'—'} - ${e.hora_out||'—'}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-id-badge" style="color:#94a3b8"></i> Tipo</span><span class="emp-row-val" style="font-size:10px">${e.tipo||'—'}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl">Biometría</span><span class="emp-row-val">${a.foto_url?'✅':'❌'}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl">Coordenada</span><span class="emp-row-val">${a.latlon||'—'}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl">Hoy</span><span class="emp-row-val" style="color:${col}">${stLbl}</span></div>
+      </div>
+      <div class="emp-card-foot">
+        <button class="emp-foot-btn" style="background:var(--al);color:#1B4E8B" onclick="event.stopPropagation();editarEmp('${id}')">✏️ Editar</button>
+        <button class="emp-foot-btn" style="background:#dcfce7;color:#166534" onclick="event.stopPropagation();marcarAsistencia('${id}','presente')">✅ Entrada</button>
+        <button class="emp-foot-btn" style="background:#fee2e2;color:#991b1b" onclick="event.stopPropagation();if(confirm('¿Eliminar empleado?'))eliminarEmp('${id}')">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filtrarEmpleados(){renderEmpleados();}
+
+// ── RENDER ASISTENCIA ──
+function renderAsistencia(){
+  const list=document.getElementById('asist-list');
+  const tb=document.getElementById('tb-asistencia');
+  const emps=Object.entries(empleados);
+  if(!emps.length){list.innerHTML='';tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin empleados</td></tr>';return;}
+
+  // Stats asistencia
+  const st=document.getElementById('asist-stats');
+  const presentes=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='presente').length;
+  const tardanza=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='tardanza').length;
+  const ausentes=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='ausente').length;
+  const sinR=emps.filter(([id])=>!(asistenciaHoy[id]||{}).estado).length;
+  st.innerHTML=[
+    {v:presentes,l:'Presentes',c:'#10b981',bg:'#dcfce7'},
+    {v:tardanza,l:'Tardanzas',c:'#f59e0b',bg:'#fef9c3'},
+    {v:ausentes,l:'Ausentes',c:'#ef4444',bg:'#fee2e2'},
+    {v:sinR,l:'Sin registro',c:'#94a3b8',bg:'#f1f5f9'},
+  ].map(x=>`<div class="stat" style="padding:12px;text-align:center;border-left:3px solid ${x.c}">
+    <div style="font-size:22px;font-weight:900;color:${x.c}">${x.v}</div>
+    <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em">${x.l}</div>
+  </div>`).join('');
+
+  // Cards asistencia
+  list.innerHTML=emps.map(([id,e])=>{
+    const a=asistenciaHoy[id]||{};
+    const col=a.estado==='presente'?'#10b981':a.estado==='tardanza'?'#f59e0b':a.estado==='ausente'?'#ef4444':'#94a3b8';
+    const stLbl=a.estado==='presente'?'✅ Presente':a.estado==='tardanza'?'⚠️ Tardanza':a.estado==='ausente'?'❌ Ausente':'⬜ Sin registro';
+    return `<div class="asist-card">
+      <div class="asist-avatar" style="background:${e.color||'#1B4E8B'}">${e.foto_url?'<img src="'+e.foto_url+'">':e.nombre.charAt(0)}</div>
+      <div class="asist-info">
+        <div class="asist-name">${e.nombre}</div>
+        <div class="asist-time">${e.puesto||''} · Turno: ${e.hora_in||'8:00'}-${e.hora_out||'17:00'}</div>
+        <div style="font-size:11px;font-weight:700;color:${col};margin-top:4px">${stLbl}${a.hora_entrada?' · Entró: '+a.hora_entrada:''}</div>
+        ${a.tardanza?`<div style="font-size:10px;color:#f59e0b">⏱️ ${a.minutos_tarde||0} min tarde</div>`:''}
+      </div>
+      <div class="asist-actions">
+        <button class="asist-btn" style="background:#dcfce7;color:#166534" onclick="abrirBiometrico('presente','${id}')">✅ Entrada</button>
+        <button class="asist-btn" style="background:#fee2e2;color:#991b1b" onclick="abrirBiometrico('ausente','${id}')">❌ Ausente</button>
+        ${a.hora_entrada&&!a.hora_salida?`<button class="asist-btn" style="background:#fef9c3;color:#92400e" onclick="abrirBiometrico('salida','${id}')">🚪 Salida</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  // Tabla historial
+  tb.innerHTML=emps.map(([id,e])=>{
+    const a=asistenciaHoy[id]||{};
+    const horas=a.hora_entrada&&a.hora_salida?calcHoras(a.hora_entrada,a.hora_salida):'—';
+    const badgeEst=a.estado==='presente'?'b-green':a.estado==='tardanza'?'b-yellow':a.estado==='ausente'?'b-red':'b-gray';
+    return `<tr>
+      <td><div style="font-weight:700">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.puesto||''}</div></td>
+      <td style="font-weight:700;color:#10b981">${a.hora_entrada||'—'}</td>
+      <td style="font-weight:700;color:#1B4E8B">${a.hora_salida||'—'}</td>
+      <td><span class="badge ${badgeEst}">${a.estado||'sin registro'}</span></td>
+      <td style="font-weight:700">${horas}</td>
+      <td style="font-size:10px;color:#64748b">${a.tardanza?'⚠️ '+a.minutos_tarde+'min tarde':''}</td>
+    </tr>`;
+  }).join('');
+}
+
+function calcHoras(hin,hout){
+  try{
+    const [hh1,mm1]=hin.split(':').map(Number);
+    const [hh2,mm2]=hout.split(':').map(Number);
+    const diff=(hh2*60+mm2)-(hh1*60+mm1);
+    return diff>0?`${Math.floor(diff/60)}h ${diff%60}m`:'—';
+  }catch{return '—';}
+}
+
+function marcarAsistencia(id,est){
+  const ahora=new Date();
+  const emp=empleados[id]||{};
+  const hEntrada=ahora.getHours().toString().padStart(2,'0')+':'+ahora.getMinutes().toString().padStart(2,'0');
+  let tardanza=false,minutos=0;
+  if(emp.hora_in){
+    const [hh,mm]=emp.hora_in.split(':').map(Number);
+    const limInMin=hh*60+mm+10;
+    const actMin=ahora.getHours()*60+ahora.getMinutes();
+    if(actMin>limInMin){tardanza=true;minutos=actMin-hh*60-mm;}
+  }
+  const datos={hora_entrada:hEntrada,hora_salida:'',estado:tardanza&&est==='presente'?'tardanza':est,tardanza,minutos_tarde:minutos};
+  db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).update(datos);
+  toast(tardanza?`⚠️ Tardanza de ${minutos} min registrada`:`✅ ${est==='presente'?'Entrada':'Ausencia'} registrada`,'ok');
+}
+
+function marcarSalida(id){
+  const ahora=new Date();
+  const hs=ahora.getHours().toString().padStart(2,'0')+':'+ahora.getMinutes().toString().padStart(2,'0');
+  db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).update({hora_salida:hs});
+  toast('🚪 Salida registrada','ok');
+}
+
+function marcarTodosEntrada(){
+  Object.keys(empleados).forEach(id=>marcarAsistencia(id,'presente'));
+  toast('✅ Entrada masiva registrada','ok');
+}
+
+// ── RENDER TURNOS ──
+const TURNO_HORARIOS={mañana:'6-14h',tarde:'14-22h',normal:'8-17h',noche:'22-6h',personalizado:'Custom'};
+const TURNO_HORAS={
+  mañana:{i:'06:00',o:'14:00'},tarde:{i:'14:00',o:'22:00'},
+  normal:{i:'08:00',o:'17:00'},noche:{i:'22:00',o:'06:00'}
+};
+function horasTurnoAdmin(t){
+  if(t.hora_in&&t.hora_out)return t.hora_in+'-'+t.hora_out;
+  return (TURNO_HORAS[t.tipo]||{i:'?',o:'?'}).i+'-'+(TURNO_HORAS[t.tipo]||{i:'?',o:'?'}).o;
+}
+
+// Calcula el rango de fechas de cada semana del mes actual
+// ── CALENDARIO REAL ──────────────────────────────────────────────────────
+const DIAS_SEMANA=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+const DIAS_CORTOS=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+const MESES_NOMBRES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const MESES_CORTOS_A=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+// Obtener TODAS las semanas (Lun-Dom) que contienen al menos un día del mes
+function semanasCalendario(year, month){
+  // month: 0-11
+  const semanas=[];
+  const primerDia=new Date(year, month, 1);
+  const ultimoDia=new Date(year, month+1, 0); // último día del mes
+
+  // Lunes de la semana que contiene el primer día
+  let lunes=new Date(primerDia);
+  const dow=lunes.getDay(); // 0=Dom
+  const diff=dow===0?-6:1-dow;
+  lunes.setDate(lunes.getDate()+diff);
+
+  // Generar semanas mientras el lunes sea <= último día del mes
+  while(lunes<=ultimoDia){
+    const days=[];
+    for(let d=0;d<7;d++){
+      const f=new Date(lunes);
+      f.setDate(lunes.getDate()+d);
+      days.push(f);
+    }
+    semanas.push(days);
+    lunes.setDate(lunes.getDate()+7);
+  }
+  return semanas; // array de N semanas (5 o 6 según el mes), cada una 7 Date (Lun-Dom)
+}
+
+function formatFecha(date){
+  // "Lun 23 Mar"
+  return DIAS_CORTOS[date.getDay()]+' '+date.getDate()+' '+MESES_CORTOS_A[date.getMonth()];
+}
+function formatFechaCorta(date){
+  return date.getDate()+'/'+MESES_CORTOS_A[date.getMonth()];
+}
+function isoFecha(date){
+  return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+}
+function semanaLabel(days){
+  const ini=days[0], fin=days[6];
+  if(ini.getMonth()===fin.getMonth())
+    return ini.getDate()+'-'+fin.getDate()+' '+MESES_CORTOS_A[ini.getMonth()];
+  return ini.getDate()+' '+MESES_CORTOS_A[ini.getMonth()]+' – '+fin.getDate()+' '+MESES_CORTOS_A[fin.getMonth()];
+}
+
+// Semana actual del mes visible (índice 0-3)
+function semanaActualIdx(year, month){
+  const hoy=new Date();
+  const sems=semanasCalendario(year,month);
+  const hoyIso=isoFecha(hoy);
+  for(let i=0;i<sems.length;i++){
+    if(sems[i].some(d=>isoFecha(d)===hoyIso))return i;
+  }
+  return 0;
+}
+
+// Inicializar selectores de mes y semana en la barra de turnos
+function initTurnoSelectors(){
+  const hoy=new Date();
+  const mesActual=hoy.getMonth();
+  const yearActual=hoy.getFullYear();
+  const mesEl=document.getElementById('turno-mes-sel');
+  if(!mesEl)return;
+  // Mostrar 3 meses atrás + actual + 2 adelante
+  mesEl.innerHTML='';
+  for(let i=-2;i<=3;i++){
+    let m=mesActual+i, y=yearActual;
+    if(m<0){m+=12;y--;}
+    if(m>11){m-=12;y++;}
+    const opt=document.createElement('option');
+    opt.value=y+'-'+m;
+    opt.textContent=MESES_NOMBRES[m]+(y!==yearActual?' '+y:'');
+    if(m===mesActual&&y===yearActual)opt.selected=true;
+    mesEl.appendChild(opt);
+  }
+  poblarSemanaSel(yearActual, mesActual, semanaActualIdx(yearActual,mesActual));
+}
+
+function poblarSemanaSel(year, month, selIdx){
+  const semEl=document.getElementById('turno-semana-sel');
+  if(!semEl)return;
+  const sems=semanasCalendario(year,month);
+  semEl.innerHTML=sems.map((days,i)=>
+    `<option value="${i}"${i===selIdx?' selected':''}>${'Sem '+(i+1)+': '+semanaLabel(days)}</option>`
+  ).join('');
+}
+
+function onChangeMesTurnos(){
+  const [y,m]=document.getElementById('turno-mes-sel').value.split('-').map(Number);
+  poblarSemanaSel(y,m,0);
+  renderTurnos();
+}
+
+function getMesAnoSel(){
+  const val=document.getElementById('turno-mes-sel')?.value||'';
+  if(!val){const h=new Date();return{y:h.getFullYear(),m:h.getMonth()};}
+  const [y,m]=val.split('-').map(Number);
+  return{y,m};
+}
+
+function getSemanaSelDays(){
+  const {y,m}=getMesAnoSel();
+  const idx=parseInt(document.getElementById('turno-semana-sel')?.value||0);
+  return semanasCalendario(y,m)[idx]||[];
+}
+
+function renderTurnos(){
+  const days=getSemanaSelDays(); // array de 7 Date (Lun-Dom)
+  if(!days.length)return;
+  const hoyIso=isoFecha(new Date());
+
+  // ── Grilla de columnas por día ──
+  const grid=document.getElementById('turnos-semana');
+  grid.innerHTML=days.map(fecha=>{
+    const iso=isoFecha(fecha);
+    const esHoy=iso===hoyIso;
+    const turnosDia=Object.entries(turnos).filter(([,t])=>t.fecha===iso);
+    return `<div class="turno-day" style="${esHoy?'border-color:#1B4E8B;background:#f5f3ff':''}">
+      <div class="turno-day-hdr" style="${esHoy?'background:#1B4E8B':''}">
+        <div>${DIAS_CORTOS[fecha.getDay()]}</div>
+        <div style="font-size:10px;font-weight:600;opacity:.85">${fecha.getDate()} ${MESES_CORTOS_A[fecha.getMonth()]}</div>
+      </div>
+      <div class="turno-slots">
+        ${turnosDia.map(([tid,t])=>`
+          <div class="turno-slot" style="flex-direction:column;align-items:flex-start;gap:1px">
+            <span style="font-size:10px;font-weight:700;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${(empleados[t.emp_id]||{}).nombre?.split(' ')[0]||'—'}</span>
+            <span style="font-size:10px;color:#1B4E8B;font-weight:800">${formatHorasAMPM(t.hora_in,t.hora_out)}</span>
+            <div style="display:flex;gap:3px;margin-top:2px">
+              <button onclick="editarTurno('${tid}')" style="font-size:9px;background:#EBF2FB;border:none;border-radius:5px;padding:2px 6px;cursor:pointer;color:#1B4E8B">✏️</button>
+              <button onclick="eliminarTurno('${tid}')" style="font-size:9px;background:#fee2e2;border:none;border-radius:5px;padding:2px 6px;cursor:pointer;color:#991b1b">✕</button>
+            </div>
+          </div>`).join('')||'<div style="font-size:9px;color:#cbd5e1;padding:6px 0;text-align:center">—</div>'}
+      </div>
+    </div>`;
+  }).join('');
+
+  // ── Tabla por empleado ──
+  const head=document.getElementById('tb-turnos-head');
+  if(head){
+    head.innerHTML='<th>Empleado</th>'+days.map(d=>
+      `<th style="font-size:10px;text-align:center;white-space:nowrap">${DIAS_CORTOS[d.getDay()]}<br><span style="font-weight:600;opacity:.7">${d.getDate()}/${MESES_CORTOS_A[d.getMonth()]}</span></th>`
+    ).join('')+'<th></th>';
+  }
+
+  const tb=document.getElementById('tb-turnos');
+  const emps=Object.entries(empleados);
+  if(!emps.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;padding:20px;color:#94a3b8;font-size:11px">Sin empleados</td></tr>';return;}
+  tb.innerHTML=emps.map(([id,e])=>`
+    <tr>
+      <td><div style="font-weight:700;font-size:12px">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.puesto||''}</div></td>
+      ${days.map(fecha=>{
+        const iso=isoFecha(fecha);
+        const entry=Object.entries(turnos).find(([,t])=>t.emp_id===id&&t.fecha===iso);
+        if(!entry)return '<td style="text-align:center;color:#cbd5e1">—</td>';
+        const[tid,t]=entry;
+        return `<td style="text-align:center"><span style="background:var(--al);color:var(--a);padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;display:inline-block" onclick="editarTurno('${tid}')">${formatHorasAMPM(t.hora_in,t.hora_out)}</span></td>`;
+      }).join('')}
+      <td><button class="btn btn-ghost btn-sm" onclick="abrirModalTurno('${id}')">+</button></td>
+    </tr>`).join('');
+}
+
+// Convierte "14:00","22:00" → "2:00 PM - 10:00 PM"
+function formatHorasAMPM(hi,ho){
+  if(!hi||!ho)return '—';
+  function to12(t){
+    const[h,m]=t.split(':').map(Number);
+    const ampm=h>=12?'PM':'AM';
+    const h12=h%12||12;
+    return h12+(m?':'+String(m).padStart(2,'0'):'')+' '+ampm;
+  }
+  return to12(hi)+' – '+to12(ho);
+}
+
+// ── RENDER PLANILLA ──
+function calcularPlanilla(){renderPlanilla();}
+function renderPlanilla(){
+  const tb=document.getElementById('tb-planilla');
+  const emps=Object.entries(empleados);
+  if(!emps.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#94a3b8;font-size:11px">Sin empleados</td></tr>';document.getElementById('planilla-total-val').textContent='$0.00';return;}
+  let totalPlanilla=0,totalHex=0,totalDed=0;
+  const rows=emps.map(([id,e])=>{
+    const sal=parseFloat(e.salario)||0;
+    const hex=0; // horas extras (futuro: calcular desde asistencia)
+    const bono=0;
+    const aplIsss = e.aplica_isss!==false;
+    const aplAfp = e.aplica_afp!==false;
+    const afp = aplAfp ? sal*0.0725 : 0;
+    const isss = aplIsss ? Math.min(sal*0.03,30) : 0;
+    const deduccion=afp+isss;
+    const neto=sal+hex+bono-deduccion;
+    totalPlanilla+=neto;totalHex+=hex;totalDed+=deduccion;
+    return `<tr>
+      <td><div style="font-weight:700">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.tipo||''}</div></td>
+      <td style="font-size:11px">${e.puesto||'—'}</td>
+      <td style="font-weight:700">$${sal.toFixed(2)}</td>
+      <td style="color:#1B4E8B;font-weight:700">$${hex.toFixed(2)}</td>
+      <td style="color:#10b981;font-weight:700">$${bono.toFixed(2)}</td>
+      <td style="color:#ef4444;font-weight:700">-$${deduccion.toFixed(2)}</td>
+      <td style="font-size:11px;color:#64748b">$${afp.toFixed(2)}</td>
+      <td style="font-size:11px;color:#64748b">$${isss.toFixed(2)}</td>
+      <td style="font-weight:900;font-size:14px;color:#059669">$${neto.toFixed(2)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="verComprobante('${id}','${e.nombre}','${sal}','${neto}')">🧾 Comprobante</button></td>
+    </tr>`;
+  }).join('');
+  tb.innerHTML=rows+`<tr style="background:#f8fafc;font-weight:900">
+    <td colspan="2" style="text-align:right;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em">TOTALES →</td>
+    <td style="font-weight:900">$${Object.values(empleados).reduce((s,e)=>s+(parseFloat(e.salario)||0),0).toFixed(2)}</td>
+    <td>$${totalHex.toFixed(2)}</td><td>$0.00</td><td style="color:#ef4444">-$${totalDed.toFixed(2)}</td>
+    <td></td><td></td>
+    <td style="font-weight:900;font-size:15px;color:#059669">$${totalPlanilla.toFixed(2)}</td>
+    <td></td>
+  </tr>`;
+  document.getElementById('planilla-total-val').textContent='$'+totalPlanilla.toFixed(2);
+  document.getElementById('p-empleados-n').textContent=emps.length;
+  document.getElementById('p-horas-n').textContent=totalHex;
+  document.getElementById('p-deduc-n').textContent='$'+totalDed.toFixed(2);
+}
+
+// ── RENDER PERMISOS ──
+function renderPermisos(){
+  const tb=document.getElementById('tb-permisos');
+  const entries=Object.entries(permisos);
+  if(!entries.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin solicitudes</td></tr>';return;}
+  tb.innerHTML=entries.map(([id,p])=>{
+    const badgeMap={pendiente:'b-yellow',aprobado:'b-green',rechazado:'b-red'};
+    return `<tr>
+      <td style="font-weight:700">${p.emp_nombre||'—'}</td>
+      <td><span class="badge b-blue">${p.tipo}</span></td>
+      <td>${p.inicio||'—'}</td>
+      <td>${p.fin||'—'}</td>
+      <td style="text-align:center;font-weight:700">${p.dias||1}</td>
+      <td style="font-size:11px;color:#64748b;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.motivo||'—'}</td>
+      <td><span class="badge ${badgeMap[p.estado]||'b-gray'}">${p.estado}</span></td>
+      <td>
+        ${p.estado==='pendiente'?`<button class="btn btn-green btn-sm" onclick="aprobarPermiso('${id}',true)">✅</button>
+        <button class="btn btn-red btn-sm" onclick="aprobarPermiso('${id}',false)">❌</button>`:'—'}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function aprobarPermiso(id,aprobado){
+  const est=aprobado?'aprobado':'rechazado';
+  db.ref(`negocios/${negocioID}/permisos_emp/${id}`).update({estado:est});
+  toast(aprobado?'✅ Permiso aprobado':'❌ Permiso rechazado',aprobado?'ok':'err');
+}
+
+// ── PORTAL EMPLEADO ──
+function renderPortalSelector(){
+  const sel=document.getElementById('portal-emp-sel');
+  const current=sel.value;
+  sel.innerHTML='<option value="">— Seleccionar empleado —</option>'+
+    Object.entries(empleados).map(([id,e])=>`<option value="${id}">${e.nombre}</option>`).join('');
+  if(current)sel.value=current;
+}
+
+function cargarPortalEmp(){
+  const id=document.getElementById('portal-emp-sel').value;
+  const cont=document.getElementById('portal-content');
+  if(!id){cont.innerHTML='<div style="text-align:center;padding:60px;color:#94a3b8"><div style="font-size:48px;margin-bottom:12px">👤</div><div style="font-size:14px;font-weight:700">Selecciona un empleado</div></div>';return;}
+  const e=empleados[id]||{};
+  const a=asistenciaHoy[id]||{};
+  const misPermisos=Object.values(permisos).filter(p=>p.emp_id===id);
+  cont.innerHTML=`
+    <div class="portal-header">
+      <div class="portal-avatar">${e.nombre?e.nombre.charAt(0):'?'}</div>
+      <div>
+        <div class="portal-name">${e.nombre||'Empleado'}</div>
+        <div class="portal-role">${e.puesto||''} · ${e.dept||''}</div>
+        <div style="font-size:11px;opacity:.7;margin-top:4px">🗓️ Ingreso: ${e.fecha||'—'} · ${e.tipo||''}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:24px;font-weight:900">$${(parseFloat(e.salario)||0).toFixed(2)}</div>
+        <div style="font-size:10px;opacity:.7;text-transform:uppercase">Salario mensual</div>
+      </div>
+    </div>
+    <div class="portal-grid">
+      <div class="portal-card" onclick="showTab('asistencia')">
+        <div class="portal-card-icon">⏰</div>
+        <div class="portal-card-title">Asistencia</div>
+        <div class="portal-card-sub">Hoy: ${a.hora_entrada?'Entró '+a.hora_entrada:'Sin registro'}</div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-icon">💰</div>
+        <div class="portal-card-title">Mi Pago</div>
+        <div class="portal-card-sub">Salario: $${(parseFloat(e.salario)||0).toFixed(2)}/mes</div>
+      </div>
+      <div class="portal-card" onclick="abrirModalPermiso()">
+        <div class="portal-card-icon">🏖️</div>
+        <div class="portal-card-title">Permisos</div>
+        <div class="portal-card-sub">${misPermisos.length} solicitudes</div>
+      </div>
+      <div class="portal-card">
+        <div class="portal-card-icon">📅</div>
+        <div class="portal-card-title">Mi Horario</div>
+        <div class="portal-card-sub">${e.hora_in||'8:00'} – ${e.hora_out||'17:00'}</div>
+      </div>
+    </div>
+    <div style="background:white;border-radius:16px;border:1px solid var(--bd);overflow:hidden">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--bd);font-size:13px;font-weight:800">Información de la ficha</div>
+      <div style="padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px">
+        <div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">DUI</div><div style="font-weight:700">${e.dui||'—'}</div></div>
+        <div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">Teléfono</div><div style="font-weight:700">${e.tel||'—'}</div></div>
+        <div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">Email</div><div style="font-weight:700">${e.email||'—'}</div></div>
+        <div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase">Rol MODUS</div><div style="font-weight:700">${e.rol||'empleado'}</div></div>
+      </div>
+    </div>`;
+}
+
+// ── ROLES PARCHE SYS ──
+const ROLES_CONFIG={
+  propietario:{label:'Propietario',icon:'👑',modulos:{POS:true,Pronostico:true,Auditoria:true,Menu:true,Inventario:true,Cocina:true,MapaMesas:true,Delivery:true,POSMovil:true,AppCliente:true,Empleados:true,DTE:true,Contabilidad:true,Ajustes:true,Empresa:true,Perfil:true}},
+  admin:      {label:'Administrador',icon:'🛡️',modulos:{POS:true,Pronostico:true,Auditoria:true,Menu:true,Inventario:true,Cocina:true,MapaMesas:true,Delivery:true,POSMovil:true,AppCliente:true,Empleados:true,DTE:true,Contabilidad:true,Ajustes:true,Empresa:true,Perfil:true}},
+  supervisor: {label:'Supervisor',icon:'👔',modulos:{POS:true,Pronostico:true,Auditoria:false,Menu:true,Inventario:true,Cocina:true,MapaMesas:true,Delivery:true,POSMovil:true,AppCliente:false,Empleados:false,DTE:false,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+  cajero:     {label:'Cajero',icon:'💳',modulos:{POS:true,Pronostico:false,Auditoria:false,Menu:false,Inventario:false,Cocina:false,MapaMesas:true,Delivery:false,POSMovil:true,AppCliente:false,Empleados:false,DTE:true,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+  mesero:     {label:'Mesero',icon:'🧑‍🍽️',modulos:{POS:true,Pronostico:false,Auditoria:false,Menu:true,Inventario:false,Cocina:false,MapaMesas:true,Delivery:false,POSMovil:true,AppCliente:false,Empleados:false,DTE:false,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+  cocinero:   {label:'Cocinero',icon:'👨‍🍳',modulos:{POS:false,Pronostico:false,Auditoria:false,Menu:true,Inventario:true,Cocina:true,MapaMesas:false,Delivery:false,POSMovil:false,AppCliente:false,Empleados:false,DTE:false,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+  delivery:   {label:'Repartidor',icon:'🛵',modulos:{POS:false,Pronostico:false,Auditoria:false,Menu:false,Inventario:false,Cocina:false,MapaMesas:false,Delivery:true,POSMovil:false,AppCliente:false,Empleados:false,DTE:false,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+  empleado:   {label:'Empleado',icon:'👤',modulos:{POS:true,Pronostico:false,Auditoria:false,Menu:false,Inventario:false,Cocina:false,MapaMesas:false,Delivery:false,POSMovil:true,AppCliente:false,Empleados:false,DTE:false,Contabilidad:false,Ajustes:false,Empresa:false,Perfil:true}},
+};
+
+// Mapa ROLES_CONFIG → IDs de checkboxes de permisos FOOD
+const ROL_PERM_MAP={
+  propietario:{pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':true,empleados:true,dte:true,contabilidad:true,ajustes:true,'mi-empresa':true,'mi-perfil':true},
+  admin:      {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':true,empleados:true,dte:true,contabilidad:true,ajustes:true,'mi-empresa':true,'mi-perfil':true},
+  supervisor: {pos:true,pronostico:true,auditoria:false,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  cajero:     {pos:true,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:true,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  mesero:     {pos:true,pronostico:false,auditoria:false,menu:true,inventario:false,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  cocinero:   {pos:false,pronostico:false,auditoria:false,menu:true,inventario:true,cocina:true,'mapa-mesas':false,delivery:false,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  delivery:   {pos:false,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':false,delivery:true,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  empleado:   {pos:true,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':false,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+};
+
+function onRolChange(rol){
+  var perms=ROL_PERM_MAP[rol]||ROL_PERM_MAP.empleado;
+  var grid=document.getElementById('modulos-permisos-grid');
+  if(!grid)return;
+  // Aplicar checkboxes según rol
+  Object.keys(perms).forEach(function(mod){
+    var chk=document.getElementById('perm-'+mod);
+    if(chk) chk.checked=perms[mod];
+  });
+  // Admin/propietario: todos los módulos ON y deshabilitados (no se pueden quitar)
+  var isPropAdmin=rol==='propietario'||rol==='admin';
+  grid.querySelectorAll('input[type="checkbox"]').forEach(function(chk){
+    chk.disabled=isPropAdmin;
+    if(isPropAdmin)chk.checked=true;
+  });
+  // PIN por defecto según rol
+  var pinEl=document.getElementById('emp-pin');
+  if(pinEl&&!pinEl.value){
+    if(isPropAdmin) pinEl.placeholder='0123456789 (Admin)';
+    else pinEl.placeholder='1234';
+  }
+  // Sección módulos administrativos
+  var sensWrap=document.getElementById('modulos-sensibles-wrap');
+  if(sensWrap){
+    sensWrap.style.display=isPropAdmin?'none':'block';
+    var adminIds=['perm-empleados','perm-dte','perm-contabilidad','perm-ajustes','perm-mi-empresa','perm-mi-perfil'];
+    if(isPropAdmin){
+      adminIds.forEach(function(id){var el=document.getElementById(id);if(el){el.checked=true;el.disabled=true;}});
+    } else {
+      adminIds.forEach(function(id){var el=document.getElementById(id);if(el){el.disabled=false;el.checked=perms[id.replace('perm-','')]||false;}});
+    }
+  }
+  if(isPropAdmin){
+    grid.style.opacity='.6';
+    grid.title='El propietario/admin siempre tiene acceso a todos los módulos';
+  } else {
+    grid.style.opacity='1';
+    grid.title='';
+  }
+}
+function showRoleDetail(rol){
+  const r=ROLES_CONFIG[rol];
+  document.getElementById('rol-detail').querySelector('div').textContent=r.icon+' '+r.label;
+  document.getElementById('rol-permisos').innerHTML=Object.entries(r.modulos).map(([mod,acc])=>`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9">
+      <span style="font-size:12px;font-weight:700">${mod}</span>
+      <span class="badge ${acc?'b-green':'b-red'}">${acc?'✅ Permitido':'🚫 Sin acceso'}</span>
+    </div>`).join('');
+}
+
+// ── NOTIFICACIONES ──
+function renderNotificaciones(){
+  const list=document.getElementById('notif-list');
+  if(!notificaciones_emp.length){list.innerHTML='<div style="text-align:center;padding:40px;color:#94a3b8;font-size:13px;font-weight:700">Sin notificaciones enviadas</div>';return;}
+  const iconMap={turno:'🔄',pago:'💰',recordatorio:'⏰',alerta:'🚨'};
+  const bgMap={turno:'#EBF2FB',pago:'#dcfce7',recordatorio:'#fef9c3',alerta:'#fee2e2'};
+  list.innerHTML=notificaciones_emp.map(n=>`
+    <div class="notif-item">
+      <div class="notif-icon" style="background:${bgMap[n.tipo]||'#f1f5f9'}">${iconMap[n.tipo]||'📢'}</div>
+      <div class="notif-body">
+        <div class="notif-title">${n.titulo||'Notificación'}</div>
+        <div class="notif-msg">${n.mensaje||''}</div>
+        <div class="notif-time">Para: ${n.empleado||'Todos'} · ${new Date(n.fecha).toLocaleDateString('es-SV')}</div>
+      </div>
+    </div>`).join('');
+}
+
+// ── FUNCIONES DE PUESTO Y ROLES DE RESTAURANTE ──
+function autoAsignarDepartamento(puesto) {
+  var depto = 'Administración';
+  if (['Cajero', 'Mesero', 'Host', 'Atención al cliente'].includes(puesto)) {
+    depto = 'Servicio al Cliente';
+  } else if (['Chef', 'Cocinero', 'Ayudante de cocina'].includes(puesto)) {
+    depto = 'Producción';
+  } else if (['Delivery', 'Delivery Externo'].includes(puesto)) {
+    depto = 'Logística';
+  } else if (['Inventario / bodega', 'Compras'].includes(puesto)) {
+    depto = 'Bodega';
+  }
+  document.getElementById('emp-dept').value = depto;
+}
+
+function onPuestoChange(puesto) {
+  var esExterno = (puesto === 'Delivery Externo');
+  var secSocial = document.getElementById('sec-social-prevision');
+  var secHorarios = document.getElementById('sec-horarios');
+  var salDiv = document.getElementById('emp-salario').parentElement;
+  var emailDiv = document.getElementById('emp-email').parentElement;
+  
+  if (esExterno) {
+    if(secSocial) secSocial.style.display = 'none';
+    if(secHorarios) secHorarios.style.display = 'none';
+    if(salDiv) salDiv.style.display = 'none';
+    if(emailDiv) emailDiv.style.display = 'none';
+    
+    // Setear valores por defecto mínimos para evitar errores de validación de formulario
+    document.getElementById('emp-salario').value = '0.01';
+    document.getElementById('emp-email').value = '';
+    document.getElementById('emp-aplica-isss').checked = false;
+    document.getElementById('emp-aplica-afp').checked = false;
+    document.getElementById('emp-dept').value = 'Logística';
+    document.getElementById('emp-rol').value = 'empleado';
+    onRolChange('empleado');
+  } else {
+    if(secSocial) secSocial.style.display = 'block';
+    if(secHorarios) secHorarios.style.display = 'block';
+    if(salDiv) salDiv.style.display = 'block';
+    if(emailDiv) emailDiv.style.display = 'block';
+    
+    // Si estaba en 0.01 (de un externo anterior), restauramos a un salario mínimo por defecto
+    if (document.getElementById('emp-salario').value === '0.01' || !document.getElementById('emp-salario').value) {
+      document.getElementById('emp-salario').value = '365.00';
+    }
+    document.getElementById('emp-aplica-isss').checked = true;
+    document.getElementById('emp-aplica-afp').checked = true;
+    calcPreviewDeducciones();
+    autoAsignarDepartamento(puesto);
+  }
+}
+
+// ── GUARDAR EMPLEADO ──
+function abrirModalEmp(id){
+  document.getElementById('emp-id-edit').value='';
+  document.getElementById('modal-emp-title').textContent = '👤 Nuevo Empleado';
+  ['emp-nombre','emp-dui','emp-tel','emp-email','emp-salario'].forEach(i=>document.getElementById(i).value='');
+  document.getElementById('emp-puesto').value='Mesero';
+  document.getElementById('emp-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('emp-hora-in').value='08:00';
+  document.getElementById('emp-hora-out').value='17:00';
+  document.getElementById('emp-pin').value='';
+  document.getElementById('emp-pin').placeholder='1234';
+  document.getElementById('emp-rol').value='mesero';
+  document.getElementById('emp-acceso-campo').value='false';
+  onRolChange('mesero');
+  onPuestoChange('Mesero');
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+function editarEmp(id){
+  const e=empleados[id]||{};
+  document.getElementById('emp-id-edit').value=id;
+  document.getElementById('modal-emp-title').textContent = '✏️ Editar Empleado';
+  document.getElementById('emp-nombre').value=e.nombre||'';
+  document.getElementById('emp-dui').value=e.dui||'';
+  document.getElementById('emp-tel').value=e.tel||'';
+  document.getElementById('emp-email').value=e.email||'';
+  document.getElementById('emp-puesto').value=e.puesto||'Mesero';
+  document.getElementById('emp-dept').value=e.dept||'Servicio al Cliente';
+  document.getElementById('emp-tipo').value=e.tipo||'Tiempo completo';
+  document.getElementById('emp-salario').value=e.salario||'';
+  document.getElementById('emp-fecha').value=e.fecha||'';
+  document.getElementById('emp-hora-in').value=e.hora_in||'08:00';
+  document.getElementById('emp-hora-out').value=e.hora_out||'17:00';
+  var rolActual=e.rol||'empleado';
+  // Si el rol guardado no existe en el nuevo selector, usar 'empleado' como fallback
+  var rolesValidos=['empleado','mesero','cajero','cocinero','delivery','supervisor','admin','propietario'];
+  if(!rolesValidos.includes(rolActual)) rolActual='empleado';
+  document.getElementById('emp-rol').value=rolActual;
+  document.getElementById('emp-pin').value=e.pin_app||'';
+  document.getElementById('emp-pin').placeholder=(rolActual==='propietario'||rolActual==='admin')?'0123456789':'1234';
+  // Foto preview
+  const prev=document.getElementById('emp-foto-preview');
+  if(e.foto_url)prev.innerHTML=`<img src="${e.foto_url}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+  else prev.innerHTML='👤';
+  document.getElementById('emp-foto-file').value='';
+  document.getElementById('emp-acceso-campo').value=e.acceso_campo?'true':'false';
+  // Cargar campos ISSS / AFP
+  var isssEl=document.getElementById('emp-isss-num');if(isssEl)isssEl.value=e.isss_num||'';
+  var afpEl=document.getElementById('emp-afp-num');if(afpEl)afpEl.value=e.afp_num||'';
+  var afpInstEl=document.getElementById('emp-afp-inst');if(afpInstEl)afpInstEl.value=e.afp_inst||'CRECER';
+  var aplIsssEl=document.getElementById('emp-aplica-isss');if(aplIsssEl)aplIsssEl.checked=e.aplica_isss!==false;
+  var aplAfpEl=document.getElementById('emp-aplica-afp');if(aplAfpEl)aplAfpEl.checked=e.aplica_afp!==false;
+  calcPreviewDeducciones();
+  var mp=e.modulos_custom||e.modulos_permitidos||{};
+  // Aplicar rol PRIMERO (establece defaults y deshabilita si propietario/admin)
+  onRolChange(rolActual);
+  onPuestoChange(e.puesto||'Mesero');
+  // Re-aplicar permisos personalizados del empleado (solo roles editables)
+  if(rolActual!=='propietario'&&rolActual!=='admin'&&(e.modulos_custom||e.modulos_permitidos)){
+    // Módulos FOOD principales
+    var foodKeys=['pos','pronostico','auditoria','menu','inventario','cocina','mapa-mesas','delivery','pos-movil','app-cliente'];
+    foodKeys.forEach(function(k){
+      var el=document.getElementById('perm-'+k);
+      var mpKey=k.replace(/-/g,'_');
+      if(el&&!el.disabled)el.checked=mp[mpKey]===true||mp[k]===true;
+    });
+    // Módulos administrativos FOOD
+    var adminKeys={empleados:'empleados',dte:'dte',contabilidad:'contabilidad',ajustes:'ajustes','mi-empresa':'mi_empresa','mi-perfil':'mi_perfil'};
+    Object.entries(adminKeys).forEach(function(entry){
+      var chkId=entry[0],mpKey=entry[1];
+      var el=document.getElementById('perm-'+chkId);
+      if(el&&!el.disabled)el.checked=mp[mpKey]===true||mp[chkId]===true;
+    });
+  }
+  document.getElementById('modal-emp').classList.add('open');
+}
+
+// ── FOTO PREVIEW ──
+function previewFoto(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  if(file.size>2*1024*1024){toast('La foto no debe superar 2MB','err');input.value='';return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById('emp-foto-preview');
+    prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:14px">`;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── PREVIEW DEDUCCIONES EN MODAL ──
+function calcPreviewDeducciones(){
+  const sal = parseFloat(document.getElementById('emp-salario')?.value)||0;
+  const aplIsss = document.getElementById('emp-aplica-isss')?.checked;
+  const aplAfp = document.getElementById('emp-aplica-afp')?.checked;
+  const prev = document.getElementById('preview-deducciones');
+  if(!prev) return;
+  if(!sal){ prev.style.display='none'; return; }
+  const isss = aplIsss ? Math.min(sal*0.03, 30) : 0;
+  const afp = aplAfp ? sal*0.0725 : 0;
+  const neto = sal - isss - afp;
+  prev.style.display = 'block';
+  prev.innerHTML = `ISSS (3%, máx $30): <strong>$${isss.toFixed(2)}</strong> &nbsp;|&nbsp; AFP (7.25%): <strong>$${afp.toFixed(2)}</strong> &nbsp;|&nbsp; Salario neto: <strong style="color:#15803d">$${neto.toFixed(2)}</strong>`;
+}
+
+function guardarEmpleado(){
+  const nombre=document.getElementById('emp-nombre').value.trim();
+  const salario=parseFloat(document.getElementById('emp-salario').value);
+  if(!nombre||!salario){toast('Nombre y salario son requeridos','err');return;}
+  const editId=document.getElementById('emp-id-edit').value;
+  const colors=['#1B4E8B','#10b981','#f59e0b','#ec4899','#1B4E8B','#06b6d4','#f97316','#14b8a6'];
+  const color=(editId&&empleados[editId]?.color)||colors[Math.floor(Math.random()*colors.length)];
+  const data={
+    nombre,dui:document.getElementById('emp-dui').value,
+    tel:document.getElementById('emp-tel').value,email:document.getElementById('emp-email').value,
+    puesto:document.getElementById('emp-puesto').value,dept:document.getElementById('emp-dept').value,
+    tipo:document.getElementById('emp-tipo').value,salario,fecha:document.getElementById('emp-fecha').value,
+    hora_in:document.getElementById('emp-hora-in').value,hora_out:document.getElementById('emp-hora-out').value,
+    rol:document.getElementById('emp-rol').value,color,
+    pin_app:document.getElementById('emp-pin').value||(document.getElementById('emp-rol').value==='propietario'||document.getElementById('emp-rol').value==='admin'?'0123456789':'1234'),
+    acceso_campo:document.getElementById('emp-acceso-campo').value==='true',
+    isss_num:document.getElementById('emp-isss-num').value.trim(),
+    afp_num:document.getElementById('emp-afp-num').value.trim(),
+    afp_inst:document.getElementById('emp-afp-inst').value,
+    aplica_isss:document.getElementById('emp-aplica-isss').checked,
+    aplica_afp:document.getElementById('emp-aplica-afp').checked,
+    modulos_permitidos:(function(){
+      var r=document.getElementById('emp-rol').value;
+      if(r==='propietario'||r==='admin')
+        return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
+      return {
+        pos:!!document.getElementById('perm-pos')?.checked,
+        pronostico:!!document.getElementById('perm-pronostico')?.checked,
+        auditoria:!!document.getElementById('perm-auditoria')?.checked,
+        menu:!!document.getElementById('perm-menu')?.checked,
+        inventario:!!document.getElementById('perm-inventario')?.checked,
+        cocina:!!document.getElementById('perm-cocina')?.checked,
+        mapa_mesas:!!document.getElementById('perm-mapa-mesas')?.checked,
+        delivery:!!document.getElementById('perm-delivery')?.checked,
+        pos_movil:!!document.getElementById('perm-pos-movil')?.checked,
+        app_cliente:!!document.getElementById('perm-app-cliente')?.checked,
+        empleados:!!document.getElementById('perm-empleados')?.checked,
+        dte:!!document.getElementById('perm-dte')?.checked,
+        contabilidad:!!document.getElementById('perm-contabilidad')?.checked,
+        ajustes:!!document.getElementById('perm-ajustes')?.checked,
+        mi_empresa:!!document.getElementById('perm-mi-empresa')?.checked,
+        mi_perfil:document.getElementById('perm-mi-perfil')?.checked!==false,
+      };
+    })(),
+    // modulos_custom: campo canónico leído por portal-food.html
+    modulos_custom:(function(){
+      var r=document.getElementById('emp-rol').value;
+      if(r==='propietario'||r==='admin')
+        return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
+      return {
+        pos:!!document.getElementById('perm-pos')?.checked,
+        pronostico:!!document.getElementById('perm-pronostico')?.checked,
+        auditoria:!!document.getElementById('perm-auditoria')?.checked,
+        menu:!!document.getElementById('perm-menu')?.checked,
+        inventario:!!document.getElementById('perm-inventario')?.checked,
+        cocina:!!document.getElementById('perm-cocina')?.checked,
+        mapa_mesas:!!document.getElementById('perm-mapa-mesas')?.checked,
+        delivery:!!document.getElementById('perm-delivery')?.checked,
+        pos_movil:!!document.getElementById('perm-pos-movil')?.checked,
+        app_cliente:!!document.getElementById('perm-app-cliente')?.checked,
+        empleados:!!document.getElementById('perm-empleados')?.checked,
+        dte:!!document.getElementById('perm-dte')?.checked,
+        contabilidad:!!document.getElementById('perm-contabilidad')?.checked,
+        ajustes:!!document.getElementById('perm-ajustes')?.checked,
+        mi_empresa:!!document.getElementById('perm-mi-empresa')?.checked,
+        mi_perfil:document.getElementById('perm-mi-perfil')?.checked!==false,
+      };
+    })(),
+  };
+  const fotoFile=document.getElementById('emp-foto-file').files[0];
+  const btn=document.querySelector('#modal-emp .btn-primary');
+  if(btn){btn.textContent='Guardando...';btn.disabled=true;}
+  const doSave=(fotoUrl)=>{
+    if(fotoUrl)data.foto_url=fotoUrl;
+    const doFinal=(finalData)=>{
+      const ref=editId?db.ref(`negocios/${negocioID}/empleados/${editId}`):db.ref(`negocios/${negocioID}/empleados`).push();
+      (editId?ref.update(finalData):ref.set(finalData)).then(()=>{
+        toast(editId?'✅ Empleado actualizado':'✅ Empleado creado','ok');
+        cerrar('modal-emp');
+        document.getElementById('emp-foto-file').value='';
+        document.getElementById('emp-foto-preview').innerHTML='👤';
+        ['emp-isss-num','emp-afp-num'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+        if(document.getElementById('emp-aplica-isss')) document.getElementById('emp-aplica-isss').checked=true;
+        if(document.getElementById('emp-aplica-afp')) document.getElementById('emp-aplica-afp').checked=true;
+        if(document.getElementById('preview-deducciones')) document.getElementById('preview-deducciones').style.display='none';
+      }).catch(e=>toast(e.message,'err'))
+      .finally(()=>{if(btn){btn.textContent='Guardar Empleado';btn.disabled=false;}});
+    };
+    if(editId&&!fotoUrl){
+      db.ref(`negocios/${negocioID}/empleados/${editId}/foto_url`).once('value',s=>{
+        const ex=s.val();
+        doFinal(ex?{...data,foto_url:ex}:data);
+      });
+    } else doFinal(data);
+  };
+  if(fotoFile){
+    const storage=firebase.storage();
+    const ref2=storage.ref(`negocios/${negocioID}/empleados_fotos/${Date.now()}_${fotoFile.name.replace(/[^a-zA-Z0-9.]/g,'_')}`);
+    ref2.put(fotoFile).then(snap=>snap.ref.getDownloadURL()).then(url=>doSave(url))
+      .catch(e=>{toast('Error al subir foto: '+e.message,'err');if(btn){btn.textContent='Guardar Empleado';btn.disabled=false;}});
+  } else doSave(null);
+}
+
+function eliminarEmp(id){
+  db.ref(`negocios/${negocioID}/empleados/${id}`).remove().then(()=>toast('🗑️ Empleado eliminado','ok'));
+}
+
+function toggleAllModulos(val){
+  ['pos','pronostico','auditoria','menu','inventario','cocina','mapa-mesas','delivery','pos-movil','app-cliente','empleados','dte','contabilidad','ajustes','mi-empresa','mi-perfil'].forEach(function(k){
+    var el=document.getElementById('perm-'+k);if(el&&!el.disabled)el.checked=val;
+  });
+}
+
+// ── GUARDAR TURNO ──
+function onChangeFechaTurno(){
+  const fecha=document.getElementById('turno-fecha').value;
+  if(!fecha)return;
+  const d=new Date(fecha+'T12:00:00');
+  const lbl=document.getElementById('turno-fecha-lbl');
+  if(lbl)lbl.textContent=DIAS_SEMANA[d.getDay()]+', '+d.getDate()+' de '+MESES_NOMBRES[d.getMonth()]+' '+d.getFullYear();
+}
+
+function abrirModalTurno(empId){
+  llenarSelectoresEmp();
+  document.getElementById('turno-edit-key').value='';
+  document.getElementById('modal-turno-title').textContent='📅 Asignar Turno';
+  document.getElementById('btn-turno-lbl').textContent='Asignar';
+  document.getElementById('btn-eliminar-turno').style.display='none';
+  // Default: hoy
+  document.getElementById('turno-fecha').value=isoFecha(new Date());
+  onChangeFechaTurno();
+  document.getElementById('turno-tipo').value='normal';
+  document.getElementById('turno-custom').style.display='none';
+  document.getElementById('turno-h-in').value='08:00';
+  document.getElementById('turno-h-out').value='17:00';
+  document.getElementById('turno-nota').value='';
+  if(empId)document.getElementById('turno-emp').value=empId;
+  document.getElementById('modal-turno').classList.add('open');
+}
+
+function editarTurno(key){
+  const t=turnos[key];
+  if(!t)return;
+  llenarSelectoresEmp();
+  document.getElementById('turno-edit-key').value=key;
+  document.getElementById('modal-turno-title').textContent = '✏️ Editar Turno';
+  document.getElementById('btn-turno-lbl').textContent='Guardar cambios';
+  document.getElementById('btn-eliminar-turno').style.display='inline-flex';
+  document.getElementById('turno-emp').value=t.emp_id||'';
+  document.getElementById('turno-fecha').value=t.fecha||isoFecha(new Date());
+  onChangeFechaTurno();
+  document.getElementById('turno-tipo').value=t.tipo||'normal';
+  document.getElementById('turno-h-in').value=t.hora_in||'';
+  document.getElementById('turno-h-out').value=t.hora_out||'';
+  document.getElementById('turno-nota').value=t.nota||'';
+  document.getElementById('turno-custom').style.display=t.tipo==='personalizado'?'grid':'none';
+  document.getElementById('modal-turno').classList.add('open');
+}
+
+function eliminarTurnoEdit(){
+  const key=document.getElementById('turno-edit-key').value;
+  if(!key)return;
+  if(!confirm('¿Eliminar este turno?'))return;
+  db.ref(`negocios/${negocioID}/turnos_emp/${key}`).remove().then(()=>{
+    toast('🗑️ Turno eliminado','ok');
+    cerrar('modal-turno');
+  });
+}
+
+function eliminarTurno(key){
+  if(!confirm('¿Eliminar este turno?'))return;
+  db.ref(`negocios/${negocioID}/turnos_emp/${key}`).remove().then(()=>toast('🗑️ Turno eliminado','ok'));
+}
+
+function guardarTurno(){
+  const empId=document.getElementById('turno-emp').value;
+  const fecha=document.getElementById('turno-fecha').value; // "2025-03-23"
+  const tipo=document.getElementById('turno-tipo').value;
+  const editKey=document.getElementById('turno-edit-key').value;
+  if(!empId){toast('Selecciona un empleado','err');return;}
+  if(!fecha){toast('Selecciona una fecha','err');return;}
+  const hora_in=tipo==='personalizado'?document.getElementById('turno-h-in').value:(TURNO_HORAS[tipo]||{i:''}).i;
+  const hora_out=tipo==='personalizado'?document.getElementById('turno-h-out').value:(TURNO_HORAS[tipo]||{o:''}).o;
+  const fechaObj=new Date(fecha+'T12:00:00');
+  const data={
+    emp_id:empId,
+    emp_nombre:(empleados[empId]||{}).nombre||'',
+    emp_dui:(empleados[empId]||{}).dui||'',
+    fecha,                           // "2025-03-23" — clave principal
+    dia:DIAS_SEMANA[fechaObj.getDay()],
+    mes:fechaObj.getMonth(),
+    anio:fechaObj.getFullYear(),
+    tipo,hora_in,hora_out,
+    nota:document.getElementById('turno-nota').value
+  };
+  const ref=editKey
+    ?db.ref(`negocios/${negocioID}/turnos_emp/${editKey}`)
+    :db.ref(`negocios/${negocioID}/turnos_emp`).push();
+  (editKey?ref.update(data):ref.set(data)).then(()=>{
+    toast(editKey?'✅ Turno actualizado':'✅ Turno asignado','ok');
+    cerrar('modal-turno');
+  });
+}
+document.getElementById('turno-tipo').addEventListener('change',function(){
+  const isCustom=this.value==='personalizado';
+  document.getElementById('turno-custom').style.display=isCustom?'grid':'none';
+  if(!isCustom){
+    document.getElementById('turno-h-in').value=(TURNO_HORAS[this.value]||{i:''}).i;
+    document.getElementById('turno-h-out').value=(TURNO_HORAS[this.value]||{o:''}).o;
+  }
+});
+
+// ── GUARDAR PERMISO ──
+function abrirModalPermiso(){
+  llenarSelectoresEmp(['perm-emp']);
+  document.getElementById('perm-inicio').value=new Date().toISOString().split('T')[0];
+  document.getElementById('perm-fin').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modal-permiso').classList.add('open');
+}
+function guardarPermiso(){
+  const empId=document.getElementById('perm-emp').value;
+  const inicio=document.getElementById('perm-inicio').value;
+  const fin=document.getElementById('perm-fin').value;
+  if(!empId||!inicio){toast('Datos incompletos','err');return;}
+  const dias=Math.max(1,Math.ceil((new Date(fin)-new Date(inicio))/(86400000))+1);
+  db.ref(`negocios/${negocioID}/permisos_emp`).push({
+    emp_id:empId,emp_nombre:(empleados[empId]||{}).nombre||empId,
+    tipo:document.getElementById('perm-tipo').value,inicio,fin,dias,
+    motivo:document.getElementById('perm-motivo').value,estado:'pendiente',fecha_sol:new Date().toISOString()
+  }).then(()=>{toast('✅ Solicitud enviada','ok');cerrar('modal-permiso');});
+}
+
+// ── NOTIFICACION ──
+function abrirModalNotif(){
+  llenarSelectoresEmp(['notif-emp-sel']);
+  document.getElementById('modal-notif').classList.add('open');
+}
+document.getElementById('notif-para').addEventListener('change',function(){
+  document.getElementById('notif-emp-wrap').style.display=this.value==='individual'?'block':'none';
+});
+function enviarNotificacion(){
+  const para=document.getElementById('notif-para').value;
+  const empId=para==='individual'?document.getElementById('notif-emp-sel').value:'todos';
+  const tipo=document.getElementById('notif-tipo').value;
+  const msg=document.getElementById('notif-msg').value.trim();
+  if(!msg){toast('Escribe un mensaje','err');return;}
+  const tipoLabels={turno:'Cambio de turno',pago:'Pago procesado',recordatorio:'Recordatorio',alerta:'Alerta importante'};
+  db.ref(`negocios/${negocioID}/notificaciones_emp`).push({
+    titulo:tipoLabels[tipo],mensaje:msg,tipo,
+    empleado:para==='todos'?'Todos':(empleados[empId]||{}).nombre||empId,
+    fecha:new Date().toISOString()
+  }).then(()=>{toast('📲 Notificación enviada','ok');cerrar('modal-notif');document.getElementById('notif-msg').value='';});
+}
+
+// ── COMPROBANTE ──
+function verComprobante(id,nombre,sal,neto){
+  document.getElementById('detalle-content').innerHTML=`
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">🧾</div>
+      <div style="font-size:16px;font-weight:900">Comprobante de Pago</div>
+      <div style="font-size:11px;color:#94a3b8">${new Date().toLocaleDateString('es-SV',{month:'long',year:'numeric'})}</div>
+    </div>
+    <div style="background:#f8fafc;border-radius:14px;padding:16px;font-size:12px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Empleado</span><strong>${nombre}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#64748b">Salario base</span><strong>$${parseFloat(sal).toFixed(2)}</strong></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#64748b">AFP (7.25%)</span><span style="color:#ef4444">-$${(parseFloat(sal)*0.0725).toFixed(2)}</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:#64748b">ISSS (3%)</span><span style="color:#ef4444">-$${Math.min(parseFloat(sal)*0.03,30).toFixed(2)}</span></div>
+      <div style="border-top:1px solid var(--bd);padding-top:8px;display:flex;justify-content:space-between"><strong>TOTAL NETO</strong><strong style="font-size:16px;color:#059669">$${parseFloat(neto).toFixed(2)}</strong></div>
+    </div>
+    <button class="btn btn-green" style="width:100%;margin-top:14px" onclick="cerrar('modal-detalle')">Cerrar</button>`;
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+// ── VER DETALLE EMP ──
+function verDetalleEmp(id){
+  const e=empleados[id]||{};
+  const a=asistenciaHoy[id]||{};
+  document.getElementById('detalle-content').innerHTML=`
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
+      <div style="width:52px;height:52px;border-radius:14px;background:${e.color||'#1B4E8B'};display:flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:900;flex-shrink:0">${e.nombre?e.nombre.charAt(0):'?'}</div>
+      <div>
+        <div style="font-size:17px;font-weight:900">${e.nombre||'—'}</div>
+        <div style="font-size:11px;color:#94a3b8">${e.puesto||''} · ${e.dept||''}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;margin-bottom:14px">
+      ${[['DUI',e.dui],['Teléfono',e.tel],['Email',e.email],['Tipo',e.tipo],['Salario','$'+(parseFloat(e.salario)||0).toFixed(2)],['Ingreso',e.fecha],['Horario',(e.hora_in||'8:00')+' - '+(e.hora_out||'17:00')],['Hoy',a.hora_entrada?'Entró '+a.hora_entrada:a.estado||'Sin registro']].map(([l,v])=>`<div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:2px">${l}</div><div style="font-weight:700">${v||'—'}</div></div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-detalle')">Cerrar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="cerrar('modal-detalle');editarEmp('${id}')">✏️ Editar</button>
+    </div>`;
+  document.getElementById('modal-detalle').classList.add('open');
+}
+
+// ── HELPERS ──
+function llenarSelectoresEmp(ids=['turno-emp','perm-emp','notif-emp-sel','ta-emp']){
+  const opts='<option value="">— Seleccionar —</option>'+Object.entries(empleados).map(([id,e])=>`<option value="${id}">${e.nombre}</option>`).join('');
+  ids.forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts;});
+}
+function cerrar(id){document.getElementById(id).classList.remove('open');}
+function generarTurnosAutomaticos(){
+  if(!confirm('Esto generará turno Normal (8am-5pm) de Lun a Vie para todos los empleados en la semana seleccionada. ¿Continuar?'))return;
+  const emps=Object.keys(empleados);
+  const days=getSemanaSelDays();
+  const diasLaborales=days.filter(d=>d.getDay()>=1&&d.getDay()<=5); // Lun-Vie
+  const batch={};
+  emps.forEach(id=>{
+    diasLaborales.forEach(fecha=>{
+      const iso=isoFecha(fecha);
+      const key=db.ref(`negocios/${negocioID}/turnos_emp`).push().key;
+      batch[key]={
+        emp_id:id,emp_nombre:(empleados[id]||{}).nombre||'',
+        emp_dui:(empleados[id]||{}).dui||'',
+        fecha:iso,dia:DIAS_SEMANA[fecha.getDay()],
+        mes:fecha.getMonth(),anio:fecha.getFullYear(),
+        tipo:'normal',hora_in:'08:00',hora_out:'17:00',nota:''
+      };
+    });
+  });
+  db.ref(`negocios/${negocioID}/turnos_emp`).update(batch).then(()=>
+    toast('✅ Turnos generados para la semana seleccionada','ok')
+  );
+}
+
+// ── EXPORTS EXCEL ──
+function exportarPlanillaXLSX(){
+  const emps=Object.values(empleados);
+  if(!emps.length){toast('Sin empleados para exportar','err');return;}
+  const data=[['Nombre','Puesto','Departamento','Tipo','Salario Base','AFP','ISSS','Total Neto'],...emps.map(e=>{
+    const sal=parseFloat(e.salario)||0;
+    const aplIsss=e.aplica_isss!==false; const aplAfp=e.aplica_afp!==false;
+    const afp=aplAfp?sal*0.0725:0;const isss=aplIsss?Math.min(sal*0.03,30):0;
+    return[e.nombre,e.puesto,e.dept,e.tipo,sal,afp.toFixed(2),isss.toFixed(2),(sal-afp-isss).toFixed(2)];
+  })];
+  const ws=XLSX.utils.aoa_to_sheet(data);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Planilla');
+  XLSX.writeFile(wb,'Planilla_MODUS_'+new Date().toLocaleDateString('es-SV').replace(/\//g,'-')+'.xlsx');
+  toast('📊 Planilla exportada','ok');
+}
+
+function exportarAsistenciaXLSX(){
+  const rows=[['Empleado','Puesto','Hora Entrada','Hora Salida','Estado','Tardanza (min)'],...Object.entries(empleados).map(([id,e])=>{
+    const a=asistenciaHoy[id]||{};
+    return[e.nombre,e.puesto||'',a.hora_entrada||'',a.hora_salida||'',a.estado||'sin_registro',a.tardanza?a.minutos_tarde:0];
+  })];
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Asistencia');
+  XLSX.writeFile(wb,'Asistencia_'+new Date().toLocaleDateString('es-SV').replace(/\//g,'-')+'.xlsx');
+  toast('📊 Asistencia exportada','ok');
+}
+
+// ── TOAST ──
+let _tTimer;
+function toast(msg,type='ok'){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className='show '+(type==='ok'?'ok':'err');
+  clearTimeout(_tTimer);_tTimer=setTimeout(()=>t.className='',3000);
+}
+
+// INIT
+// ── Tab Groups ────────────────────────────────────────────────
+function toggleGroup(groupId){
+  const items=document.getElementById('items-'+groupId.replace('grp-',''));
+  const wasOpen=items&&items.classList.contains('open');
+  closeGroups();
+  if(items&&!wasOpen)items.classList.add('open');
+}
+function closeGroups(){
+  document.querySelectorAll('.tab-group-items').forEach(g=>g.classList.remove('open'));
+}
+document.addEventListener('click',function(ev){
+  if(!ev.target.closest('.tab-group'))closeGroups();
+});
+// Override showTab to also mark the parent group as active
+const _origShowTab=window.showTab||function(){};
+function showTab(id){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-group-btn').forEach(b=>b.classList.remove('active-group'));
+  const page=document.getElementById('page-'+id);
+  if(page)page.classList.add('active');
+  const btn=document.getElementById('tab-btn-'+id);
+  if(btn)btn.classList.add('active');
+  // Highlight parent group button
+  if(btn){
+    const grpItems=btn.closest('.tab-group-items');
+    if(grpItems){
+      const grpBtn=grpItems.previousElementSibling;
+      if(grpBtn)grpBtn.classList.add('active-group');
+    }
+  }
+}
+
+init();
+
+// ══════════════════════════════════════════════
+// NUEVOS MÓDULOS — SOLICITUDES, TAREAS, GPS
+// ══════════════════════════════════════════════
+
+let adelantos={},horasExtra={},incidencias={},tareasAdmin={};
+
+// ── CARGAR DATOS NUEVOS — llamado desde init() ──
+function initNuevosModulos(){
+  db.ref(`negocios/${negocioID}/adelantos_emp`).on('value',s=>{
+    adelantos=s.val()||{};renderAdelantos();
+    const p=Object.values(adelantos).filter(a=>a.estado==='pendiente').length;
+    const el=document.getElementById('tc-adel');if(el)el.textContent=p;
+  });
+  db.ref(`negocios/${negocioID}/horas_extra_emp`).on('value',s=>{
+    horasExtra=s.val()||{};renderHorasExtra();
+    const p=Object.values(horasExtra).filter(a=>a.estado==='pendiente').length;
+    const el=document.getElementById('tc-horas');if(el)el.textContent=p;
+  });
+  db.ref(`negocios/${negocioID}/incidencias_emp`).on('value',s=>{
+    incidencias=s.val()||{};renderIncidencias();
+    const p=Object.values(incidencias).filter(a=>a.estado==='pendiente').length;
+    const el=document.getElementById('tc-inc');if(el)el.textContent=p;
+  });
+  db.ref(`negocios/${negocioID}/tareas_emp`).on('value',s=>{
+    tareasAdmin={};
+    s.forEach(empNode=>{
+      Object.entries(empNode.val()||{}).forEach(([tid,t])=>{
+        tareasAdmin[tid]={...t,_empId:empNode.key};
+      });
+    });
+    renderTareasAdmin();
+  });
+  const hoy=new Date().toISOString().split('T')[0];
+  const gpsEl=document.getElementById('gps-fecha');if(gpsEl)gpsEl.value=hoy;
+  cargarAsistenciaGPS();
+
+  // ══ HOOKS DE NOTIFICACIÓN PUSH → PROPIETARIO ══════════════════════
+  // Solo escuchar child_added (eventos nuevos) con marca de sesión
+  // para no re-disparar al cargar datos históricos.
+  const _sesKey='modus_emp_notif_ses_'+negocioID;
+  const _sesMarca=Date.now();
+  try{sessionStorage.setItem(_sesKey,_sesMarca);}catch(e){}
+
+  // ── Incidencias nuevas ──────────────────────────────────────────
+  db.ref(`negocios/${negocioID}/incidencias_emp`)
+    .orderByChild('timestamp').startAt(_sesMarca)
+    .on('child_added',function(snap){
+      const inc=snap.val();if(!inc||!inc.emp_nombre)return;
+      if(typeof MODUS_NOTIF!=='undefined'){
+        MODUS_NOTIF.incidenciaCreada({
+          emp_nombre: inc.emp_nombre,
+          emp_dui:    inc.emp_dui||inc.empleado_dui||'',
+          tipo_inc:   inc.tipo_inc||inc.tipo||'Incidencia',
+          urgencia:   inc.urgencia||'media',
+          descripcion:inc.descripcion||inc.motivo||''
+        });
+      }
+    });
+
+  // ── Adelantos nuevos ───────────────────────────────────────────
+  db.ref(`negocios/${negocioID}/adelantos_emp`)
+    .orderByChild('timestamp').startAt(_sesMarca)
+    .on('child_added',function(snap){
+      const pet=snap.val();if(!pet||!pet.emp_nombre)return;
+      if(typeof MODUS_NOTIF!=='undefined'){
+        MODUS_NOTIF.peticionCreada({
+          emp_nombre:   pet.emp_nombre,
+          emp_dui:      pet.emp_dui||'',
+          tipo_peticion:'adelanto',
+          monto:        pet.monto||0,
+          descripcion:  pet.motivo||''
+        });
+      }
+    });
+
+  // ── Horas extra nuevas ─────────────────────────────────────────
+  db.ref(`negocios/${negocioID}/horas_extra_emp`)
+    .orderByChild('timestamp').startAt(_sesMarca)
+    .on('child_added',function(snap){
+      const pet=snap.val();if(!pet||!pet.emp_nombre)return;
+      if(typeof MODUS_NOTIF!=='undefined'){
+        MODUS_NOTIF.peticionCreada({
+          emp_nombre:   pet.emp_nombre,
+          emp_dui:      pet.emp_dui||'',
+          tipo_peticion:'horas_extra',
+          monto:        null,
+          descripcion:  (pet.horas||0)+'h · '+(pet.motivo||'')
+        });
+      }
+    });
+
+  // ── Gastos de campo nuevos ─────────────────────────────────────
+  db.ref(`negocios/${negocioID}/gastos_campo`)
+    .orderByChild('timestamp').startAt(_sesMarca)
+    .on('child_added',function(snap){
+      const g=snap.val();if(!g||!g.empleado)return;
+      if(typeof MODUS_NOTIF!=='undefined'){
+        MODUS_NOTIF.gastoCampoCreado({
+          emp_nombre: g.empleado,
+          emp_dui:    g.dui||'',
+          categoria:  g.categoria||'Otros',
+          monto:      g.monto||0,
+          descripcion:g.descripcion||''
+        });
+      }
+    });
+
+  // ── Inicio de horario (asistencia_hoy) ────────────────────────
+  db.ref(`negocios/${negocioID}/asistencia_hoy`)
+    .on('child_changed',function(snap){
+      const a=snap.val();
+      // Detectar cuando un empleado hace clock-in (estado cambia a presente)
+      if(!a||a.estado!=='presente')return;
+      const empId=snap.key;
+      const emp=empleados[empId]||{};
+      const ts=a.timestamp_entrada||0;
+      // Solo notificar si fue en los últimos 2 minutos (evento reciente)
+      if(Date.now()-ts>120000)return;
+      if(typeof MODUS_NOTIF!=='undefined'){
+        MODUS_NOTIF.inicioHorario({
+          emp_nombre:  emp.nombre||a.emp_nombre||'—',
+          emp_dui:     emp.dui||a.emp_dui||empId,
+          hora_entrada:a.hora_entrada||'',
+          ubicacion:   a.ubicacion||''
+        });
+      }
+    });
+}
+
+// ── ADELANTOS ──
+function renderAdelantos(){
+  const tb=document.getElementById('tb-adelantos');if(!tb)return;
+  const ents=Object.entries(adelantos).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(!ents.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin solicitudes de adelanto</td></tr>';return;}
+  const bm={pendiente:'b-yellow',aprobado:'b-green',rechazado:'b-red'};
+  tb.innerHTML=ents.map(([id,a])=>`<tr>
+    <td style="font-weight:700">${a.emp_nombre||'—'}</td>
+    <td style="font-weight:800;color:#059669">$${parseFloat(a.monto||0).toFixed(2)}</td>
+    <td style="color:#64748b">$${parseFloat(a.salario_base||0).toFixed(2)}</td>
+    <td style="font-size:11px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.motivo||'—'}</td>
+    <td>${a.fecha_solicitud||'—'}</td>
+    <td><span class="badge ${bm[a.estado]||'b-gray'}">${a.estado||'pendiente'}</span></td>
+    <td style="display:flex;gap:4px">
+      ${a.estado==='pendiente'?`
+        <button class="btn btn-green btn-sm" onclick="resolverSolicitud('adelantos_emp','${id}',true)">✅</button>
+        <button class="btn btn-red btn-sm" onclick="resolverSolicitud('adelantos_emp','${id}',false)">❌</button>`:'—'}
+    </td>
+  </tr>`).join('');
+}
+
+// ── HORAS EXTRA ──
+function renderHorasExtra(){
+  const tb=document.getElementById('tb-horas');if(!tb)return;
+  const ents=Object.entries(horasExtra).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(!ents.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin registros de horas extra</td></tr>';return;}
+  const bm={pendiente:'b-yellow',aprobado:'b-green',rechazado:'b-red'};
+  tb.innerHTML=ents.map(([id,h])=>`<tr>
+    <td style="font-weight:700">${h.emp_nombre||'—'}</td>
+    <td>${h.fecha||'—'}</td>
+    <td style="font-weight:800;color:#d97706">${h.horas||0}h</td>
+    <td style="font-size:11px">${h.tipo_hora||'—'}</td>
+    <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${h.motivo||'—'}</td>
+    <td><span class="badge ${bm[h.estado]||'b-gray'}">${h.estado||'pendiente'}</span></td>
+    <td style="display:flex;gap:4px">
+      ${h.estado==='pendiente'?`
+        <button class="btn btn-green btn-sm" onclick="resolverSolicitud('horas_extra_emp','${id}',true)">✅</button>
+        <button class="btn btn-red btn-sm" onclick="resolverSolicitud('horas_extra_emp','${id}',false)">❌</button>`:'—'}
+    </td>
+  </tr>`).join('');
+}
+
+// ── INCIDENCIAS ──
+function renderIncidencias(){
+  const tb=document.getElementById('tb-incidencias');if(!tb)return;
+  const ents=Object.entries(incidencias).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(!ents.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin incidencias reportadas</td></tr>';return;}
+  const urgCls={alta:'b-red',media:'b-yellow',baja:'b-green'};
+  const bm={pendiente:'b-yellow',resuelto:'b-green',en_proceso:'b-blue'};
+  tb.innerHTML=ents.map(([id,inc])=>`<tr>
+    <td style="font-weight:700">${inc.emp_nombre||'—'}</td>
+    <td>${inc.tipo_inc||inc.tipo||'—'}</td>
+    <td><span class="badge ${urgCls[inc.urgencia]||'b-gray'}">${inc.urgencia||'—'}</span></td>
+    <td class="inc-desc" onclick="this.classList.toggle('open')" title="Clic para expandir">
+      <div class="inc-desc-short">${(inc.descripcion||inc.motivo||'—').substring(0,60)}${(inc.descripcion||inc.motivo||'').length>60?'...':''}</div>
+      <div class="inc-desc-full">${(inc.descripcion||inc.motivo||'—').replace(/\|/g,'\n| ')}</div>
+    </td>
+    <td>${inc.fecha_solicitud||'—'}</td>
+    <td><span class="badge ${bm[inc.estado]||'b-gray'}">${inc.estado||'pendiente'}</span></td>
+    <td style="display:flex;gap:4px">
+      ${inc.estado==='pendiente'?`
+        <button class="btn btn-ghost btn-sm" onclick="cambiarEstadoInc('${id}','en_proceso')">En proceso</button>
+        <button class="btn btn-green btn-sm" onclick="cambiarEstadoInc('${id}','resuelto')">✅ Resuelto</button>`:'—'}
+    </td>
+  </tr>`).join('');
+}
+
+function cambiarEstadoInc(id,estado){
+  db.ref(`negocios/${negocioID}/incidencias_emp/${id}`).update({estado});
+  toast('Incidencia actualizada','ok');
+}
+
+// ══ GASTOS DE CAMPO ══════════════════════════════════════════════
+let _gastosCampo={};
+let _gastosCampoLoaded=false;
+
+function cargarGastosCampoAdmin(){
+  if(_gastosCampoLoaded){renderGastosCampoAdmin();return;}
+  _gastosCampoLoaded=true;
+  db.ref(`negocios/${negocioID}/gastos_campo`).on('value',s=>{
+    _gastosCampo=s.val()||{};
+    renderGastosCampoAdmin();
+    // Llenar filtro de empleados
+    const empSel=document.getElementById('gc-filtro-emp');
+    if(empSel){
+      const emps=[...new Set(Object.values(_gastosCampo).map(g=>g.empleado||'').filter(Boolean))].sort();
+      empSel.innerHTML='<option value="">Todos los empleados</option>'+
+        emps.map(n=>`<option value="${n}">${n}</option>`).join('');
+    }
+    // Llenar filtro de meses
+    const mesSel=document.getElementById('gc-filtro-mes');
+    if(mesSel){
+      const meses=[...new Set(Object.values(_gastosCampo).map(g=>(g.fecha||'').substring(0,7)).filter(Boolean))].sort().reverse();
+      mesSel.innerHTML='<option value="">Todos los meses</option>'+
+        meses.map(m=>`<option value="${m}">${m}</option>`).join('');
+    }
+    // Badge en tab
+    const pend=Object.values(_gastosCampo).filter(g=>!g.aprobado&&g.estado!=='aprobado').length;
+    const tc=document.getElementById('tc-gastos');
+    if(tc){tc.textContent=pend;tc.style.display=pend?'inline':'none';}
+  });
+}
+
+function renderGastosCampoAdmin(){
+  const tb=document.getElementById('tb-gastos-campo');if(!tb)return;
+  const filtEmp=(document.getElementById('gc-filtro-emp')||{}).value||'';
+  const filtMes=(document.getElementById('gc-filtro-mes')||{}).value||'';
+  let entries=Object.entries(_gastosCampo).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(filtEmp)entries=entries.filter(([,g])=>(g.empleado||'')===filtEmp);
+  if(filtMes)entries=entries.filter(([,g])=>(g.fecha||'').startsWith(filtMes));
+  // Totales
+  const pend=entries.filter(([,g])=>!g.aprobado&&g.estado!=='aprobado').reduce((s,[,g])=>s+Number(g.monto||0),0);
+  const aprob=entries.filter(([,g])=>g.aprobado||g.estado==='aprobado').reduce((s,[,g])=>s+Number(g.monto||0),0);
+  const tp=document.getElementById('gc-total-pend');if(tp)tp.textContent='$'+pend.toFixed(2);
+  const ta=document.getElementById('gc-total-aprob');if(ta)ta.textContent='$'+aprob.toFixed(2);
+  const tc2=document.getElementById('gc-count');if(tc2)tc2.textContent=entries.length;
+  if(!entries.length){
+    tb.innerHTML='<tr><td colspan="7" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin gastos de campo registrados</td></tr>';return;
+  }
+  tb.innerHTML=entries.map(([id,g])=>{
+    const aprobado=g.aprobado||g.estado==='aprobado';
+    return `<tr>
+      <td style="font-weight:700">${g.empleado||'—'}<br><span style="font-size:9px;color:#94a3b8">${g.dui||''}</span></td>
+      <td>${g.categoria||'—'}</td>
+      <td style="font-weight:800;color:#ea580c">$${Number(g.monto||0).toFixed(2)}</td>
+      <td class="inc-desc" onclick="this.classList.toggle('open')" title="Clic para expandir">
+        <div class="inc-desc-short">${(g.descripcion||'—').substring(0,40)}${(g.descripcion||'').length>40?'...':''}</div>
+        <div class="inc-desc-full">${g.descripcion||'—'}</div>
+      </td>
+      <td>${g.fecha||'—'}</td>
+      <td><span class="badge ${aprobado?'b-green':'b-yellow'}">${aprobado?'Aprobado':'Pendiente'}</span></td>
+      <td style="display:flex;gap:4px;flex-wrap:wrap">
+        ${!aprobado?`<button class="btn btn-primary btn-sm" onclick="aprobarGastoCampo('${id}')">✓ Aprobar</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="eliminarGastoCampo('${id}')">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function aprobarGastoCampo(id){
+  db.ref(`negocios/${negocioID}/gastos_campo/${id}`).update({
+    aprobado:true,estado:'aprobado',fecha_aprobacion:new Date().toISOString()
+  }).then(()=>toast('✅ Gasto aprobado — aparece en Finanzas','ok'));
+}
+
+function eliminarGastoCampo(id){
+  if(!confirm('¿Eliminar este gasto de campo?'))return;
+  db.ref(`negocios/${negocioID}/gastos_campo/${id}`).remove()
+    .then(()=>toast('🗑 Gasto eliminado','ok'));
+}
+
+function exportarGastosCampoCSV(){
+  const filtEmp=(document.getElementById('gc-filtro-emp')||{}).value||'';
+  const filtMes=(document.getElementById('gc-filtro-mes')||{}).value||'';
+  let rows=Object.entries(_gastosCampo).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(filtEmp)rows=rows.filter(([,g])=>(g.empleado||'')===filtEmp);
+  if(filtMes)rows=rows.filter(([,g])=>(g.fecha||'').startsWith(filtMes));
+  const header='Empleado,DUI,Categoría,Monto,Descripción,Fecha,Estado';
+  const csv=[header,...rows.map(([,g])=>[
+    `"${g.empleado||''}"`,`"${g.dui||''}"`,`"${g.categoria||''}"`,
+    g.monto||0,`"${g.descripcion||''}"`,g.fecha||'',
+    g.aprobado||g.estado==='aprobado'?'Aprobado':'Pendiente'
+  ].join(','))].join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`gastos_campo_${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  toast('📥 CSV descargado','ok');
+}
+
+// ── RESOLVER SOLICITUDES (adelantos y horas extra) ──
+function resolverSolicitud(ruta,id,aprobado){
+  const est=aprobado?'aprobado':'rechazado';
+  db.ref(`negocios/${negocioID}/${ruta}/${id}`).update({estado:est,fecha_resolucion:new Date().toISOString().split('T')[0]});
+  toast(aprobado?'✅ Aprobado':'❌ Rechazado',aprobado?'ok':'err');
+}
+
+// ── TAREAS ADMIN ──
+function renderTareasAdmin(){
+  const tb=document.getElementById('tb-tareas');if(!tb)return;
+  const ents=Object.entries(tareasAdmin).sort((a,b)=>(b[1].timestamp||0)-(a[1].timestamp||0));
+  if(!ents.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin tareas asignadas</td></tr>';return;}
+  const prioCls={alta:'b-red',media:'b-yellow',baja:'b-green'};
+  tb.innerHTML=ents.map(([id,t])=>`<tr>
+    <td style="font-weight:700">${(empleados[t._empId]||{}).nombre||t._empId||'—'}</td>
+    <td>${t.descripcion||'—'}</td>
+    <td>${t.fecha||'Sin límite'}</td>
+    <td><span class="badge ${prioCls[t.prioridad]||'b-gray'}">${t.prioridad||'—'}</span></td>
+    <td><span class="badge ${t.completada?'b-green':'b-yellow'}">${t.completada?'Completada':'Pendiente'}</span>
+      ${t.completada&&t.hora_completado?`<span style="font-size:10px;color:#94a3b8;margin-left:4px">a las ${t.hora_completado}</span>`:''}
+    </td>
+    <td><button class="btn btn-red btn-sm" onclick="eliminarTarea('${t._empId}','${id}')">🗑</button></td>
+  </tr>`).join('');
+}
+
+function abrirModalTarea(){
+  // Forzar recarga del selector con empleados actuales
+  // Mostrar ID de Firebase junto al nombre para verificación
+  const opts='<option value="">— Seleccionar empleado —</option>'+
+    Object.entries(empleados).map(([id,emp])=>`<option value="${id}">${emp.nombre||id} | ID: ${id}</option>`).join('');
+  const sel=document.getElementById('ta-emp');
+  if(sel) sel.innerHTML=opts;
+  document.getElementById('ta-desc').value='';
+  document.getElementById('ta-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modal-tarea-admin').classList.add('open');
+}
+
+function guardarTarea(){
+  const empId=document.getElementById('ta-emp').value;
+  const desc=document.getElementById('ta-desc').value.trim();
+  if(!empId||!desc){toast('Selecciona empleado y escribe la tarea','err');return;}
+  const prioridad=document.getElementById('ta-prioridad').value;
+  const fecha=document.getElementById('ta-fecha').value;
+  const emp=empleados[empId]||{};
+  const empNombre=emp.nombre||empId;
+  // Guardar tarea en la ruta que la app lee: tareas_emp/{empId}
+  db.ref(`negocios/${negocioID}/tareas_emp/${empId}`).push({
+    descripcion:desc,fecha,prioridad,
+    completada:false,timestamp:Date.now(),
+    asignada_por:'admin',emp_nombre:empNombre,
+    emp_id:empId
+  }).then(()=>{
+    // Notificación en sistema
+    db.ref(`negocios/${negocioID}/notificaciones_emp`).push({
+      titulo:'Nueva tarea asignada',
+      mensaje:desc,
+      para_emp_id:empId,
+      prioridad,fecha,
+      tipo:'sistema',
+      urgente:prioridad==='alta',
+      timestamp:Date.now(),
+      fecha_registro:new Date().toISOString().split('T')[0]
+    });
+    // ── Notificación por EMAIL al empleado ───────────────────────────
+    if(typeof MODUS_NOTIF_EMP!=='undefined' && emp.email){
+      MODUS_NOTIF_EMP.tareaAsignada(
+        _bizNombreEmp||'MODUS', emp,
+        'Tarea: '+desc+
+        (fecha?'\nFecha límite: '+fecha:'')+
+        '\nPrioridad: '+(prioridad||'normal')
+      );
+    }
+    // ── Notificación PUSH al empleado vía DUI ─────────────────────────
+    if(typeof MODUS_NOTIF!=='undefined' && emp.dui){
+      MODUS_NOTIF.tareaAsignada(
+        {dui:emp.dui, nombre:empNombre, email:emp.email||''},
+        {descripcion:desc, prioridad:prioridad, fecha:fecha}
+      );
+    }
+    cerrar('modal-tarea-admin');
+    toast('Tarea asignada a '+empNombre+(emp.email?' · Email enviado':''),'ok');
+  }).catch(e=>toast('Error: '+e.message,'err'));
+}
+
+function eliminarTarea(empId,tid){
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  db.ref(`negocios/${negocioID}/tareas_emp/${empId}/${tid}`).remove().then(()=>toast('Tarea eliminada','ok'));
+}
+
+// ── ASISTENCIA GPS ──
+function cargarAsistenciaGPS(){
+  const fecha=document.getElementById('gps-fecha').value;
+  if(!fecha)return;
+  db.ref(`negocios/${negocioID}/asistencia_gps/${fecha}`).once('value',s=>{
+    const data=s.val()||{};
+    const tb=document.getElementById('tb-asistencia-gps');
+    const ents=Object.entries(data);
+    if(!ents.length){
+      tb.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Sin registros de asistencia GPS para esta fecha</td></tr>';
+      return;
+    }
+    tb.innerHTML=ents.map(([empId,a])=>{
+      const nombre=(empleados[empId]||{}).nombre||a.emp_nombre||empId;
+      const latEnt=a.entrada_lat?a.entrada_lat.toFixed(5):'—';
+      const lngEnt=a.entrada_lng?a.entrada_lng.toFixed(5):'—';
+      const latSal=a.salida_lat?a.salida_lat.toFixed(5):'—';
+      const lngSal=a.salida_lng?a.salida_lng.toFixed(5):'—';
+      const mapUrlEnt=a.entrada_lat?`https://maps.google.com/?q=${a.entrada_lat},${a.entrada_lng}`:'';
+      const mapUrlSal=a.salida_lat?`https://maps.google.com/?q=${a.salida_lat},${a.salida_lng}`:'';
+      return `<tr>
+        <td style="font-weight:700">${nombre}</td>
+        <td style="font-weight:700;color:#059669">${a.entrada_hora||'—'}</td>
+        <td style="font-size:11px">${a.entrada_lat?`<a href="${mapUrlEnt}" target="_blank" style="color:#1B4E8B;text-decoration:none">📍 ${latEnt}, ${lngEnt}</a>`:'—'}</td>
+        <td style="font-weight:700;color:#dc2626">${a.salida_hora||'—'}</td>
+        <td style="font-size:11px">${a.salida_lat?`<a href="${mapUrlSal}" target="_blank" style="color:#1B4E8B;text-decoration:none">📍 ${latSal}, ${lngSal}</a>`:'—'}</td>
+        <td style="font-size:11px;color:#94a3b8">${a.entrada_precision?'±'+a.entrada_precision+'m':'—'}</td>
+      </tr>`;
+    }).join('');
+  });
+}
+
+// ── VACACIONES ──
+let NID='',EID='',EMP={};
+let pendingAttendance = null;
+let vacEmpId='';
+function abrirModalVacaciones(empId){
+  vacEmpId=empId;
+  const emp=empleados[empId]||{};
+  document.getElementById('vac-emp-nombre').textContent=emp.nombre||empId;
+  db.ref(`negocios/${negocioID}/vacaciones_emp/${empId}`).once('value',s=>{
+    const data=s.val()||{dias_disponibles:15,dias_usados:0};
+    document.getElementById('vac-disponibles').value=data.dias_disponibles||15;
+    document.getElementById('vac-usados').value=data.dias_usados||0;
+  });
+  document.getElementById('modal-vacaciones').classList.add('open');
+}
+
+function guardarVacaciones(){
+  const disp=parseInt(document.getElementById('vac-disponibles').value)||15;
+  const usados=parseInt(document.getElementById('vac-usados').value)||0;
+  db.ref(`negocios/${negocioID}/vacaciones_emp/${vacEmpId}`).set({dias_disponibles:disp,dias_usados:usados}).then(()=>{
+    cerrar('modal-vacaciones');
+    toast('Vacaciones actualizadas','ok');
+  });
+}
+</script>
+
+<!-- ══ MODUS NOTIF — módulo bidireccional push ════════════════════
+     Portal Empleados: el admin envía tareas → notificación PUSH al
+     empleado (por DUI). Eventos de empleados → notificación al
+     propietario (vía canal notif_propietario).
+     ══════════════════════════════════════════════════════════════ -->
+<script>
+var MODUS_NOTIF=(function(){
+  var _nid=null,_db=null,_rol=null,_dui=null,_ls=[];
+  function _duiNorm(d){return(d||'').replace(/[^a-zA-Z0-9]/g,'_');}
+  function _rProp(){return'notif_propietario/'+_nid+'/pendientes';}
+  function _rEmp(d){return'notif_empleado/'+_nid+'/'+_duiNorm(d)+'/pendientes';}
+  function _fecha(){return new Date().toLocaleDateString('es-SV');}
+  function _hora(){return new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});}
+
+  function _pushLocal(titulo,cuerpo){
+    if(!('Notification'in window)||Notification.permission!=='granted')return;
+    try{new Notification(titulo,{body:cuerpo||'',icon:'/modus-icon.png',tag:'modus-notif-'+Date.now()});}catch(e){}
+  }
+  function _toast(msg){
+    var t=document.getElementById('toast');if(!t)return;
+    t.textContent=msg;t.className='show ok';
+    clearTimeout(window._mnToastT);window._mnToastT=setTimeout(function(){t.className='';},5000);
+  }
+
+  function _notifProp(tipo,titulo,mensaje,extra){
+    if(!_nid||!_db)return;
+    _db.ref(_rProp()).push({
+      tipo:tipo,titulo:titulo,mensaje:mensaje||'',extra:extra||{},
+      fecha:_fecha(),hora:_hora(),timestamp:Date.now(),leida:false,origen:tipo
+    }).then(function(){
+      _db.ref('negocios/'+_nid+'/notificaciones').push({
+        titulo:titulo,mensaje:mensaje||'',tipo:tipo,
+        urgente:(extra&&extra.urgente)||false,
+        fecha:new Date().toISOString(),leida:false,canal:'push-modus'
+      });
+      _pushLocal('🔔 '+titulo,mensaje);
+    }).catch(function(e){console.warn('[MODUS Notif]',e.message);});
+  }
+
+  function _notifEmp(dui,nombre,tipo,titulo,mensaje,extra){
+    if(!_nid||!_db||!dui)return;
+    _db.ref(_rEmp(dui)).push({
+      tipo:tipo,titulo:titulo,mensaje:mensaje||'',extra:extra||{},
+      emp_dui:dui,emp_nombre:nombre||'',fecha:_fecha(),hora:_hora(),
+      timestamp:Date.now(),leida:false,origen:'admin'
+    }).then(function(){
+      _db.ref('negocios/'+_nid+'/notificaciones_emp').push({
+        titulo:titulo,mensaje:mensaje||'',tipo:tipo,para_dui:dui,
+        empleado:nombre||'',urgente:(extra&&extra.urgente)||false,
+        timestamp:Date.now(),fecha_registro:new Date().toISOString().split('T')[0]
+      });
+    }).catch(function(e){console.warn('[MODUS Notif Emp]',e.message);});
+  }
+
+  function _escucharProp(){
+    if(!_nid||!_db)return;
+    var ref=_db.ref(_rProp()).orderByChild('leida').equalTo(false).limitToLast(20);
+    var fn=ref.on('child_added',function(snap){
+      var n=snap.val();if(!n)return;
+      var ico={orden_anulada:'🚫',incidencia:'⚠️',peticion:'📩',
+               gasto_campo:'💸',inicio_horario:'🕐'}[n.tipo]||'🔔';
+      _toast(ico+' '+n.titulo+(n.mensaje?' — '+n.mensaje.slice(0,60):''));
+      _pushLocal(ico+' '+n.titulo,n.mensaje);
+      snap.ref.update({leida:true});
+    });
+    _ls.push({ref:ref,fn:fn});
+  }
+
+  function _escucharEmp(dui){
+    if(!_nid||!_db||!dui)return;
+    var ref=_db.ref(_rEmp(dui)).orderByChild('leida').equalTo(false).limitToLast(20);
+    var fn=ref.on('child_added',function(snap){
+      var n=snap.val();if(!n)return;
+      var ico={tarea_asignada:'📋',turno_asignado:'📅',pago_procesado:'💰',
+               recordatorio:'⏰',alerta:'🚨'}[n.tipo]||'🔔';
+      _toast(ico+' '+n.titulo+(n.mensaje?': '+n.mensaje.slice(0,60):''));
+      _pushLocal(ico+' '+n.titulo,n.mensaje);
+      snap.ref.update({leida:true});
+    });
+    _ls.push({ref:ref,fn:fn});
+  }
+
+  function init(negocioID,firebaseDB,ops){
+    _nid=negocioID;_db=firebaseDB;ops=ops||{};
+    _rol=ops.rol||'admin';_dui=ops.dui||null;
+    if(_rol==='propietario'||_rol==='admin')_escucharProp();
+    if(_dui)_escucharEmp(_dui);
+    console.log('[MODUS Notif Emp] iniciado — rol:'+_rol);
+  }
+  function destroy(){
+    _ls.forEach(function(l){try{l.ref.off('child_added',l.fn);}catch(e){}});
+    _ls=[];
+  }
+
+  function ordenAnulada(){}  // no aplica en empleados
+  function incidenciaCreada(inc){
+    var u=inc.urgencia==='alta'?' 🔴':inc.urgencia==='media'?' 🟡':'';
+    _notifProp('incidencia','⚠️ Incidencia: '+(inc.emp_nombre||'—')+u,
+      (inc.tipo_inc||'Sin tipo')+': '+(inc.descripcion||'—').slice(0,120),
+      {urgente:inc.urgencia==='alta',emp_dui:inc.emp_dui,emp_nombre:inc.emp_nombre});
+  }
+  function peticionCreada(pet){
+    var tl={adelanto:'Adelanto de salario',horas_extra:'Horas extra',permiso:'Solicitud de permiso'}[pet.tipo_peticion]||'Petición';
+    _notifProp('peticion','📩 '+tl+' — '+(pet.emp_nombre||'—'),
+      (pet.monto?'$'+parseFloat(pet.monto).toFixed(2)+' | ':'')+(pet.descripcion||''),
+      {urgente:false,emp_dui:pet.emp_dui,tipo_peticion:pet.tipo_peticion});
+  }
+  function gastoCampoCreado(g){
+    _notifProp('gasto_campo','💸 Gasto de campo — '+(g.emp_nombre||'—'),
+      '$'+parseFloat(g.monto||0).toFixed(2)+' · '+(g.categoria||'—')+(g.descripcion?' : '+g.descripcion.slice(0,80):''),
+      {urgente:false,emp_dui:g.emp_dui,monto:g.monto,categoria:g.categoria});
+  }
+  function inicioHorario(a){
+    _notifProp('inicio_horario','🕐 Inicio de horario — '+(a.emp_nombre||'—'),
+      'Entró a las '+(a.hora_entrada||_hora())+(a.ubicacion?' · 📍 '+a.ubicacion:''),
+      {urgente:false,emp_dui:a.emp_dui,hora:a.hora_entrada});
+  }
+  function tareaAsignada(emp,tarea){
+    var p={alta:'🔴 Alta',media:'🟡 Media',baja:'🟢 Baja'}[tarea.prioridad]||tarea.prioridad||'Normal';
+    _notifEmp(emp.dui,emp.nombre,'tarea_asignada','📋 Nueva tarea asignada',
+      (tarea.descripcion||'—')+(tarea.fecha?' · Límite: '+tarea.fecha:'')+(tarea.prioridad?' · '+p:''),
+      {urgente:tarea.prioridad==='alta',prioridad:tarea.prioridad,fecha:tarea.fecha});
+  }
+
+  return{init,destroy,ordenAnulada,incidenciaCreada,peticionCreada,gastoCampoCreado,inicioHorario,tareaAsignada};
+})();
+
+// ── Inicializar MODUS_NOTIF cuando la sesión esté lista ──────────
+// empleados.html tiene _session con {rol, dui, nombre}
+document.addEventListener('DOMContentLoaded',function(){
+  setTimeout(function(){
+    if(typeof db==='undefined'||typeof negocioID==='undefined')return;
+    try{
+      var ses=JSON.parse(localStorage.getItem('modus_session_'+negocioID)||'null')||{};
+      var rol=ses.rol||'admin';
+      var dui=ses.dui||null;
+      MODUS_NOTIF.init(negocioID,db,{rol:rol,dui:dui});
+    }catch(e){console.warn('[MODUS Notif] init empleados error:',e);}
+  },1500);
+});
+</script>
+</body>
+</html>

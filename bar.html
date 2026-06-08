@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>PARCHE SYS · Bar KDS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#090d16; --sur:#0f172a; --sur2:#1e293b; --bd:#334155; --bd2:#475569;
+  --ink:#f8fafc; --mid:#94a3b8; --muted:#64748b;
+  --green:#3b82f6; --gl:rgba(59,130,246,.15); --gd:#2563eb;
+  --amber:#F59E0B; --al:rgba(245,158,11,.15);
+  --orange:#F97316; --ol:rgba(249,115,22,.15);
+  --red:#EF4444; --rl:rgba(239,68,68,.15);
+  --blue:#06b6d4; --bl:rgba(6,182,212,.15);
+  --font:'DM Sans',system-ui,sans-serif;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column}
+
+/* Scrollbar táctil premium para la Acer de 11" */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--bd2);
+  border-radius: 6px;
+  border: 3px solid var(--bg);
+}
+::-webkit-scrollbar-thumb:active {
+  background: var(--mid);
+}
+
+/* TOPBAR */
+.tb{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-l{display:flex;align-items:center;gap:12px}
+.tb-logo{width:40px;height:40px;background:var(--green);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.tb-logo i{font-size:18px;color:#0f172a}
+.tb-title{font-size:16px;font-weight:800;color:var(--ink);line-height:1}
+.tb-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.tb-r{display:flex;align-items:center;gap:10px}
+#tb-clock{font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+#tb-date{font-size:11px;color:var(--muted);text-align:right;margin-top:1px}
+.tb-stats{display:flex;gap:8px}
+.stat-pill{background:var(--sur2);border:1px solid var(--bd);border-radius:9px;padding:6px 14px;display:flex;flex-direction:column;align-items:center;min-width:60px}
+.stat-pill .sn{font-size:20px;font-weight:900;line-height:1}
+.stat-pill .sl{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+.stat-pill.s-pending .sn{color:var(--amber)}
+.stat-pill.s-prep .sn{color:var(--orange)}
+.stat-pill.s-ready .sn{color:var(--green)}
+.stat-pill.s-web .sn{color:#c084fc}
+
+/* FILTER BAR */
+.filter-bar{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 20px;display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.filter-btn{padding:7px 16px;border-radius:20px;border:1px solid var(--bd);background:transparent;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);white-space:nowrap;transition:.12s;display:inline-flex;align-items:center;gap:6px}
+.filter-btn:hover{border-color:var(--bd2);color:var(--mid)}
+.filter-btn.active{background:var(--sur2);border-color:var(--bd2);color:var(--ink)}
+.filter-btn .fb-count{background:var(--bd2);border-radius:10px;padding:1px 6px;font-size:10px}
+.filter-btn.f-all.active{border-color:var(--green);color:var(--green)}
+.filter-btn.f-mesa.active{border-color:var(--blue);color:var(--blue)}
+.filter-btn.f-llevar.active{border-color:var(--amber);color:var(--amber)}
+.filter-btn.f-domicilio.active{border-color:var(--orange);color:var(--orange)}
+
+/* BOARD - Adaptable de forma táctil para Tablet de 11" */
+.board{flex:1;overflow-y:auto;padding:12px;display:grid;gap:12px;align-content:start;background:#030712}
+.board.cols-3{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+@media(max-width:800px){.board{grid-template-columns:repeat(2,1fr)!important}}
+@media(max-width:500px){.board{grid-template-columns:1fr!important}}
+
+/* ORDER CARD */
+.ord-card{background:#1e293b;border:1px solid #0f172a;border-radius:8px;display:flex;flex-direction:column;overflow:hidden;min-height:280px;box-shadow:0 4px 12px rgba(0,0,0,0.2)}
+.card-head{padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:#0f172a}
+.card-head.time-ok{background:#60a5fa}
+.card-head.time-warn{background:#fbbf24}
+.card-head.time-late{background:#f87171;color:#fff}
+.ord-id{font-size:18px;font-weight:900;white-space:nowrap;letter-spacing:1px}
+.ord-timer{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+.card-info{background:#0f172a;padding:6px 14px;font-size:12px;font-weight:700;color:#60a5fa;text-transform:uppercase}
+.card-body{padding:10px;flex:1;display:flex;flex-direction:column;gap:6px;overflow-y:auto}
+.item-line{display:flex;align-items:flex-start;gap:10px;padding:4px 0;font-family:var(--font);font-size:15px;font-weight:600}
+.item-cant{min-width:24px;font-weight:900;color:#fff;display:flex;justify-content:flex-end}
+.item-name{color:#fff;line-height:1.2;flex:1}
+.item-note{font-size:13px;color:#facc15;margin-left:34px;font-style:italic}
+.card-foot{padding:10px;border-top:1px solid #0f172a;display:flex;gap:8px;background:#0f172a}
+.state-btn{flex:1;padding:12px 6px;border-radius:6px;border:none;font-size:13px;font-weight:800;cursor:pointer;text-transform:uppercase;transition:.1s}
+.state-btn:active{transform:scale(0.96)}
+.btn-prep{background:#fbbf24;color:#0f172a}
+.btn-listo{background:#3b82f6;color:#fff;box-shadow:0 0 10px rgba(59,130,246,0.3)}
+.btn-entregado{background:var(--bl);color:var(--blue)}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--sur);border:1px solid var(--bd);padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;z-index:10000;transition:.4s cubic-bezier(.17,1.3,.3,1);opacity:0;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px}
+</style>
+<div id="toast"></div>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <div class="tb-logo" style="background:#3b82f6"><i class="fa-solid fa-glass-water" style="color:#fff"></i></div>
+    <div>
+      <div class="tb-title">Pantalla de Bar KDS</div>
+      <div class="tb-sub" id="tb-neg-name">PARCHE SYS</div>
+      <div id="conn-status" style="font-size:9px;font-weight:800;color:var(--muted);text-transform:uppercase;margin-top:2px">
+        <i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado
+      </div>
+    </div>
+  </div>
+  <div class="tb-r">
+    <button id="btn-sound" onclick="activarSonido()" style="padding:8px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:12px;cursor:pointer"><i class="fa-solid fa-volume-xmark"></i></button>
+    <div class="tb-stats">
+      <div class="stat-pill s-pending">
+        <div class="sn" id="cnt-pendiente">0</div><div class="sl">Pendientes</div>
+      </div>
+      <div class="stat-pill s-prep">
+        <div class="sn" id="cnt-prep">0</div><div class="sl">En prep.</div>
+      </div>
+      <div class="stat-pill s-ready">
+        <div class="sn" id="cnt-listo">0</div><div class="sl">Listos</div>
+      </div>
+    </div>
+    <div><div id="tb-clock">--:--</div><div id="tb-date" class="tb-sub">--</div></div>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <button class="filter-btn f-all active" onclick="setFiltro('all')">📔 Todos <span class="fb-count" id="fc-all">0</span></button>
+  <button class="filter-btn f-mesa" onclick="setFiltro('mesa')">🍽️ Mesa <span class="fb-count" id="fc-mesa">0</span></button>
+  <button class="filter-btn f-llevar" onclick="setFiltro('llevar')">🥡 Para llevar <span class="fb-count" id="fc-llevar">0</span></button>
+  <button class="filter-btn f-domicilio" onclick="setFiltro('domicilio')">🛵 Domicilio <span class="fb-count" id="fc-domicilio">0</span></button>
+</div>
+
+<!-- BOARD -->
+<div class="board cols-3" id="board">
+  <div class="empty-board">
+    <div class="empty-icon">🍹</div>
+    <div class="empty-txt">Conectando con Bar KDS...</div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+/* Firebase centralizado en firebase-config.js */
+if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
+/* Firebase centralizado en firebase-config.js */
+
+var params = new URLSearchParams(window.location.search);
+var negocioID = params.get('negocio') || 'negocio_food_sv_demo';
+</script>
+<script>
+var _orders      = {};
+var _itemChecks  = {};
+var _filtroActual= 'all';
+var _sonidoActivo= false;
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+/* ─── SONIDO DIFERENCIADO (TINTINEO COPA) ─── */
+function beepBar(dur){
+  if(!_sonidoActivo) return;
+  try {
+    let t = audioContext.currentTime;
+    // Tono agudo y cristalino (frecuencia fundamental alta)
+    [[1300, 0, 0.15], [1600, 0.1, 0.15], [1950, 0.2, 0.3]].forEach(cfg => {
+      let osc = audioContext.createOscillator();
+      let gain = audioContext.createGain();
+      osc.connect(gain);
+      gain.connect(audioContext.destination);
+      osc.type = 'sine'; // Onda sinusoidal pura para simular sonido de vidrio
+      osc.frequency.setValueAtTime(cfg[0], t + cfg[1]);
+      gain.gain.setValueAtTime(0.4, t + cfg[1]);
+      osc.start(t + cfg[1]);
+      osc.stop(t + cfg[1] + cfg[2]);
+    });
+  } catch(e){}
+}
+
+function playNewOrderSound() {
+  if(!_sonidoActivo) return;
+  beepBar();
+  setTimeout(beepBar, 300);
+}
+
+function activarSonido(){
+  audioContext.resume().then(()=>{
+    _sonidoActivo=true;
+    document.getElementById('btn-sound').innerHTML='<i class="fa-solid fa-volume-high"></i>';
+    toast('Sonido activado','ok');
+    playNewOrderSound();
+  });
+}
+
+/* ─── INICIAR ─── */
+function iniciar(){
+  db.ref('negocios/'+negocioID+'/info').once('value',s=>{
+    document.getElementById('tb-neg-name').textContent = (s.val()||{}).nombre||'PARCHE SYS';
+  });
+
+  db.ref('.info/connected').on('value',snap=>{
+    var el=document.getElementById('conn-status');
+    if(snap.val()){
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
+      el.style.color='var(--green)';
+    } else {
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
+      el.style.color='var(--red)';
+    }
+  });
+
+  var firstLoad=true;
+  db.ref('negocios/'+negocioID+'/cocina_orders').on('value',snap=>{
+    var prevCount=Object.keys(_orders).length;
+    _orders={};
+    snap.forEach(c=>{
+      var v=c.val();
+      if(v && v.estado!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+    });
+    var newCount=Object.keys(_orders).length;
+
+    if(!firstLoad){
+      if(newCount>prevCount){
+        playNewOrderSound();
+        toast('🍹 ¡Nueva bebida para preparar!','ok');
+      }
+    }
+    firstLoad=false;
+    renderBoard(); updateStats();
+  });
+
+  setInterval(renderBoard,30000);
+}
+
+/* ─── BOARD KDS ─── */
+function renderBoard(){
+  var board=document.getElementById('board');
+  var entries=Object.entries(_orders).sort((a,b)=>(a[1].timestamp||0)-(b[1].timestamp||0));
+  if(_filtroActual!=='all') entries=entries.filter(e=>e[1].tipo===_filtroActual);
+
+  // Filtrar órdenes que contengan al menos una bebida
+  entries = entries.filter(function(e) {
+    var items = e[1].items || [];
+    return items.some(function(it) {
+      return (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+    });
+  });
+
+  if(!entries.length){ board.innerHTML='<div class="empty-board"><div class="empty-icon">🍹</div><div class="empty-txt">Sin bebidas activas en el bar</div></div>'; return; }
+
+  board.innerHTML=entries.map(([id,o])=>{
+    var diff=Date.now()-(o.timestamp||Date.now());
+    var mins=Math.floor(diff/60000);
+    var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
+    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
+    return `<div class="ord-card state-${o.estado}">
+      <div class="card-head ${tc}">
+        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}</div>
+        <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
+      </div>
+      <div class="card-info">
+        ${o.tipo==='mesa'?'MESA '+(o.mesa_num||'?'):o.tipo?o.tipo.toUpperCase():'ORDEN'}
+        ${o.cliente?' | '+o.cliente:''}
+        ${o.mesero || o.tomada_por ? ' · ' + (o.mesero || o.tomada_por) : ''}
+      </div>
+      <div class="card-body">
+        ${(o.items||[]).map((it,idx)=>{
+          var isDrink = (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+          if(!isDrink) return ''; // Ocultar si no es bebida
+          
+          var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
+          return '<div class="item-line"><div class="item-cant">'+it.cant+'</div><div class="item-text"><div class="item-name'+(isOk?' line-through opacity-50':'')+'" style="cursor:pointer;text-decoration:'+(isOk?'line-through':'none')+';opacity:'+(isOk?'0.5':'1')+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+'</div></div></div>'
+          +(it.nota?'<div class="item-note">-- '+it.nota+'</div>':'');
+        }).join('')}
+        ${o.nota_cocina?'<div style="background:#0f172a;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
+      </div>
+      <div class="card-foot">
+        ${(o.estado==='pendiente'||o.estado==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
+        ${o.estado==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
+        ${o.estado==='listo'?'<button class="state-btn btn-entregado" style="background:#06b6d4;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Despachado</button>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleCheck(orderId,itemIdx){
+  var o = _orders[orderId];
+  if(!o || !o.items || !o.items[itemIdx]) return;
+  var currentVal = !!o.items[itemIdx].listo;
+  var newVal = !currentVal;
+  
+  var k = orderId+'_'+itemIdx;
+  _itemChecks[k] = newVal;
+  
+  db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
+    listo: newVal
+  });
+  
+  if (newVal) {
+    var mesero = o.tomada_por || o.mesero;
+    if (mesero) {
+      var channel = o.tipo || o.canal || 'mesa';
+      var mesaText = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
+      var itemName = o.items[itemIdx].desc;
+      db.ref('negocios/'+negocioID+'/notificaciones/' + mesero.toLowerCase().trim()).push({
+        tipo: 'bar_item_listo',
+        mensaje: '🍹 Bar ya preparó ' + o.items[itemIdx].cant + 'x ' + itemName + ' de ' + mesaText,
+        timestamp: Date.now()
+      });
+    }
+  }
+}
+
+function cambiarEstado(id,nestado){
+  if(nestado==='entregado'){
+    // Si la orden completa se marca entregada, se guarda en el historial
+    var o=_orders[id];
+    if(o){
+      var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+      var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+      db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
+        estado:'entregado',
+        hora_entrega:hora,
+        fecha_entrega:fecha,
+        ts_entrega:Date.now()
+      }));
+    }
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
+    db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+    toast('Bebidas entregadas y retiradas del KDS Bar','ok');
+  } else {
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado:nestado});
+    if(nestado==='listo'){
+      var o=_orders[id];
+      var meseroTarget = o ? (o.mesero || o.tomada_por) : null;
+      if(o && meseroTarget){
+        var channel = o.tipo || o.canal || 'mesa';
+        var mesaLabel = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
+        var drinkItems = (o.items||[]).filter(function(i){ return (i.cat||'').trim().toUpperCase() === 'BEBIDAS'; });
+        var itemList = drinkItems.map(function(i){ return i.cant+'x '+i.desc; }).join(', ');
+        
+        db.ref('negocios/'+negocioID+'/notificaciones/'+meseroTarget.toLowerCase().trim()).push({
+          tipo: 'bar_orden_lista',
+          mensaje: '🍻 Bar ya preparó ' + itemList + ' de ' + mesaLabel,
+          timestamp: Date.now()
+        });
+      }
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+    }
+  }
+}
+
+/* ─── STATS ─── */
+function updateStats(){
+  var o=Object.values(_orders).filter(function(e) {
+    return (e.items || []).some(function(it) {
+      return (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+    });
+  });
+  
+  var setT=(id,v)=>{ var el=document.getElementById(id); if(el) el.textContent=v; };
+  setT('cnt-pendiente', o.filter(x=>x.estado==='pendiente').length);
+  setT('cnt-prep',      o.filter(x=>x.estado==='en_prep').length);
+  setT('cnt-listo',     o.filter(x=>x.estado==='listo').length);
+  setT('fc-all',   o.length);
+  setT('fc-mesa',  o.filter(x=>x.tipo==='mesa').length);
+  setT('fc-llevar',o.filter(x=>x.tipo==='llevar').length);
+  setT('fc-domicilio',o.filter(x=>x.tipo==='domicilio').length);
+}
+
+function setFiltro(f){
+  _filtroActual=f;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.classList.contains('f-'+f)));
+  renderBoard();
+}
+
+/* ─── TOAST ─── */
+function toast(m,t){
+  var el=document.getElementById('toast');
+  el.textContent=m;
+  el.style.borderColor='var(--green)';
+  el.style.color='var(--green)';
+  el.style.transform='translateX(-50%) translateY(0)'; el.style.opacity='1';
+  clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.transform='translateX(-50%) translateY(100px)'; el.style.opacity='0'; },3000);
+}
+
+/* ─── CLOCK ─── */
+function updateClock(){
+  var n=new Date();
+  document.getElementById('tb-clock').textContent=n.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('tb-date').textContent=n.toLocaleDateString('es-SV',{day:'numeric',month:'short'});
+}
+setInterval(updateClock,1000);
+
+document.addEventListener('DOMContentLoaded',()=>{ updateClock(); iniciar(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS · Repartidores</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F4F7F2;--sur:white;--bd:#D6E2D8;--bd2:#B8CFC0;
+  --ink:#0D1F12;--mid:#2D4A36;--muted:#6B7F6F;
+  --green:#1A6B32;--gl:#E8F5EC;--gd:#0F4520;
+  --amber:#B5860A;--al:#FFF8E6;
+  --orange:#E85D04;--ol:#FFF0E6;
+  --red:#C0190F;--rl:#FEE8E7;
+  --blue:#1D6FA4;--bl:#E8F3FB;
+  --font:'DM Sans',system-ui,sans-serif;
+  --radius:12px;--shadow:0 2px 12px rgba(13,31,18,.08);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column}
+
+/* ── TOPBAR ── */
+.tb{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 18px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.tb-l{display:flex;align-items:center;gap:10px}
+.tb-logo{width:34px;height:34px;background:var(--orange);border-radius:9px;display:flex;align-items:center;justify-content:center}
+.tb-logo i{color:white;font-size:15px}
+.tb-title{font-size:14px;font-weight:800;color:var(--ink)}
+.tb-sub{font-size:10px;color:var(--muted)}
+.tb-r{display:flex;align-items:center;gap:8px}
+.tbb{padding:7px 13px;border-radius:9px;border:1.5px solid var(--bd);background:var(--sur);font-size:11px;font-weight:700;color:var(--muted);cursor:pointer;font-family:var(--font);transition:.12s;display:inline-flex;align-items:center;gap:5px;text-decoration:none}
+.tbb:hover{border-color:var(--orange);color:var(--orange)}
+.tbb.primary{background:var(--orange);color:white;border-color:var(--orange)}
+.tbb.primary:hover{background:#c54d02}
+#tb-clock{font-size:12px;font-weight:700;color:var(--muted)}
+
+/* ── STATS BAR ── */
+.stats-bar{flex-shrink:0;background:var(--sur);border-bottom:1px solid var(--bd);padding:8px 18px;display:flex;align-items:center;gap:10px;overflow-x:auto;scrollbar-width:none}
+.stats-bar::-webkit-scrollbar{display:none}
+.stat-chip{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:20px;border:1.5px solid var(--bd);background:var(--bg);white-space:nowrap;flex-shrink:0}
+.sc-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sc-n{font-size:18px;font-weight:900;line-height:1}
+.sc-l{font-size:10px;font-weight:700;color:var(--muted);margin-left:2px}
+.stat-chip.disponible .sc-dot{background:#22C55E}.stat-chip.disponible .sc-n{color:var(--green)}
+.stat-chip.en_ruta .sc-dot{background:var(--orange);animation:blink 1.2s ease-in-out infinite}.stat-chip.en_ruta .sc-n{color:var(--orange)}
+.stat-chip.inactivo .sc-dot{background:#94a3b8}.stat-chip.inactivo .sc-n{color:var(--muted)}
+.stat-chip.pedidos-pend .sc-n{color:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* ── MAIN GRID ── */
+.main{flex:1;display:grid;grid-template-columns:1fr 320px;min-height:0;overflow:hidden;gap:0}
+@media(max-width:760px){.main{grid-template-columns:1fr}}
+
+/* ── LEFT — repartidores ── */
+.left-panel{overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.section-title{font-size:13px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
+.filter-row{display:flex;gap:5px}
+.f-btn{padding:5px 12px;border-radius:20px;border:1.5px solid var(--bd);background:var(--sur);font-size:10px;font-weight:700;color:var(--muted);cursor:pointer;transition:.12s}
+.f-btn.active{background:var(--ink);color:white;border-color:var(--ink)}
+
+/* Rep cards grid */
+.rep-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+
+/* Rep card */
+.rep-card{background:var(--sur);border:1.5px solid var(--bd);border-radius:14px;padding:14px;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.rep-card:hover{box-shadow:var(--shadow);transform:translateY(-1px)}
+.rep-card.disponible{border-color:#B8D9BF}
+.rep-card.en_ruta{border-color:#F5C9A0;background:var(--ol)}
+.rep-card.inactivo{opacity:.55}
+.rep-card.seleccionado{box-shadow:0 0 0 3px var(--ink)}
+.rep-card-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.rep-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;flex-shrink:0;color:white}
+.av-disponible{background:var(--green)}
+.av-en_ruta{background:var(--orange)}
+.av-inactivo{background:#94a3b8}
+.rep-info{flex:1;min-width:0}
+.rep-nombre{font-size:13px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rep-tel{font-size:10px;color:var(--muted);margin-top:1px}
+.rep-estado-badge{font-size:9px;font-weight:800;padding:3px 9px;border-radius:20px;white-space:nowrap}
+.reb-disponible{background:var(--gl);color:var(--green)}
+.reb-en_ruta{background:var(--ol);color:var(--orange)}
+.reb-inactivo{background:#f1f5f9;color:#94a3b8}
+.rep-pedido{background:var(--bg);border-radius:9px;padding:8px 10px;font-size:11px;color:var(--mid);display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.rep-pedido i{color:var(--orange);flex-shrink:0}
+.rep-actions{display:flex;gap:6px}
+.ra-btn{flex:1;padding:7px 6px;border-radius:9px;border:none;font-size:10px;font-weight:700;font-family:var(--font);cursor:pointer;transition:.12s;display:flex;align-items:center;justify-content:center;gap:4px}
+.ra-entregado{background:var(--gl);color:var(--green)}
+.ra-entregado:hover{background:var(--green);color:white}
+.ra-disponible{background:var(--gl);color:var(--green)}
+.ra-disponible:hover{background:var(--green);color:white}
+.ra-inactivar{background:#f1f5f9;color:#94a3b8;border:1.5px solid var(--bd)}
+.ra-inactivar:hover{background:var(--rl);color:var(--red);border-color:var(--rl)}
+.rep-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+.rs-item{background:var(--bg);border-radius:8px;padding:6px 8px;text-align:center}
+.rs-n{font-size:15px;font-weight:900;color:var(--ink);line-height:1}
+.rs-l{font-size:8px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+/* ── RIGHT — pedidos domicilio ── */
+.right-panel{background:var(--sur);border-left:1px solid var(--bd);display:flex;flex-direction:column;overflow:hidden}
+@media(max-width:760px){.right-panel{display:none}}
+.rp-head{padding:12px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.rp-head h3{font-size:13px;font-weight:800;color:var(--ink)}
+.rp-body{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+
+/* Pedido domicilio card */
+.dom-card{background:var(--bg);border:1.5px solid var(--bd);border-radius:12px;padding:12px;transition:.15s}
+.dom-card.sin-asignar{border-color:#F5C9A0;background:var(--ol)}
+.dom-card.en_ruta{border-color:#B8D9BF;background:var(--gl)}
+.dom-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px}
+.dom-ord{font-size:12px;font-weight:900;color:var(--ink)}
+.dom-badge{font-size:9px;font-weight:800;padding:2px 8px;border-radius:20px}
+.db-sin{background:var(--ol);color:var(--orange)}
+.db-ruta{background:var(--gl);color:var(--green)}
+.db-entregado{background:#e0f2fe;color:var(--blue)}
+.dom-cliente{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.dom-dir{font-size:11px;color:var(--muted);margin-bottom:6px;display:flex;align-items:flex-start;gap:5px;line-height:1.4}
+.dom-dir i{margin-top:1px;flex-shrink:0}
+.dom-total{font-size:12px;font-weight:800;color:var(--ink);margin-bottom:8px}
+.dom-assign{width:100%;padding:8px;border-radius:9px;border:none;font-size:11px;font-weight:700;font-family:var(--font);cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.da-asignar{background:var(--ol);color:var(--orange)}
+.da-asignar:hover{background:var(--orange);color:white}
+.da-entregar{background:var(--gl);color:var(--green)}
+.da-entregar:hover{background:var(--green);color:white}
+.dom-timer{font-size:10px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums;display:flex;align-items:center;gap:4px;margin-bottom:6px}
+
+/* ── MODALS ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(13,31,18,.7);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px}
+.overlay.open{display:flex}
+.modal{background:var(--sur);border-radius:18px;width:100%;max-width:420px;overflow:hidden}
+.modal-head{padding:16px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:14px;font-weight:800;color:var(--ink)}
+.modal-close{width:28px;height:28px;border-radius:8px;border:1px solid var(--bd);background:var(--bg);cursor:pointer;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.modal-body{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.fl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:4px}
+.fi{width:100%;padding:9px 11px;border:1.5px solid var(--bd);border-radius:9px;font-size:13px;font-family:var(--font);color:var(--ink);outline:none;background:var(--bg);transition:.15s}
+.fi:focus{border-color:var(--green);background:white}
+.modal-foot{padding:12px 18px;border-top:1px solid var(--bd);display:flex;gap:8px}
+.mf-btn{flex:1;padding:10px;border-radius:10px;border:none;font-size:12px;font-weight:700;font-family:var(--font);cursor:pointer;transition:.15s}
+.mf-cancel{background:var(--bg);color:var(--muted);border:1.5px solid var(--bd)}
+.mf-save{background:var(--orange);color:white}
+.mf-save:hover{background:#c54d02}
+
+/* Assign modal */
+.rep-sel-list{display:flex;flex-direction:column;gap:6px}
+.rep-sel-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1.5px solid var(--bd);background:var(--bg);cursor:pointer;transition:.12s}
+.rep-sel-item:hover{border-color:var(--orange);background:var(--ol)}
+.rep-sel-item.selected{border-color:var(--orange);background:var(--ol)}
+.rsi-avatar{width:34px;height:34px;border-radius:50%;background:var(--green);color:white;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.rsi-name{font-size:12px;font-weight:700;color:var(--ink)}
+.rsi-sub{font-size:10px;color:var(--muted)}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);color:white;padding:10px 20px;border-radius:11px;font-size:12px;font-weight:700;z-index:99999;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.err{background:var(--red)}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <div class="tb-l">
+    <div class="tb-logo"><i class="fa-solid fa-motorcycle"></i></div>
+    <div>
+      <div class="tb-title">Repartidores</div>
+      <div class="tb-sub" id="tb-neg">PARCHE SYS</div>
+    </div>
+  </div>
+  <div class="tb-r">
+    <span id="tb-clock"></span>
+    <a class="tbb" href="pos-food.html?negocio=" id="link-pos"><i class="fa-solid fa-cash-register"></i> POS</a>
+    <a class="tbb" href="mapa-mesas.html?negocio=" id="link-mapa"><i class="fa-solid fa-table-cells-large"></i> Mesas</a>
+    <a class="tbb" href="portal-food.html?negocio=" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
+    <button class="tbb primary" onclick="abrirAddRep()"><i class="fa-solid fa-plus"></i> Nuevo repartidor</button>
+  </div>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-chip disponible"><div class="sc-dot"></div><div class="sc-n" id="sc-disp">0</div><div class="sc-l">Disponibles</div></div>
+  <div class="stat-chip en_ruta"><div class="sc-dot"></div><div class="sc-n" id="sc-ruta">0</div><div class="sc-l">En ruta</div></div>
+  <div class="stat-chip inactivo"><div class="sc-dot"></div><div class="sc-n" id="sc-inact">0</div><div class="sc-l">Inactivos</div></div>
+  <div class="stat-chip pedidos-pend" style="border-color:#F5B8B5;background:var(--rl)">
+    <div class="sc-n" id="sc-sin-asignar" style="color:var(--red)">0</div><div class="sc-l">Sin asignar</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT — repartidores -->
+  <div class="left-panel">
+    <div class="section-head">
+      <div class="section-title"><i class="fa-solid fa-users"></i> Equipo de reparto</div>
+      <div class="filter-row">
+        <button class="f-btn active" id="f-todos" onclick="setFiltro('todos')">Todos</button>
+        <button class="f-btn" id="f-disponible" onclick="setFiltro('disponible')">Disponibles</button>
+        <button class="f-btn" id="f-en_ruta" onclick="setFiltro('en_ruta')">En ruta</button>
+      </div>
+    </div>
+    <div class="rep-grid" id="rep-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:12px">Cargando...</div>
+    </div>
+  </div>
+
+  <!-- RIGHT — pedidos domicilio -->
+  <div class="right-panel">
+    <div class="rp-head">
+      <h3>🚀 Pedidos domicilio</h3>
+      <span style="font-size:10px;color:var(--muted)" id="rp-count">0 activos</span>
+    </div>
+    <div class="rp-body" id="rp-body">
+      <div style="text-align:center;padding:28px;color:var(--muted);font-size:12px">Sin pedidos activos</div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD REPARTIDOR MODAL -->
+<div class="overlay" id="add-overlay" onclick="if(event.target===this)cerrarAddRep()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Nuevo repartidor</h3>
+      <button class="modal-close" onclick="cerrarAddRep()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="ff" style="grid-column:1/-1"><label class="fl">Nombre completo</label><input class="fi" id="add-nombre" placeholder="Carlos Martínez"></div>
+        <div><label class="fl">Teléfono</label><input class="fi" id="add-tel" placeholder="7000-0000"></div>
+        <div><label class="fl">Vehículo</label>
+          <select class="fi" id="add-vehiculo">
+            <option value="moto">Moto</option>
+            <option value="bicicleta">Bicicleta</option>
+            <option value="a_pie">A pie</option>
+            <option value="carro">Carro</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-btn mf-cancel" onclick="cerrarAddRep()">Cancelar</button>
+      <button class="mf-btn mf-save" onclick="guardarRep()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASIGNAR REPARTIDOR MODAL -->
+<div class="overlay" id="assign-overlay" onclick="if(event.target===this)cerrarAssign()">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>Asignar repartidor</h3>
+      <button class="modal-close" onclick="cerrarAssign()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:4px">Pedido: <strong id="assign-ord" style="color:var(--ink)"></strong></p>
+      <div class="rep-sel-list" id="rep-sel-list"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="mf-btn mf-cancel" onclick="cerrarAssign()">Cancelar</button>
+      <button class="mf-btn mf-save" onclick="confirmarAsignar()">Asignar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Shared Config -->
+<script src="firebase-config.js"></script>
+<script>
+// negocioID and db are already inherited from firebase-config.js
+if(!negocioID){ location.href='index.html'; }
+
+var _reps={};
+var _pedidosDom={};
+var _filtro='todos';
+var _assignPedidoId=null;
+var _assignRepId=null;
+
+/* ── INIT ── */
+document.addEventListener('DOMContentLoaded',function(){
+  document.getElementById('link-pos').href='pos-food.html?negocio='+negocioID;
+  document.getElementById('link-mapa').href='mapa-mesas.html?negocio='+negocioID;
+  document.getElementById('link-portal').href='portal-food.html?negocio='+negocioID;
+  setInterval(function(){
+    var n=new Date();
+    document.getElementById('tb-clock').textContent=n.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    updateTimersDOM();
+  },1000);
+  db.ref('negocios/'+negocioID+'/info').once('value',function(s){
+    var inf=s.val()||{};
+    document.getElementById('tb-neg').textContent=inf.nombre||'Restaurante';
+  });
+  db.ref('negocios/'+negocioID+'/repartidores').on('value',function(snap){
+    _reps={};
+    snap.forEach(function(c){_reps[c.key]=c.val();_reps[c.key]._id=c.key;});
+    renderReps();
+    updateStats();
+  });
+  db.ref('negocios/'+negocioID+'/pedidos')
+    .orderByChild('canal').equalTo('domicilio')
+    .on('value',function(snap){
+      _pedidosDom={};
+      snap.forEach(function(c){
+        var v=c.val();
+        if(v&&v.estado!=='pagado'&&v.estado!=='ANULADA')_pedidosDom[c.key]=v;
+      });
+      renderPedidosDom();
+      updateStats();
+    });
+});
+
+/* ── RENDER REPS ── */
+function renderReps(){
+  var g=document.getElementById('rep-grid');
+  var reps=Object.values(_reps).filter(function(r){
+    if(_filtro==='todos')return true;
+    return r.estado===_filtro;
+  }).sort(function(a,b){
+    var ord={disponible:0,en_ruta:1,inactivo:2};
+    return (ord[a.estado]||0)-(ord[b.estado]||0);
+  });
+  if(!reps.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);font-size:12px">Sin repartidores'+(negocioID?'':' — verifica tu ID de negocio')+'</div>';return;}
+  g.innerHTML=reps.map(function(r){
+    var est=r.estado||'disponible';
+    var inicial=(r.nombre||'R').charAt(0).toUpperCase();
+    var vicon={'moto':'🛵','bicicleta':'🚲','a_pie':'🚶','carro':'🚗'}[r.vehiculo]||'🛴';
+
+    // Pedido asignado
+    var pedAsig=r.pedido_asignado_id?_pedidosDom[r.pedido_asignado_id]:null;
+    var pedHtml=pedAsig&&est==='en_ruta'?
+      '<div class="rep-pedido"><i class="fa-solid fa-location-dot"></i><div><div style="font-weight:700">'+escHtml(pedAsig.orden||r.pedido_asignado_id)+'</div><div style="font-size:10px;color:var(--muted)">'+escHtml(pedAsig.cliente||'')+(pedAsig.direccion_entrega?' · '+pedAsig.direccion_entrega.substring(0,30):'')+'</div></div></div>':'';
+
+    // Stats today
+    var entregadosHoy=Object.values(_pedidosDom).filter(function(p){
+      return p.repartidor_id===r._id&&p.estado==='entregado'&&p.fecha===new Date().toLocaleDateString('es-SV');
+    }).length;
+
+    // Actions
+    var acciones='';
+    if(est==='en_ruta'){
+      acciones='<button class="ra-btn ra-entregado" onclick="marcarEntregado(\''+r._id+'\',event)"><i class="fa-solid fa-check"></i> Entregado</button>';
+    } else if(est==='inactivo'){
+      acciones='<button class="ra-btn ra-disponible" onclick="setEstadoRep(\''+r._id+'\',\'disponible\',event)"><i class="fa-solid fa-circle-check"></i> Activar</button>';
+    } else {
+      acciones='<button class="ra-btn ra-inactivar" onclick="setEstadoRep(\''+r._id+'\',\'inactivo\',event)"><i class="fa-solid fa-circle-pause"></i> Inactivar</button>';
+    }
+
+    return '<div class="rep-card '+est+'" id="rc-'+r._id+'" data-ts="'+(r.ruta_inicio||0)+'">'
+      +'<div class="rep-card-head">'
+      +'<div class="rep-avatar av-'+est+'">'+inicial+'</div>'
+      +'<div class="rep-info"><div class="rep-nombre">'+escHtml(r.nombre||'Repartidor')+'</div><div class="rep-tel">'+vicon+' '+(r.vehiculo||'moto')+' · '+(r.telefono||'—')+'</div></div>'
+      +'<span class="rep-estado-badge reb-'+est+'">'+{disponible:'Disponible',en_ruta:'En ruta',inactivo:'Inactivo'}[est]+'</span>'
+      +'</div>'
+      +pedHtml
+      +(est==='en_ruta'?'<div class="dom-timer" id="rt-'+r._id+'"><i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(Math.floor((Date.now()-(r.ruta_inicio||Date.now()))/1000))+'</div>':'')
+      +'<div class="rep-stats"><div class="rs-item"><div class="rs-n">'+entregadosHoy+'</div><div class="rs-l">Hoy</div></div>'
+      +'<div class="rs-item"><div class="rs-n">'+(r.total_entregas||0)+'</div><div class="rs-l">Total</div></div></div>'
+      +'<div class="rep-actions">'+acciones+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+/* ── RENDER PEDIDOS DOMICILIO ── */
+function renderPedidosDom(){
+  var body=document.getElementById('rp-body');
+  var peds=Object.entries(_pedidosDom)
+    .sort(function(a,b){return (a[1].timestamp||0)-(b[1].timestamp||0);});
+  document.getElementById('rp-count').textContent=peds.length+' activo'+(peds.length!==1?'s':'');
+  if(!peds.length){body.innerHTML='<div style="text-align:center;padding:28px;color:var(--muted);font-size:12px">Sin pedidos de domicilio activos</div>';return;}
+  body.innerHTML=peds.map(function(e){
+    var id=e[0];var p=e[1];
+    var sinAsignar=!p.repartidor_id||p.repartidor_id==='';
+    var est=sinAsignar?'sin-asignar':(p.estado==='entregado'?'entregado':'en_ruta');
+    var elapsed=p.timestamp?Math.floor((Date.now()-p.timestamp)/1000):0;
+    var repNombre=p.repartidor_id&&_reps[p.repartidor_id]?_reps[p.repartidor_id].nombre:'Sin asignar';
+    var badgeClass=sinAsignar?'db-sin':p.estado==='entregado'?'db-entregado':'db-ruta';
+    var badgeTxt=sinAsignar?'Sin asignar':p.estado==='entregado'?'Entregado':'En ruta';
+    var btnHtml=sinAsignar
+      ?'<button class="dom-assign da-asignar" onclick="abrirAssign(\''+id+'\')"><i class="fa-solid fa-user-plus"></i> Asignar repartidor</button>'
+      :p.estado!=='entregado'
+        ?'<button class="dom-assign da-entregar" onclick="marcarPedidoEntregado(\''+id+'\')"><i class="fa-solid fa-check"></i> Marcar entregado</button>'
+        :'';
+    return '<div class="dom-card '+est+'" id="dc-'+id+'">'
+      +'<div class="dom-head"><div class="dom-ord">'+escHtml(p.orden||id)+'</div><span class="dom-badge '+badgeClass+'">'+badgeTxt+'</span></div>'
+      +'<div class="dom-cliente"><i class="fa-solid fa-user" style="font-size:9px;color:var(--muted)"></i> '+escHtml(p.cliente||'—')+(p.telefono?' · '+p.telefono:'')+'</div>'
+      +(p.direccion_entrega?'<div class="dom-dir"><i class="fa-solid fa-location-dot" style="font-size:10px;color:var(--orange)"></i> '+escHtml(p.direccion_entrega)+'</div>':'')
+      +'<div class="dom-timer" id="dt-'+id+'"><i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(elapsed)+' · <i class="fa-solid fa-motorcycle" style="font-size:9px"></i> '+escHtml(repNombre)+'</div>'
+      +'<div class="dom-total">Total: $'+parseFloat(p.total||0).toFixed(2)+'</div>'
+      +btnHtml+'</div>';
+  }).join('');
+}
+
+/* ── TIMERS ── */
+function updateTimersDOM(){
+  // Repartidor timers
+  Object.values(_reps).forEach(function(r){
+    if(r.estado!=='en_ruta'||!r.ruta_inicio)return;
+    var el=document.getElementById('rt-'+r._id);
+    if(el)el.innerHTML='<i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(Math.floor((Date.now()-r.ruta_inicio)/1000));
+  });
+  // Pedido timers
+  Object.entries(_pedidosDom).forEach(function(e){
+    var id=e[0];var p=e[1];
+    var el=document.getElementById('dt-'+id);
+    if(!el)return;
+    var elapsed=p.timestamp?Math.floor((Date.now()-p.timestamp)/1000):0;
+    var repNombre=p.repartidor_id&&_reps[p.repartidor_id]?_reps[p.repartidor_id].nombre:'Sin asignar';
+    el.innerHTML='<i class="fa-regular fa-clock" style="font-size:9px"></i> '+fmtTime(elapsed)+' · <i class="fa-solid fa-motorcycle" style="font-size:9px"></i> '+escHtml(repNombre);
+  });
+}
+
+/* ── ACTIONS ── */
+function setEstadoRep(id,estado,e){
+  if(e)e.stopPropagation();
+  var upd={estado:estado};
+  if(estado==='disponible')upd.pedido_asignado_id=null;
+  db.ref('negocios/'+negocioID+'/repartidores/'+id).update(upd);
+  toast(estado==='disponible'?'✓ Repartidor disponible':'Repartidor inactivo','ok');
+}
+
+function marcarEntregado(repId,e){
+  if(e)e.stopPropagation();
+  var rep=_reps[repId];
+  if(!rep)return;
+  var pedId=rep.pedido_asignado_id;
+  var saves=[
+    db.ref('negocios/'+negocioID+'/repartidores/'+repId).update({
+      estado:'disponible',pedido_asignado_id:null,
+      total_entregas:(rep.total_entregas||0)+1
+    })
+  ];
+  if(pedId){
+    saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+pedId).update({estado:'entregado',faseIdx:3}));
+    saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+pedId).update({estado:'entregado'}));
+  }
+  Promise.all(saves).then(function(){toast('✅ Entrega confirmada','ok');}).catch(function(){toast('Error','err');});
+}
+
+function marcarPedidoEntregado(pedId){
+  var ped=_pedidosDom[pedId];
+  if(!ped)return;
+  var saves=[
+    db.ref('negocios/'+negocioID+'/pedidos/'+pedId).update({estado:'entregado',faseIdx:3}),
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+pedId).update({estado:'entregado'})
+  ];
+  if(ped.repartidor_id){
+    var rep=_reps[ped.repartidor_id];
+    saves.push(db.ref('negocios/'+negocioID+'/repartidores/'+ped.repartidor_id).update({
+      estado:'disponible',pedido_asignado_id:null,
+      total_entregas:((rep&&rep.total_entregas)||0)+1
+    }));
+  }
+  Promise.all(saves).then(function(){toast('✅ Pedido entregado','ok');});
+}
+
+/* ── ASSIGN ── */
+function abrirAssign(pedId){
+  _assignPedidoId=pedId;
+  _assignRepId=null;
+  document.getElementById('assign-ord').textContent=(_pedidosDom[pedId]&&_pedidosDom[pedId].orden)||pedId;
+  var list=document.getElementById('rep-sel-list');
+  var disponibles=Object.values(_reps).filter(function(r){return r.estado==='disponible';});
+  if(!disponibles.length){list.innerHTML='<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px">No hay repartidores disponibles</p>';}
+  else{
+    list.innerHTML=disponibles.map(function(r){
+      var vicon={'moto':'🛵','bicicleta':'🚲','a_pie':'🚶','carro':'🚗'}[r.vehiculo]||'🛴';
+      return '<div class="rep-sel-item" id="rsi-'+r._id+'" onclick="selAssignRep(\''+r._id+'\')">'
+        +'<div class="rsi-avatar">'+r.nombre.charAt(0).toUpperCase()+'</div>'
+        +'<div><div class="rsi-name">'+escHtml(r.nombre)+'</div><div class="rsi-sub">'+vicon+' '+r.vehiculo+(r.telefono?' · '+r.telefono:'')+'</div></div>'
+        +'</div>';
+    }).join('');
+  }
+  document.getElementById('assign-overlay').classList.add('open');
+}
+function cerrarAssign(){document.getElementById('assign-overlay').classList.remove('open');}
+function selAssignRep(id){
+  _assignRepId=id;
+  document.querySelectorAll('.rep-sel-item').forEach(function(el){el.classList.remove('selected');});
+  var el=document.getElementById('rsi-'+id);
+  if(el)el.classList.add('selected');
+}
+function confirmarAsignar(){
+  if(!_assignRepId){toast('Selecciona un repartidor','err');return;}
+  if(!_assignPedidoId)return;
+  var saves=[
+    db.ref('negocios/'+negocioID+'/repartidores/'+_assignRepId).update({
+      estado:'en_ruta',pedido_asignado_id:_assignPedidoId,ruta_inicio:Date.now()
+    }),
+    db.ref('negocios/'+negocioID+'/pedidos/'+_assignPedidoId).update({
+      repartidor_id:_assignRepId,estado:'en_cocina'
+    })
+  ];
+  Promise.all(saves).then(function(){
+    cerrarAssign();
+    toast('✓ Repartidor asignado','ok');
+  });
+}
+
+/* ── ADD REP ── */
+function abrirAddRep(){document.getElementById('add-overlay').classList.add('open');document.getElementById('add-nombre').focus();}
+function cerrarAddRep(){document.getElementById('add-overlay').classList.remove('open');}
+function guardarRep(){
+  var nombre=document.getElementById('add-nombre').value.trim();
+  if(!nombre){toast('Ingresa el nombre','err');return;}
+  var id='rep_'+Date.now();
+  db.ref('negocios/'+negocioID+'/repartidores/'+id).set({
+    nombre:nombre,
+    telefono:document.getElementById('add-tel').value.trim(),
+    vehiculo:document.getElementById('add-vehiculo').value,
+    estado:'disponible',pedido_asignado_id:null,
+    total_entregas:0,fecha_registro:new Date().toISOString()
+  });
+  cerrarAddRep();
+  toast('✓ Repartidor '+nombre+' agregado','ok');
+}
+
+/* ── FILTER ── */
+function setFiltro(f){
+  _filtro=f;
+  ['todos','disponible','en_ruta'].forEach(function(x){
+    var btn=document.getElementById('f-'+x);
+    if(btn)btn.classList.toggle('active',x===f);
+  });
+  renderReps();
+}
+
+/* ── STATS ── */
+function updateStats(){
+  var reps=Object.values(_reps);
+  document.getElementById('sc-disp').textContent=reps.filter(function(r){return r.estado==='disponible';}).length;
+  document.getElementById('sc-ruta').textContent=reps.filter(function(r){return r.estado==='en_ruta';}).length;
+  document.getElementById('sc-inact').textContent=reps.filter(function(r){return r.estado==='inactivo';}).length;
+  var sinAsignar=Object.values(_pedidosDom).filter(function(p){return !p.repartidor_id||p.repartidor_id===''});
+  document.getElementById('sc-sin-asignar').textContent=sinAsignar.length;
+}
+
+/* ── UTILS ── */
+function fmtTime(s){var m=Math.floor(s/60);var ss=s%60;return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss;}
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function toast(msg,t){var el=document.getElementById('toast');el.textContent=msg;el.className='toast show'+(t==='err'?' err':'');clearTimeout(el._t);el._t=setTimeout(function(){el.className='toast';},3000);}
+</script>
+</body>
+</html>

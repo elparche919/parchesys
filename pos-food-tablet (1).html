@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f1923">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>MODUS FOOD · POS (Tablet)</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      overflow: hidden;
+      background: #0f1923;
+      font-family: 'DM Sans', sans-serif;
+      /* Prevent text-size adjust on orientation change */
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+
+    #pos-iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      display: block;
+      /* Improve iframe rendering on low-end GPU */
+      will-change: auto;
+    }
+
+    /* ─── OFFLINE STATUS BADGE ─────────────────────────────────────── */
+    #offline-badge {
+      position: fixed;
+      top: 16px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-80px);
+      background: #b91c1c;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      padding: 6px 16px;
+      border-radius: 20px;
+      z-index: 99998;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 4px 16px rgba(185, 28, 28, 0.45);
+      pointer-events: none;
+    }
+    #offline-badge.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+    #offline-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #fca5a5;
+      /* CSS-only pulse — no JS animation loop */
+      animation: blink 1.2s step-start infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* ─── EMERGENCY OFFLINE FAB ────────────────────────────────────── */
+    #offline-fab {
+      position: fixed;
+      bottom: 28px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #1b4e8b 0%, #0f3060 100%);
+      border: 2px solid rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      z-index: 99997;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+      /* GPU-composited transform only — no filter/blur */
+      transition: transform 0.15s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      /* Badge counter */
+      overflow: visible;
+    }
+    #offline-fab:active { transform: scale(0.92); }
+    #offline-fab.offline-mode {
+      background: linear-gradient(135deg, #b91c1c 0%, #7f1d1d 100%);
+      border-color: rgba(255,100,100,0.4);
+      box-shadow: 0 6px 24px rgba(185,28,28,0.5);
+    }
+    #fab-counter {
+      position: absolute;
+      top: -6px; right: -6px;
+      background: #e8820c;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      min-width: 20px; height: 20px;
+      border-radius: 10px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 0 4px;
+      border: 2px solid #0f1923;
+    }
+    #fab-counter.visible { display: flex; }
+
+    /* ─── OFFLINE DRAWER ───────────────────────────────────────────── */
+    #offline-drawer {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: none;
+      align-items: flex-end;
+    }
+    #offline-drawer.open { display: flex; }
+    #drawer-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+    }
+    #drawer-panel {
+      position: relative;
+      width: 100%;
+      max-height: 82vh;
+      background: #111827;
+      border-radius: 20px 20px 0 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+    }
+    #offline-drawer.open #drawer-panel { transform: translateY(0); }
+
+    .drawer-handle {
+      width: 40px; height: 4px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.2);
+      margin: 12px auto 0;
+      flex-shrink: 0;
+    }
+    .drawer-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      flex-shrink: 0;
+    }
+    .drawer-title {
+      display: flex; align-items: center; gap: 10px;
+      color: #fff;
+      font-weight: 700; font-size: 16px;
+    }
+    .drawer-title i { color: #e8820c; font-size: 18px; }
+    .drawer-subtitle {
+      font-size: 11px;
+      font-weight: 400;
+      color: rgba(255,255,255,0.4);
+      display: block;
+      margin-top: 1px;
+    }
+    #btn-close-drawer {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: rgba(255,255,255,0.5);
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Offline order input section */
+    .drawer-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .drawer-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.35);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .offline-form-row {
+      display: flex; gap: 10px; margin-bottom: 10px;
+    }
+    .offline-input {
+      flex: 1;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 10px 14px;
+      outline: none;
+    }
+    .offline-input:focus { border-color: rgba(232,130,12,0.5); }
+    .offline-input::placeholder { color: rgba(255,255,255,0.25); }
+    #offline-note-input {
+      width: 100%;
+      resize: none;
+      height: 56px;
+    }
+    #btn-save-offline {
+      width: 100%;
+      padding: 13px;
+      background: #e8820c;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    #btn-save-offline:active { background: #c26a00; }
+
+    /* Queued orders list */
+    #offline-queue {
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px 0 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .queue-empty {
+      text-align: center;
+      color: rgba(255,255,255,0.25);
+      font-size: 13px;
+      padding: 32px 20px;
+    }
+    .queue-empty i { font-size: 32px; display: block; margin-bottom: 10px; opacity: 0.3; }
+    .order-card {
+      margin: 6px 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .order-card-info { flex: 1; min-width: 0; }
+    .order-card-title {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .order-card-meta {
+      font-size: 11px;
+      color: rgba(255,255,255,0.35);
+    }
+    .order-card-note {
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+      margin-top: 4px;
+      font-style: italic;
+    }
+    .order-card-status {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      padding: 3px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .status-pending {
+      background: rgba(232,130,12,0.15);
+      color: #e8820c;
+    }
+    .status-synced {
+      background: rgba(34,197,94,0.12);
+      color: #22c55e;
+    }
+
+    /* Sync button */
+    .drawer-footer {
+      padding: 12px 16px 16px;
+      flex-shrink: 0;
+      border-top: 1px solid rgba(255,255,255,0.07);
+    }
+    #btn-sync-now {
+      width: 100%;
+      padding: 12px;
+      background: rgba(27,78,139,0.6);
+      border: 1px solid rgba(27,78,139,0.8);
+      border-radius: 10px;
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s;
+    }
+    #btn-sync-now:active { background: rgba(27,78,139,0.9); }
+    #btn-sync-now:disabled { opacity: 0.4; cursor: default; }
+
+    /* ─── TOAST (optimized — no backdrop-filter) ───────────────────── */
+    .tablet-toast {
+      position: fixed;
+      top: 24px; right: 20px;
+      /* Solid instead of blur — much better perf on MediaTek */
+      background: #1b4e8b;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      padding: 14px 18px;
+      color: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      display: flex; align-items: center; gap: 12px;
+      z-index: 99999;
+      transform: translateY(-100px);
+      opacity: 0;
+      /* GPU-composited only */
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+      max-width: 300px;
+      pointer-events: none;
+    }
+    .tablet-toast.show { transform: translateY(0); opacity: 1; }
+    .tablet-toast-icon {
+      font-size: 18px; color: #e8820c; flex-shrink: 0;
+      /* Simpler animation — 2 states, no intermediate */
+      animation: pulseIcon 1.6s ease-in-out infinite;
+    }
+    @keyframes pulseIcon {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+    }
+    .tablet-toast-content { font-size: 13px; font-weight: 500; line-height: 1.4; }
+
+    /* ─── ALARM OVERLAY (optimized) ───────────────────────────────── */
+    #alarm-overlay {
+      position: fixed;
+      inset: 0;
+      background: #0d0d0d;
+      z-index: 100000;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      text-align: center;
+      padding: 24px;
+    }
+    /* Use background-color toggle instead of animation to reduce repaints */
+    .flash-red { animation: flashRed 0.7s step-end infinite; }
+    @keyframes flashRed {
+      0%, 100% { background-color: #0d0d0d; }
+      50% { background-color: #4a0000; }
+    }
+    .bell-shake {
+      font-size: 80px; color: #e8820c; margin-bottom: 20px;
+      animation: shake 0.6s ease-in-out infinite alternate;
+      /* Contain animation to transform only */
+      will-change: transform;
+    }
+    @keyframes shake {
+      from { transform: rotate(-15deg); }
+      to { transform: rotate(15deg); }
+    }
+    .alarm-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px; font-weight: 700;
+      margin-bottom: 10px; color: #ff4444;
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .alarm-message {
+      font-size: 22px; font-weight: 500;
+      margin-bottom: 36px; max-width: 500px; line-height: 1.4;
+    }
+    .btn-dismiss {
+      padding: 15px 44px;
+      font-size: 18px; font-weight: 700;
+      background: #22c55e; color: white;
+      border: none; border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(34,197,94,0.35);
+      text-transform: uppercase;
+      transition: transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-dismiss:active { transform: scale(0.95); }
+  </style>
+</head>
+<body>
+  <iframe id="pos-iframe" src="" allow="autoplay" importance="high"></iframe>
+
+  <!-- Offline status badge -->
+  <div id="offline-badge">
+    <span class="dot"></span>
+    SIN CONEXIÓN — MODO EMERGENCIA
+  </div>
+
+  <!-- Emergency offline FAB -->
+  <button id="offline-fab" title="Órdenes offline" aria-label="Gestionar órdenes sin conexión">
+    <i class="fa-solid fa-wifi-slash"></i>
+    <span id="fab-counter">0</span>
+  </button>
+
+  <!-- Offline drawer -->
+  <div id="offline-drawer" role="dialog" aria-modal="true" aria-label="Gestión offline">
+    <div id="drawer-backdrop"></div>
+    <div id="drawer-panel">
+      <div class="drawer-handle"></div>
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <div>
+            MODO EMERGENCIA
+            <span class="drawer-subtitle">Las órdenes se guardan localmente y se sincronizan al restaurar la conexión</span>
+          </div>
+        </div>
+        <button id="btn-close-drawer" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Quick offline order capture -->
+      <div class="drawer-section">
+        <div class="drawer-section-label">Registrar orden manual</div>
+        <div class="offline-form-row">
+          <input id="offline-mesa" class="offline-input" type="text" placeholder="Mesa / Número" inputmode="numeric">
+          <input id="offline-items" class="offline-input" type="text" placeholder="Ítems (ej: 2 burger, 1 soda)">
+        </div>
+        <textarea id="offline-note-input" class="offline-input" placeholder="Notas adicionales (opcional)…"></textarea>
+        <br><br>
+        <button id="btn-save-offline">
+          <i class="fa-solid fa-floppy-disk"></i> Guardar orden offline
+        </button>
+      </div>
+
+      <!-- Queued orders -->
+      <div id="offline-queue"></div>
+
+      <div class="drawer-footer">
+        <button id="btn-sync-now" disabled>
+          <i class="fa-solid fa-rotate"></i> Sincronizar ahora
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast for kitchen alerts -->
+  <div class="tablet-toast" id="kdsToast">
+    <i class="fa-solid fa-bell tablet-toast-icon"></i>
+    <div class="tablet-toast-content" id="kdsToastText">El pedido está listo</div>
+  </div>
+
+  <!-- Alarm overlay -->
+  <div id="alarm-overlay">
+    <div class="bell-shake"><i class="fa-solid fa-bell"></i></div>
+    <div class="alarm-title">¡PEDIDO LISTO EN COCINA!</div>
+    <div class="alarm-message" id="alarm-message">Mesa 4 — Listo</div>
+    <button class="btn-dismiss" id="alarm-dismiss">Entendido</button>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <script>
+    // ─── Firebase ────────────────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyBoM-hQcdhJxfeODu848q2D1AYsa1dvRqQ",
+      authDomain: "ventas-id-43ff8.firebaseapp.com",
+      databaseURL: "https://ventas-id-43ff8-default-rtdb.firebaseio.com",
+      projectId: "ventas-id-43ff8",
+      storageBucket: "ventas-id-43ff8.firebasestorage.app",
+      messagingSenderId: "898228544993",
+      appId: "1:898228544993:web:06658053096e51cdfa5ea0"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ─── Session ─────────────────────────────────────────────────────
+    const params = new URLSearchParams(window.location.search);
+    const negocioID = params.get('negocio') ||
+                      localStorage.getItem('food_negocioID') ||
+                      localStorage.getItem('modus_food_negocio') ||
+                      localStorage.getItem('negocioID');
+    const meseroId = localStorage.getItem('meseroId');
+
+    if (!negocioID || !meseroId) {
+      window.location.href = 'login.html';
+    } else {
+      localStorage.setItem('food_negocioID', negocioID);
+      localStorage.setItem('modus_food_negocio', negocioID);
+      localStorage.setItem('negocioID', negocioID);
+
+      const iframe = document.getElementById('pos-iframe');
+      iframe.src = 'pos-food.html?negocio=' + encodeURIComponent(negocioID);
+
+      iframe.addEventListener('load', () => {
+        try {
+          const doc = iframe.contentDocument || iframe.contentWindow.document;
+          if (doc) {
+            const link = doc.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'pos-food-tablet.css';
+            doc.head.appendChild(link);
+          }
+        } catch (e) {
+          // Cross-origin restriction — expected in production
+        }
+      });
+
+      startNotificationListener();
+    }
+
+    // ─── Connectivity Monitor ─────────────────────────────────────────
+    const offlineBadge = document.getElementById('offline-badge');
+    const offlineFab   = document.getElementById('offline-fab');
+    const syncBtn      = document.getElementById('btn-sync-now');
+    let isOnline = navigator.onLine;
+
+    function updateConnectivityUI(online) {
+      isOnline = online;
+      if (online) {
+        offlineBadge.classList.remove('visible');
+        offlineFab.classList.remove('offline-mode');
+        syncBtn.disabled = false;
+        // Auto-sync when connection is restored
+        syncOfflineOrders();
+      } else {
+        offlineBadge.classList.add('visible');
+        offlineFab.classList.add('offline-mode');
+        syncBtn.disabled = true;
+      }
+    }
+
+    window.addEventListener('online',  () => updateConnectivityUI(true));
+    window.addEventListener('offline', () => updateConnectivityUI(false));
+    // Check real connectivity via Firebase .info/connected
+    db.ref('.info/connected').on('value', snap => {
+      updateConnectivityUI(snap.val() === true);
+    });
+
+    // ─── Offline Order Queue (IndexedDB) ─────────────────────────────
+    const DB_NAME    = 'modus_offline';
+    const STORE_NAME = 'orders';
+    let idb = null;
+
+    function openIDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = e => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+          }
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+      });
+    }
+
+    async function getIDB() {
+      if (!idb) idb = await openIDB();
+      return idb;
+    }
+
+    async function saveOrderLocally(order) {
+      const db = await getIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).add({ ...order, status: 'pending', ts: Date.now() });
+        tx.oncomplete = resolve;
+        tx.onerror    = e => reject(e.target.error);
+      });
+    }
+
+    async function getAllLocalOrders() {
+      const db = await getIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).getAll();
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+      });
+    }
+
+    async function markOrderSynced(id) {
+      const db = await getIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(id);
+        req.onsuccess = e => {
+          const rec = e.target.result;
+          if (rec) { rec.status = 'synced'; store.put(rec); }
+        };
+        tx.oncomplete = resolve;
+        tx.onerror = e => reject(e.target.error);
+      });
+    }
+
+    async function renderQueue() {
+      const orders = await getAllLocalOrders();
+      const pending = orders.filter(o => o.status === 'pending').length;
+      const counter = document.getElementById('fab-counter');
+      counter.textContent = pending;
+      counter.classList.toggle('visible', pending > 0);
+
+      const list = document.getElementById('offline-queue');
+      if (!orders.length) {
+        list.innerHTML = '<div class="queue-empty"><i class="fa-solid fa-inbox"></i>Sin órdenes registradas</div>';
+        return;
+      }
+      list.innerHTML = orders.slice().reverse().map(o => {
+        const date = new Date(o.ts).toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' });
+        const statusClass = o.status === 'synced' ? 'status-synced' : 'status-pending';
+        const statusLabel = o.status === 'synced' ? 'ENVIADO' : 'PENDIENTE';
+        return `
+          <div class="order-card">
+            <div class="order-card-info">
+              <div class="order-card-title">Mesa ${o.mesa || '—'} · ${o.items || 'Sin detalle'}</div>
+              <div class="order-card-meta">${date}</div>
+              ${o.note ? `<div class="order-card-note">${o.note}</div>` : ''}
+            </div>
+            <span class="order-card-status ${statusClass}">${statusLabel}</span>
+          </div>`;
+      }).join('');
+    }
+
+    async function syncOfflineOrders() {
+      if (!isOnline) return;
+      const orders = await getAllLocalOrders();
+      const pending = orders.filter(o => o.status === 'pending');
+      for (const order of pending) {
+        try {
+          // Push to Firebase under a "offline_orders" node for later processing
+          await db.ref(`negocios/${negocioID}/offline_orders`).push({
+            mesa: order.mesa,
+            items: order.items,
+            note: order.note || '',
+            mesero: meseroId,
+            ts: order.ts,
+            synced_at: Date.now()
+          });
+          await markOrderSynced(order.id);
+        } catch (e) {
+          console.warn('Sync failed for order', order.id, e);
+        }
+      }
+      await renderQueue();
+    }
+
+    // ─── Offline Drawer UI ───────────────────────────────────────────
+    const drawer = document.getElementById('offline-drawer');
+    const backdrop = document.getElementById('drawer-backdrop');
+
+    offlineFab.addEventListener('click', async () => {
+      drawer.classList.add('open');
+      await renderQueue();
+    });
+    document.getElementById('btn-close-drawer').addEventListener('click', () => drawer.classList.remove('open'));
+    backdrop.addEventListener('click', () => drawer.classList.remove('open'));
+
+    document.getElementById('btn-save-offline').addEventListener('click', async () => {
+      const mesa  = document.getElementById('offline-mesa').value.trim();
+      const items = document.getElementById('offline-items').value.trim();
+      const note  = document.getElementById('offline-note-input').value.trim();
+      if (!mesa && !items) return;
+      await saveOrderLocally({ mesa, items, note });
+      document.getElementById('offline-mesa').value  = '';
+      document.getElementById('offline-items').value = '';
+      document.getElementById('offline-note-input').value = '';
+      await renderQueue();
+    });
+
+    syncBtn.addEventListener('click', async () => {
+      syncBtn.disabled = true;
+      syncBtn.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Sincronizando…';
+      await syncOfflineOrders();
+      syncBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Sincronizar ahora';
+      syncBtn.disabled = !isOnline;
+    });
+
+    // Initial render
+    renderQueue();
+
+    // ─── Kitchen Alarm ───────────────────────────────────────────────
+    let alarmInterval = null;
+    let audioCtx = null;
+
+    function playAlarmSound() {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const t = audioCtx.currentTime;
+        [[880, 0, 0.13], [1100, 0.16, 0.12], [880, 0.32, 0.13], [1100, 0.48, 0.15]].forEach(([freq, start, dur]) => {
+          const osc  = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.connect(gain); gain.connect(audioCtx.destination);
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, t + start);
+          gain.gain.setValueAtTime(0.6, t + start);
+          osc.start(t + start); osc.stop(t + start + dur);
+        });
+      } catch (e) { /* Audio not available */ }
+    }
+
+    function startAlarm(msg) {
+      document.getElementById('alarm-message').textContent = msg;
+      const overlay = document.getElementById('alarm-overlay');
+      overlay.classList.add('flash-red');
+      overlay.style.display = 'flex';
+      playAlarmSound();
+      if (alarmInterval) clearInterval(alarmInterval);
+      alarmInterval = setInterval(playAlarmSound, 1800);
+      // Use a non-blocking in-page notification instead of alert()
+      // (alert() freezes Android WebView — removed intentionally)
+    }
+
+    function stopAlarm() {
+      const overlay = document.getElementById('alarm-overlay');
+      overlay.style.display = 'none';
+      overlay.classList.remove('flash-red');
+      if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+    }
+
+    document.getElementById('alarm-dismiss').addEventListener('click', stopAlarm);
+
+    function startNotificationListener() {
+      if (!meseroId) return;
+      const path = `negocios/${negocioID}/notificaciones/${meseroId.toLowerCase().trim()}`;
+      db.ref(path).on('child_added', snap => {
+        const noti = snap.val();
+        if (noti && noti.mensaje) {
+          startAlarm(noti.mensaje);
+          db.ref(`${path}/${snap.key}`).remove();
+        }
+      });
+    }
+
+    // ─── Service Worker registration ────────────────────────────────
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('pos-sw.js').catch(() => {
+        // SW not available — offline caching won't work but app still runs
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODUS FOOD — Inyección Demo</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh;padding:24px}
+  h1{font-size:22px;font-weight:900;color:#60a5fa;margin-bottom:4px}
+  .sub{font-size:12px;color:#64748b;margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr;gap:16px;margin-bottom:24px}
+  .card{background:#1e293b;border:1px solid #334155;border-radius:16px;padding:20px;max-width:500px}
+  .card h2{font-size:15px;font-weight:800;margin-bottom:4px}
+  .card p{font-size:11px;color:#94a3b8;margin-bottom:14px}
+  .badge{display:inline-block;font-size:9px;font-weight:800;padding:2px 8px;border-radius:99px;text-transform:uppercase;margin-bottom:10px}
+  .b-orange{background:#c2410c;color:#ffedd5}
+  .btn{display:block;width:100%;padding:11px;border-radius:10px;font-size:13px;font-weight:800;border:none;cursor:pointer;transition:.15s;font-family:inherit}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-orange{background:#ea580c;color:white}
+  .btn-orange:hover:not(:disabled){background:#c2410c}
+  .log{background:#0f172a;border:1px solid #1e293b;border-radius:12px;padding:14px;height:280px;overflow-y:auto;font-size:11px;font-family:monospace;margin-top:16px;max-width:600px;}
+  .log p{padding:2px 0;border-bottom:1px solid #1e293b20}
+  .ok{color:#34d399}.err{color:#f87171}.info{color:#60a5fa}.warn{color:#fbbf24}
+  .stat{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .stat span{font-size:10px;background:#0f172a;border:1px solid #334155;padding:3px 8px;border-radius:6px;color:#94a3b8}
+  #pb-1{height:4px;background:#ea580c;border-radius:2px;transition:width .4s;width:0}
+  .progress{height:4px;background:#1e293b;border-radius:2px;margin-top:10px;overflow:hidden}
+</style>
+</head>
+<body>
+
+<h1>🍽️ MODUS FOOD — Inyección Demo</h1>
+<p class="sub">Inyecta el restaurante demo con platillos, mesas, empleados y órdenes.</p>
+
+<div class="grid">
+  <!-- EMPRESA 1 -->
+  <div class="card">
+    <span class="badge b-orange">🍕 Restaurante</span>
+    <h2>RESTAURANTE EL BUEN SABOR</h2>
+    <p>Restaurante con mesas, para llevar y a domicilio. DTE Activo.</p>
+    <div class="stat">
+      <span>👤 1 Admin + 3 Meseros</span>
+      <span>🟢 Mesas y Delivery</span>
+      <span>📦 15 Platillos</span>
+    </div>
+    <div class="progress"><div id="pb-1"></div></div>
+    <button class="btn btn-orange" style="margin-top:12px" id="btn-1" onclick="inyectar()">Inyectar El Buen Sabor</button>
+  </div>
+</div>
+
+<div class="log" id="log-global">
+  <p class="info">▶ Sistema listo.</p>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script>
+// Configuración MODUS FOOD
+var FB_CFG={
+  apiKey:"AIzaSyB0o4KmxhERNvuD64fZs2I4uWhtpMvEy14",
+  authDomain:"modus-food.firebaseapp.com",
+  databaseURL:"https://modus-food-default-rtdb.firebaseio.com",
+  projectId:"modus-food",
+  storageBucket:"modus-food.firebasestorage.app",
+  messagingSenderId:"705173172281",
+  appId:"1:705173172281:web:b4b18480e94f6309af1de8"
+};
+if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
+const db=firebase.database();
+
+function log(msg,tipo='info'){
+  const el=document.getElementById('log-global');
+  const p=document.createElement('p');
+  p.className=tipo;
+  p.textContent='['+new Date().toLocaleTimeString()+'] '+msg;
+  el.appendChild(p);
+  el.scrollTop=el.scrollHeight;
+}
+function dt(y,m,d,h=9,min=0){return new Date(y,m-1,d,h,min,0).toISOString();}
+function pushKey(){return db.ref().push().key;}
+
+function getDatosRestaurante(){
+  const ID='DEMO-BUENSABOR';
+  const NOW=new Date().toISOString();
+
+  const info={
+    nombre:'RESTAURANTE EL BUEN SABOR',
+    eslogan:'El sabor de tu hogar',
+    email:'demo@buensabor.com',
+    password:'Demo2026*',
+    tel:'7777-8888',
+    plan:'ALTIORA',
+    estado:'activo',
+    pais:'SV',
+    dte_activo:true,
+    dte_razon:'ALIMENTOS EL BUEN SABOR S.A. DE C.V.',
+    dte_comercial:'EL BUEN SABOR',
+    dte_nrc:'123456-7',
+    dte_user:'demo@dte.gob.sv',
+    dte_clave:'Demo123*',
+    dte_entorno:'01',
+    fecha_creacion:NOW
+  };
+
+  const modulos={pos:true,inventario:true,mesas:true,repartidores:true,cocina:true,finanzas:true,reportes:true,dte:true,empleados:true,contabilidad:true};
+
+  const FULL_MOD={ventas:true,cocina:true,mesas:true,repartidores:true,inventario:true,dte:true,finanzas:true,empleados:true,reportes:true};
+  const MESERO_MOD={ventas:true,cocina:false,mesas:true,repartidores:false,inventario:false,dte:false,finanzas:false,empleados:false,reportes:false};
+
+  const empleados={
+    emp_001:{nombre:'ADMIN RESTAURANTE',dui:'00000000-0',tel:'7000-0000',email:'admin@buensabor.com',puesto:'Gerente',tipo:'Tiempo completo',salario:800.00,fecha:'2026-01-01',rol:'admin',color:'#e85d04',pin_app:'1111',modulos_permitidos:FULL_MOD},
+    emp_002:{nombre:'JUAN PEREZ (Mesero)',dui:'11111111-1',tel:'7000-1111',email:'juan@buensabor.com',puesto:'Mesero',tipo:'Tiempo completo',salario:400.00,fecha:'2026-02-01',rol:'empleado',color:'#1a6b32',pin_app:'2222',modulos_permitidos:MESERO_MOD},
+    emp_003:{nombre:'MARIA LOPEZ (Mesera)',dui:'22222222-2',tel:'7000-2222',email:'maria@buensabor.com',puesto:'Mesera',tipo:'Tiempo completo',salario:400.00,fecha:'2026-02-01',rol:'empleado',color:'#b5860a',pin_app:'3333',modulos_permitidos:MESERO_MOD}
+  };
+
+  const productos={
+    'PLATOS FUERTES':[
+      {nombre:'PUPUSAS REVUELTAS',precio:1.25,tipo:'producto',sku:'PLATO-01',descripcion:'Deliciosas pupusas',costo:0.50,stock:100,sinStock:false,cocina:true},
+      {nombre:'PUPUSAS DE QUESO',precio:1.25,tipo:'producto',sku:'PLATO-02',descripcion:'Con queso derretido',costo:0.60,stock:100,sinStock:false,cocina:true},
+      {nombre:'CARNE ASADA',precio:6.50,tipo:'producto',sku:'PLATO-03',descripcion:'Plato con chirmol y arroz',costo:3.00,stock:50,sinStock:false,cocina:true},
+      {nombre:'POLLO A LA PLANCHA',precio:5.50,tipo:'producto',sku:'PLATO-04',descripcion:'Pechuga con ensalada y arroz',costo:2.50,stock:40,sinStock:false,cocina:true}
+    ],
+    'BEBIDAS':[
+      {nombre:'HORCHATA LATA',precio:1.50,tipo:'producto',sku:'BEB-01',descripcion:'Bebida tradicional fría',costo:0.75,stock:150,sinStock:false,cocina:false},
+      {nombre:'COCA COLA 12oz',precio:1.25,tipo:'producto',sku:'BEB-02',descripcion:'Refresco clásico',costo:0.60,stock:200,sinStock:false,cocina:false},
+      {nombre:'LIMONADA NATURAL',precio:1.75,tipo:'producto',sku:'BEB-03',descripcion:'Limonada con hierbabuena',costo:0.50,stock:80,sinStock:false,cocina:false}
+    ],
+    'POSTRES':[
+      {nombre:'TRES LECHES',precio:2.50,tipo:'producto',sku:'POS-01',descripcion:'Delicioso pastel suave',costo:1.00,stock:20,sinStock:false,cocina:false},
+      {nombre:'FLAN DE CARAMELO',precio:2.00,tipo:'producto',sku:'POS-02',descripcion:'Flan casero',costo:0.80,stock:25,sinStock:false,cocina:false}
+    ]
+  };
+
+  const mesas={
+    'mesa_1':{x:50,y:50,w:80,h:80,estado:'libre',nombre:'Mesa 1',tipo:'cuadrada'},
+    'mesa_2':{x:160,y:50,w:80,h:80,estado:'ocupada',nombre:'Mesa 2',tipo:'cuadrada',orden:'ORD-DEMO-1'},
+    'mesa_3':{x:270,y:50,w:100,h:100,estado:'libre',nombre:'Mesa 3',tipo:'redonda'},
+    'mesa_4':{x:50,y:160,w:80,h:80,estado:'libre',nombre:'Mesa 4',tipo:'cuadrada'},
+    'mesa_5':{x:160,y:160,w:120,h:80,estado:'libre',nombre:'Mesa 5',tipo:'rectangular'}
+  };
+
+  const clientes={};
+  clientes[pushKey()]={nombre:'JUAN PEREZ GUTIERREZ',telefono:'7701-0001',email:'juan@email.com',direccion:'Col. Escalón',tipo:'natural',dui:'00123456-7',nota:'Cliente frecuente'};
+  clientes[pushKey()]={nombre:'MARIA LOURDES SANCHEZ',telefono:'7702-0002',email:'maria@email.com',direccion:'San Salvador',tipo:'natural',dui:'00234567-8'};
+  clientes[pushKey()]={nombre:'EMPRESA ALIMENTOS S.A.',telefono:'2200-1100',email:'compras@empresa.com',direccion:'Blvd. del Ejército',tipo:'juridico',nit:'0614-080290-101-2',registro:'87654-3',razonSocial:'EMPRESA ALIMENTOS S.A. DE C.V.'};
+  clientes[pushKey()]={nombre:'CONSUMIDOR FINAL',telefono:'',email:'',direccion:'',tipo:'natural',dui:'',nota:'Venta rápida'};
+
+  const insumos = {};
+  insumos[pushKey()] = {nombre: 'MASA MAIZ', categoria: 'Insumos Básicos', stock: 50, minimo: 10, unidad: 'Lbs'};
+  insumos[pushKey()] = {nombre: 'QUESO MOZZARELLA', categoria: 'Lácteos', stock: 15, minimo: 5, unidad: 'Lbs'};
+  insumos[pushKey()] = {nombre: 'TOMATES', categoria: 'Vegetales', stock: 30, minimo: 10, unidad: 'Unidades'};
+  insumos[pushKey()] = {nombre: 'CARNE RES', categoria: 'Carnes', stock: 20, minimo: 8, unidad: 'Lbs'};
+  insumos[pushKey()] = {nombre: 'PECHUGA POLLO', categoria: 'Carnes', stock: 15, minimo: 5, unidad: 'Lbs'};
+
+  // Cocina - order
+  const cocina={};
+  cocina['ORD-DEMO-1'] = {
+    orden:'ORD-DEMO-1',
+    mesa:'Mesa 2',
+    canal:'mesa',
+    mesero:'Juan Perez',
+    estado:'preparando',
+    items:[
+      {n:'CARNE ASADA', c:2, mod:'', estado:'preparando'},
+      {n:'COCA COLA 12oz', c:2, mod:'', estado:'listo'}
+    ],
+    timestamp:Date.now()
+  };
+
+  // Ventas (ejemplo de orden pagada)
+  const ventas={};
+  ventas['ORD-DEMO-TODAY'] = {
+    orden:'ORD-DEMO-TODAY', canal:'llevar', cliente:'Consumidor Final', items:[{desc:'PUPUSAS REVUELTAS',can:4,p:1.25,sub:5.00}], total:5.00, subtotal:5.00, estado:'pagado', pagado:true, timestamp:Date.now(), fecha:new Date().toLocaleDateString('es-SV')
+  };
+
+  // Repartidores
+  const repartidores = {};
+  const r1 = pushKey();
+  repartidores[r1] = { _id: r1, nombre: 'Carlos Entregas', telefono: '7111-2222', vehiculo: 'Moto Honda', estado: 'disponible', total_entregas: 12 };
+  const r2 = pushKey();
+  repartidores[r2] = { _id: r2, nombre: 'Marta Express', telefono: '7888-9999', vehiculo: 'Moto Yamaha', estado: 'disponible', total_entregas: 8 };
+
+  return {ID,info,modulos,empleados,productos,mesas,clientes,cocina,ventas,insumos,repartidores};
+}
+
+async function inyectar(){
+  const btn = document.getElementById('btn-1');
+  if(btn) btn.disabled = true;
+  document.getElementById('pb-1').style.width = '10%';
+  log('▶ Iniciando inyección...');
+  try{
+    log('Buscando y limpiando demos anteriores...');
+    const prevSnap = await db.ref('negocios').orderByChild('info/email').equalTo('demo@buensabor.com').once('value');
+    if(prevSnap.exists()){
+      const ops = [];
+      prevSnap.forEach(c => { ops.push(db.ref(`negocios/${c.key}`).remove()); });
+      await Promise.all(ops);
+      log(`Se eliminaron ${ops.length} demos anteriores.`);
+    }
+
+    log('Generando estructura de prueba...');
+    const D=getDatosRestaurante();
+    const ID=D.ID;
+
+    await db.ref(`negocios/${ID}/info`).set(D.info);
+    await db.ref(`negocios/${ID}/modulos`).set(D.modulos);
+    document.getElementById('pb-1').style.width = '30%';
+    log('✅ Info y Módulos inyectados.');
+
+    await db.ref(`negocios/${ID}/empleados`).set(D.empleados);
+    document.getElementById('pb-1').style.width = '45%';
+    log('✅ Empleados inyectados (Admin DUI: 00000000-0)');
+
+    const pKeys=Object.keys(D.productos);
+    for(const cat of pKeys){
+      for(const p of D.productos[cat]){
+        p.categoria=cat;
+        await db.ref(`negocios/${ID}/productos/${cat}/${pushKey()}`).set(p);
+      }
+    }
+    document.getElementById('pb-1').style.width = '65%';
+    log('✅ Productos Inyectados');
+
+    if(D.clientes){
+      await db.ref(`negocios/${ID}/clientes`).set(D.clientes);
+      log('✅ Clientes Inyectados');
+    }
+
+    await db.ref(`negocios/${ID}/mesas`).set(D.mesas);
+    await db.ref(`negocios/${ID}/cocina_orders`).set(D.cocina);
+    await db.ref(`negocios/${ID}/ventas`).set(D.ventas);
+    await db.ref(`negocios/${ID}/pedidos`).set(D.ventas);
+    await db.ref(`negocios/${ID}/insumos`).set(D.insumos);
+    await db.ref(`negocios/${ID}/repartidores`).set(D.repartidores);
+    
+    document.getElementById('pb-1').style.width = '100%';
+    btn.textContent = '✅ INYECCIÓN COMPLETADA';
+    btn.style.background = '#059669';
+
+    log('🎉 Restaurante inyectado correctamente. negocioID: '+ID);
+    log('🔑 Demo Login: | Correo: demo@buensabor.com | Clave: Demo2026* | DUI: 00000000-0');
+  }catch(e){
+    log('❌ ERROR: '+e.message, 'err');
+    btn.disabled=false;
+    btn.textContent='❌ Error. Reintentar';
+  }
+}
+</script>
+</body>
+</html>
