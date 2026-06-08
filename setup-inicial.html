@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS — Setup Inicial</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(135deg, #0D1F12, #1A3A20);
+    min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; padding: 24px; color: white;
+  }
+  .card {
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px; padding: 40px; width: 100%; max-width: 520px;
+    backdrop-filter: blur(20px); box-shadow: 0 40px 80px rgba(0,0,0,.4);
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: rgba(255,255,255,.45); margin-bottom: 28px; }
+  .log {
+    background: rgba(0,0,0,.4); border-radius: 12px; padding: 16px;
+    font-size: 12px; font-family: monospace; min-height: 200px;
+    max-height: 320px; overflow-y: auto; margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .log p { margin: 3px 0; line-height: 1.5; }
+  .ok  { color: #4ade80; }
+  .er  { color: #f87171; }
+  .inf { color: rgba(255,255,255,.55); }
+  .warn-txt { color: #fde047; }
+  .btn {
+    width: 100%; padding: 14px; border-radius: 13px; border: none;
+    background: linear-gradient(135deg, #E85D04, #FF6B35);
+    color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(232,93,4,.35); transition: .2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .cred {
+    background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 12px; padding: 16px; margin-bottom: 20px; font-size: 13px;
+  }
+  .cred strong { display: block; color: #E85D04; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+  .cred table { width: 100%; border-collapse: collapse; }
+  .cred td { padding: 5px 0; vertical-align: top; }
+  .cred td:first-child { color: rgba(255,255,255,.45); width: 140px; }
+  .cred td:last-child { color: white; font-weight: 600; font-family: monospace; font-size: 13px; }
+  .warn {
+    background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3);
+    border-radius: 10px; padding: 12px 14px; font-size: 12px;
+    color: #fde047; margin-bottom: 20px; line-height: 1.6;
+  }
+  .success-box {
+    background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3);
+    border-radius: 12px; padding: 20px; margin-top: 16px; display: none;
+  }
+  .success-box h3 { color: #4ade80; margin-bottom: 12px; }
+  .success-box a {
+    display: block; margin-top: 10px; padding: 12px; border-radius: 10px;
+    background: rgba(74,222,128,.15); color: #4ade80; text-decoration: none;
+    font-weight: 700; text-align: center; transition: .2s;
+  }
+  .success-box a:hover { background: rgba(74,222,128,.25); }
+  .rules-box {
+    background: rgba(251,191,36,.08); border: 1px solid rgba(251,191,36,.25);
+    border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 12px;
+    color: rgba(255,255,255,.7); line-height: 1.7;
+  }
+  .rules-box code {
+    background: rgba(0,0,0,.4); padding: 2px 6px; border-radius: 4px;
+    color: #fde047; font-size: 11px; display: block; margin-top: 8px;
+    white-space: pre;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="LOGOPARCHESYS.png" alt="Logo" style="height:50px;margin-bottom:16px;object-fit:contain;" onerror="this.style.display='none'">
+  <h1>🚀 Setup Inicial — EL PARCHE</h1>
+  <p class="sub">Inicializa toda la base de datos Firebase con datos del negocio, empleados y menú demo.</p>
+
+  <div class="cred">
+    <strong>Credenciales que se crearán</strong>
+    <table>
+      <tr><td>Negocio ID</td><td>elparche</td></tr>
+      <tr><td>Nombre</td><td>EL PARCHE</td></tr>
+      <tr><td>Correo login</td><td>elparche919@gmail.com</td></tr>
+      <tr><td>PIN propietario</td><td>1919</td></tr>
+      <tr><td>PIN cajero demo</td><td>2020</td></tr>
+      <tr><td>PIN mesero demo</td><td>3030</td></tr>
+    </table>
+  </div>
+
+  <div class="warn">
+    ⚠️ <strong>Antes de continuar:</strong> las Reglas de Firebase deben permitir escritura.<br>
+    En Firebase Console → Realtime Database → Reglas, pon temporalmente:<br>
+    <code style="background:rgba(0,0,0,.4);padding:4px 8px;border-radius:5px;font-size:11px;display:inline-block;margin-top:4px">{ "rules": { ".read": true, ".write": true } }</code>
+  </div>
+
+  <div class="rules-box">
+    📋 <strong>Reglas definitivas a aplicar DESPUÉS del setup:</strong> guarda el archivo
+    <code>{
+  "rules": {
+    "negocios": {
+      "$negocioId": {
+        "info":             { ".read": true, ".write": "auth != null" },
+        "productos":        { ".read": true, ".write": "auth != null" },
+        "menu_categorias":  { ".read": true, ".write": "auth != null" },
+        "empleados":        { ".read": true, ".write": "auth != null" },
+        "pedidos":          { ".read": "auth != null", ".write": true },
+        "cocina_orders":    { ".read": "auth != null", ".write": true },
+        "ordenes_web":      { ".read": "auth != null", ".write": true },
+        "contador_ordenes": { ".read": true, ".write": true }
+      }
+    }
+  }
+}</code>
+  </div>
+
+  <div class="log" id="log">
+    <p class="inf">Presiona el botón para inicializar la base de datos...</p>
+  </div>
+
+  <button class="btn" id="btn" onclick="setup()">🚀 Inicializar Todo</button>
+
+  <div class="success-box" id="successBox">
+    <h3>✅ ¡Sistema listo!</h3>
+    <p style="font-size:13px; color:rgba(255,255,255,.6);">
+      Credenciales de acceso al portal:<br>
+      <strong style="color:white">Correo:</strong> elparche919@gmail.com &nbsp;|&nbsp; <strong style="color:white">PIN:</strong> 1919
+    </p>
+    <a href="index.html">→ Ir al Login del Portal</a>
+    <a href="menu-cliente.html?negocio=elparche" target="_blank">→ Ver Menú del Cliente</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
+  authDomain: "parche-sys.firebaseapp.com",
+  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
+  projectId: "parche-sys",
+  storageBucket: "parche-sys.firebasestorage.app",
+  messagingSenderId: "5761192689",
+  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+var NEGOCIO = 'elparche';
+
+function log(msg, cls) {
+  var el = document.getElementById('log');
+  var p  = document.createElement('p');
+  p.className = cls || 'inf';
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function setup() {
+  var btn = document.getElementById('btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Inicializando...';
+  document.getElementById('log').innerHTML = '';
+
+  try {
+    /* ─── 1. INFO DEL NEGOCIO ─── */
+    log('📋 Escribiendo info del negocio...', 'inf');
+    await db.ref('negocios/' + NEGOCIO + '/info').set({
+      nombre:    'EL PARCHE',
+      email:     'elparche919@gmail.com',
+      password:  'parcherumba',
+      telefono:  '7700-0000',
+      direccion: 'San Salvador, El Salvador',
+      moneda:    'USD',
+      pais:      'SV',
+      iva:       0.13,
+      propina:   0,
+      created:   Date.now()
+    });
+    log('✓ Info del negocio creada.', 'ok');
+
+    /* ─── 2. CONFIG ─── */
+    log('⚙️  Escribiendo configuración...', 'inf');
+    await db.ref('negocios/' + NEGOCIO + '/config').set({
+      iva: 0.13, propina: 0, mesas: 10, tema: 'dark', modulo_dte: false
+    });
+    log('✓ Configuración guardada.', 'ok');
+
+    /* ─── 3. EMPLEADOS ─── */
+    log('👥 Creando empleados...', 'inf');
+    await db.ref('negocios/' + NEGOCIO + '/empleados').set({
+      emp_propietario: {
+        nombre: 'Propietario', rol: 'propietario', puesto: 'Propietario',
+        dui: '06741021-6', pin: '1919', pin_app: '1919',
+        activo: true, created: Date.now(),
+        modulos: {
+          pronostico: true, auditoria: true, menu: true, inventario: true,
+          pos: true, cocina: true, mapa_mesas: true, delivery: true,
+          empleados: true, dte: true, contabilidad: true
+        }
+      },
+      emp_cajero: {
+        nombre: 'Cajero Demo', rol: 'cajero', puesto: 'Cajero',
+        dui: '00000000-0', pin: '2020', pin_app: '2020',
+        activo: true, created: Date.now(),
+        modulos: { pos: true, cocina: true, mapa_mesas: true }
+      },
+      emp_mesero: {
+        nombre: 'Mesero Demo', rol: 'mesero', puesto: 'Mesero',
+        dui: '11111111-1', pin: '3030', pin_app: '3030',
+        activo: true, created: Date.now(),
+        modulos: { pos: true, mapa_mesas: true }
+      }
+    });
+    log('✓ 3 empleados creados (propietario PIN:1919, cajero PIN:2020, mesero PIN:3030).', 'ok');
+
+    /* ─── 4. MÓDULOS ─── */
+    await db.ref('negocios/' + NEGOCIO + '/modulos').set({
+      pos: true, cocina: true, delivery: true,
+      empleados: true, contabilidad: true, mesas: true
+    });
+
+    /* ─── 5. CATEGORÍAS DEL MENÚ ─── */
+    log('🗂️  Creando categorías del menú...', 'inf');
+    await db.ref('negocios/' + NEGOCIO + '/menu_categorias').set({
+      cat_entradas:     { nombre: 'ENTRADAS',         emoji: '🥗', descripcion: 'Sopas y botanas',             orden: 1, ts: Date.now() },
+      cat_hamburguesas: { nombre: 'HAMBURGUESAS',     emoji: '🍔', descripcion: 'Hamburguesas artesanales',    orden: 2, ts: Date.now() },
+      cat_pollos:       { nombre: 'POLLOS Y ALITAS',  emoji: '🍗', descripcion: 'Pollo frito, asado y alitas', orden: 3, ts: Date.now() },
+      cat_bebidas:      { nombre: 'BEBIDAS',          emoji: '🥤', descripcion: 'Refrescos y jugos naturales', orden: 4, ts: Date.now() },
+      cat_postres:      { nombre: 'POSTRES',          emoji: '🍰', descripcion: 'Dulces y postres de la casa', orden: 5, ts: Date.now() }
+    });
+    log('✓ 5 categorías del menú creadas.', 'ok');
+
+    /* ─── 6. PRODUCTOS ─── */
+    log('🍽️  Cargando platillos del menú...', 'inf');
+
+    var productos = {
+      'ENTRADAS': {
+        prod_ent_1: { nombre: 'Sopa del Día',         descripcion: 'Sopa casera con ingredientes frescos. Se sirve con pan francés.', precio: 3.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ent_2: { nombre: 'Ensalada César',       descripcion: 'Lechuga romana, crutones, parmesano y aderezo César artesanal.', precio: 5.25, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ent_3: { nombre: 'Alitas de Entrada (6)', descripcion: 'Seis alitas fritas con salsa BBQ o Buffalo. Con dip de queso azul.', precio: 6.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ent_4: { nombre: 'Nachos con Queso',    descripcion: 'Totopos con queso derretido, jalapeños, crema y guacamole.', precio: 4.75, img: '', oculto: false, gravado: true, ts: Date.now() }
+      },
+      'HAMBURGUESAS': {
+        prod_ham_1: { nombre: 'Hamburguesa El Parche', descripcion: 'Carne 100% res, doble queso, cebolla caramelizada y salsa especial. Con papas.', precio: 8.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ham_2: { nombre: 'Hamburguesa Clásica',  descripcion: 'Carne de res, queso americano, lechuga, tomate y mostaza. Con papas fritas.', precio: 6.75, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ham_3: { nombre: 'Hamburguesa BBQ',      descripcion: 'Carne de res con salsa BBQ ahumada, bacon crujiente y queso cheddar.', precio: 9.25, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ham_4: { nombre: 'Hamburguesa Vegetariana', descripcion: 'Medallón de garbanzos, aguacate, espinacas y aderezo de hierbas. Con papas al horno.', precio: 7.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_ham_5: { nombre: 'Hamburguesa Doble',   descripcion: 'Doble carne, doble queso, tocineta, lechuga y salsa especial. Para buen apetito.', precio: 11.00, img: '', oculto: false, gravado: true, ts: Date.now() }
+      },
+      'POLLOS Y ALITAS': {
+        prod_pol_1: { nombre: 'Pollo Frito (2 piezas)', descripcion: 'Dos piezas de pollo dorado y crujiente. Con arroz, ensalada y tortillas.', precio: 7.00, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_pol_2: { nombre: 'Alitas BBQ (12 piezas)', descripcion: 'Docena de alitas bañadas en salsa BBQ ahumada. Con papas y dip de rancho.', precio: 10.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_pol_3: { nombre: 'Alitas Buffalo (12 piezas)', descripcion: 'Docena de alitas picantes estilo Buffalo. Con dip de queso azul y apio.', precio: 10.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_pol_4: { nombre: 'Pollo a la Parrilla', descripcion: 'Pechuga marinada con hierbas y limón. Con vegetales y papas al horno.', precio: 8.75, img: '', oculto: false, gravado: true, ts: Date.now() }
+      },
+      'BEBIDAS': {
+        prod_beb_1: { nombre: 'Refresco en Lata',  descripcion: 'Coca-Cola, Pepsi, Sprite, Fanta o agua mineral. Bien fría.', precio: 1.25, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_beb_2: { nombre: 'Jugo Natural',       descripcion: 'Jugo fresco: naranja, sandía, melón o maracuyá. Preparado al momento.', precio: 2.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_beb_3: { nombre: 'Limonada Natural',  descripcion: 'Limonada con limones naturales, agua mineral y menta. Con o sin gas.', precio: 2.00, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_beb_4: { nombre: 'Michelada Sin Alcohol', descripcion: 'Clamato, limón, chile en polvo y salsa inglesa. Vaso escarchado.', precio: 3.25, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_beb_5: { nombre: 'Agua Pura 500ml',   descripcion: 'Botella de agua purificada bien fría.', precio: 0.75, img: '', oculto: false, gravado: false, ts: Date.now() }
+      },
+      'POSTRES': {
+        prod_pos_1: { nombre: 'Pastel de Chocolate', descripcion: 'Porción de pastel húmedo con ganache y helado de vainilla.', precio: 3.75, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_pos_2: { nombre: 'Helado 2 Bolas',     descripcion: 'Dos bolas artesanales: vainilla, fresa, chocolate, mango u oreo.', precio: 2.50, img: '', oculto: false, gravado: true, ts: Date.now() },
+        prod_pos_3: { nombre: 'Churros con Chocolate', descripcion: 'Churros recién hechos con azúcar, canela y dip de chocolate caliente.', precio: 3.00, img: '', oculto: false, gravado: true, ts: Date.now() }
+      }
+    };
+
+    var totalProd = 0;
+    for (var cat in productos) {
+      await db.ref('negocios/' + NEGOCIO + '/productos/' + cat).set(productos[cat]);
+      var count = Object.keys(productos[cat]).length;
+      totalProd += count;
+      log('  ✓ ' + cat + ' — ' + count + ' platillos', 'ok');
+    }
+    log('✓ Total: ' + totalProd + ' platillos en ' + Object.keys(productos).length + ' categorías.', 'ok');
+
+    /* ─── 7. VERIFICACIÓN ─── */
+    log('', 'inf');
+    log('🔍 Verificando datos guardados...', 'inf');
+    var snap = await db.ref('negocios/' + NEGOCIO + '/info/nombre').once('value');
+    log('✓ Negocio: ' + snap.val(), 'ok');
+    var empSnap = await db.ref('negocios/' + NEGOCIO + '/empleados').once('value');
+    log('✓ Empleados registrados: ' + empSnap.numChildren(), 'ok');
+
+    log('', 'inf');
+    log('════════════════════════════════', 'inf');
+    log('✅ Setup completado correctamente.', 'ok');
+    log('➡  Ahora aplica las reglas definitivas en Firebase Console.', 'warn-txt');
+    log('➡  Luego abre index.html para hacer login.', 'warn-txt');
+
+    btn.textContent = '✅ ¡Listo!';
+    btn.style.background = 'linear-gradient(135deg,#16a34a,#22c55e)';
+    document.getElementById('successBox').style.display = 'block';
+
+  } catch(e) {
+    log('❌ Error: ' + e.message, 'er');
+    log('→ Revisa que las Reglas estén en modo prueba (.read y .write = true)', 'er');
+    log('→ Detalle: ' + (e.code || e), 'er');
+    btn.disabled = false;
+    btn.textContent = '🔄 Reintentar';
+  }
+}
+</script>
+</body>
+</html>

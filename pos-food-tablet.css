@@ -631,3 +631,26 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   }
 }
 
+/* ── HEIGHT OPTIMIZATION FOR LENOVO TAB 8.7 OR SMALL VIEWPORTS (<=800px) ── */
+@media (max-height: 800px) and (min-width: 768px) {
+  .pnl-r-body {
+    padding: 12px !important;
+    gap: 10px !important;
+  }
+  #tablet-btn-mesas,
+  #tablet-btn-ordenes,
+  .pnl-r-body .send-kitchen-btn,
+  .pnl-r-body #btn-checkout-trigger {
+    min-height: 90px !important;
+    padding: 10px !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+  }
+  #tablet-btn-mesas i,
+  #tablet-btn-ordenes i,
+  .pnl-r-body .send-kitchen-btn i,
+  .pnl-r-body #btn-checkout-trigger i {
+    font-size: 22px !important;
+  }
+}
+

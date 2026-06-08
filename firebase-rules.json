@@ -1,0 +1,61 @@
+{
+  "rules": {
+    "negocios": {
+      "$negocioId": {
+
+        /* ══════════════════════════════════════
+           INFORMACIÓN PÚBLICA DEL NEGOCIO
+           Solo lectura pública en info, productos y menu_categorias
+           para que el menú cliente funcione sin login
+        ══════════════════════════════════════ */
+        "info": {
+          ".read": true,
+          ".write": "auth != null"
+        },
+        "productos": {
+          ".read": true,
+          ".write": "auth != null"
+        },
+        "menu_categorias": {
+          ".read": true,
+          ".write": "auth != null"
+        },
+
+        /* ══════════════════════════════════════
+           PEDIDOS — El cliente puede crear (push)
+           pero no leer los de otros
+        ══════════════════════════════════════ */
+        "pedidos": {
+          ".read": "auth != null",
+          ".write": true
+        },
+        "cocina_orders": {
+          ".read": "auth != null",
+          ".write": true
+        },
+        "ordenes_web": {
+          ".read": "auth != null",
+          ".write": true
+        },
+        "contador_ordenes": {
+          ".read": true,
+          ".write": true
+        },
+
+        /* ══════════════════════════════════════
+           RESTO DE MÓDULOS — Solo autenticados
+        ══════════════════════════════════════ */
+        "empleados":         { ".read": "auth != null", ".write": "auth != null" },
+        "inventario_global": { ".read": "auth != null", ".write": "auth != null" },
+        "finanzas_food":     { ".read": "auth != null", ".write": "auth != null" },
+        "mesas":             { ".read": "auth != null", ".write": "auth != null" },
+        "repartidores":      { ".read": "auth != null", ".write": "auth != null" },
+        "config":            { ".read": "auth != null", ".write": "auth != null" },
+        "cortes":            { ".read": "auth != null", ".write": "auth != null" },
+        "gastos":            { ".read": "auth != null", ".write": "auth != null" },
+        "merma":             { ".read": "auth != null", ".write": "auth != null" },
+        "metas":             { ".read": "auth != null", ".write": "auth != null" }
+      }
+    }
+  }
+}

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PARCHE SYS — Setup Menú Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(135deg, #1a0a2e, #2d1854);
+    min-height: 100vh; display: flex; align-items: center;
+    justify-content: center; padding: 24px; color: white;
+  }
+  .card {
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+    border-radius: 24px; padding: 40px; width: 100%; max-width: 520px;
+    backdrop-filter: blur(20px); box-shadow: 0 40px 80px rgba(0,0,0,.4);
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .sub { font-size: 13px; color: rgba(255,255,255,.45); margin-bottom: 28px; }
+  .log {
+    background: rgba(0,0,0,.4); border-radius: 12px; padding: 16px;
+    font-size: 12px; font-family: monospace; min-height: 180px;
+    max-height: 300px; overflow-y: auto; margin-bottom: 20px;
+    border: 1px solid rgba(255,255,255,.08);
+  }
+  .log p { margin: 3px 0; }
+  .ok  { color: #4ade80; }
+  .er  { color: #f87171; }
+  .inf { color: rgba(255,255,255,.55); }
+  .btn {
+    width: 100%; padding: 14px; border-radius: 13px; border: none;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    color: white; font-size: 15px; font-weight: 700; cursor: pointer;
+    box-shadow: 0 8px 20px rgba(124,58,237,.35); transition: .2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .success-box {
+    background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.3);
+    border-radius: 12px; padding: 20px; margin-top: 16px; display: none;
+  }
+  .success-box h3 { color: #4ade80; margin-bottom: 12px; }
+  .success-box a {
+    display: block; margin-top: 10px; padding: 12px; border-radius: 10px;
+    background: rgba(74,222,128,.15); color: #4ade80; text-decoration: none;
+    font-weight: 700; text-align: center; transition: .2s;
+  }
+  .success-box a:hover { background: rgba(74,222,128,.25); }
+  .warn {
+    background: rgba(234,179,8,.1); border: 1px solid rgba(234,179,8,.3);
+    border-radius: 10px; padding: 12px 14px; font-size: 12px;
+    color: #fde047; margin-bottom: 20px; line-height: 1.6;
+  }
+  .info-box {
+    background: rgba(56,189,248,.1); border: 1px solid rgba(56,189,248,.3);
+    border-radius: 10px; padding: 12px 14px; font-size: 12px;
+    color: #7dd3fc; margin-bottom: 20px; line-height: 1.6;
+  }
+  .negocio-input {
+    width: 100%; padding: 12px 14px; border-radius: 10px;
+    border: 1.5px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08);
+    color: white; font-family: 'DM Sans', sans-serif; font-size: 14px;
+    font-weight: 700; outline: none; margin-bottom: 16px;
+    transition: border-color .2s;
+  }
+  .negocio-input:focus { border-color: #a855f7; }
+  label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.5); 
+    text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <img src="LOGOPARCHESYS.png" alt="Logo" style="height:50px;margin-bottom:16px;object-fit:contain;" onerror="this.style.display='none'">
+  <h1>🍽️ Carga de Menú Demo</h1>
+  <p class="sub">Carga categorías y platillos de ejemplo en Firebase.</p>
+
+  <div class="info-box">
+    ℹ️ Este script carga un menú completo de demo en la ruta <code>negocios/{negocioID}/productos</code> y <code>negocios/{negocioID}/menu_categorias</code>.
+    Puedes ejecutarlo múltiples veces — sobreescribe los datos anteriores.
+  </div>
+
+  <label>Negocio ID</label>
+  <input type="text" class="negocio-input" id="negocio-id" value="elparche" placeholder="elparche">
+
+  <div class="warn">
+    ⚠️ Las <strong>Reglas de Firebase</strong> deben estar en modo prueba (<code>.read: true, .write: true</code>) para que funcione.
+  </div>
+
+  <div class="log" id="log">
+    <p class="inf">Presiona el botón para cargar el menú de demo...</p>
+  </div>
+
+  <button class="btn" id="btn" onclick="cargarMenu()">🚀 Cargar Menú Demo</button>
+
+  <div class="success-box" id="successBox">
+    <h3>✅ ¡Menú cargado exitosamente!</h3>
+    <p style="font-size:13px; color:rgba(255,255,255,.6);">
+      Se cargaron categorías y platillos de ejemplo.<br>
+      Abre el menú de cliente para verlos.
+    </p>
+    <a href="menu-cliente.html" target="_blank">→ Abrir Menú Cliente</a>
+    <a href="portal-food.html" target="_blank">→ Abrir Portal Gerencial</a>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script>
+var firebaseConfig = {
+  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
+  authDomain: "parche-sys.firebaseapp.com",
+  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
+  projectId: "parche-sys",
+  storageBucket: "parche-sys.firebasestorage.app",
+  messagingSenderId: "5761192689",
+  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+};
+firebase.initializeApp(firebaseConfig);
+var db = firebase.database();
+
+function log(msg, cls) {
+  var el = document.getElementById('log');
+  var p  = document.createElement('p');
+  p.className = cls || 'inf';
+  p.textContent = msg;
+  el.appendChild(p);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function cargarMenu() {
+  var btn       = document.getElementById('btn');
+  var negocioID = document.getElementById('negocio-id').value.trim() || 'elparche';
+  btn.disabled  = true;
+  btn.textContent = '⏳ Cargando...';
+  document.getElementById('log').innerHTML = '';
+
+  try {
+    log('📡 Conectando con Firebase... negocioID: ' + negocioID, 'inf');
+
+    /* ══════════════════════════════════════════
+       CATEGORÍAS DEL MENÚ
+    ══════════════════════════════════════════ */
+    var categorias = {
+      cat_entradas: {
+        nombre:      'ENTRADAS',
+        emoji:       '🥗',
+        descripcion: 'Sopas, ensaladas y botanas',
+        orden:       1,
+        ts:          Date.now()
+      },
+      cat_hamburguesas: {
+        nombre:      'HAMBURGUESAS',
+        emoji:       '🍔',
+        descripcion: 'Nuestras hamburguesas artesanales',
+        orden:       2,
+        ts:          Date.now()
+      },
+      cat_pollos: {
+        nombre:      'POLLOS Y ALITAS',
+        emoji:       '🍗',
+        descripcion: 'Pollo frito, asado y alitas',
+        orden:       3,
+        ts:          Date.now()
+      },
+      cat_bebidas: {
+        nombre:      'BEBIDAS',
+        emoji:       '🥤',
+        descripcion: 'Refrescos, jugos y cocteles sin alcohol',
+        orden:       4,
+        ts:          Date.now()
+      },
+      cat_postres: {
+        nombre:      'POSTRES',
+        emoji:       '🍰',
+        descripcion: 'Dulces y postres de la casa',
+        orden:       5,
+        ts:          Date.now()
+      }
+    };
+
+    log('✏️  Escribiendo categorías del menú...', 'inf');
+    await db.ref('negocios/' + negocioID + '/menu_categorias').set(categorias);
+    log('✓ ' + Object.keys(categorias).length + ' categorías creadas.', 'ok');
+
+    /* ══════════════════════════════════════════
+       PRODUCTOS POR CATEGORÍA
+    ══════════════════════════════════════════ */
+    var productos = {
+
+      /* ── ENTRADAS ── */
+      'ENTRADAS': {
+        prod_ent_1: {
+          nombre:      'Sopa del Día',
+          descripcion: 'Sopa casera preparada con los ingredientes frescos de la temporada. Se sirve con pan francés.',
+          precio:      3.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          stockFijo:   0,
+          descuenta:   false,
+          ts:          Date.now()
+        },
+        prod_ent_2: {
+          nombre:      'Ensalada César',
+          descripcion: 'Lechuga romana, crutones, parmesano rallado y aderezo César artesanal.',
+          precio:      5.25,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ent_3: {
+          nombre:      'Alitas de Entrada (6 piezas)',
+          descripcion: 'Seis alitas de pollo fritas con salsa BBQ o Buffalo. Acompañadas de dip de queso azul.',
+          precio:      6.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ent_4: {
+          nombre:      'Nachos con Queso',
+          descripcion: 'Totopos crujientes con queso derretido, jalapeños, crema y guacamole.',
+          precio:      4.75,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        }
+      },
+
+      /* ── HAMBURGUESAS ── */
+      'HAMBURGUESAS': {
+        prod_ham_1: {
+          nombre:      'Hamburguesa El Parche',
+          descripcion: 'Nuestra hamburguesa estrella. Carne 100% res, doble queso, lechuga, tomate, cebolla caramelizada y salsa especial de la casa. Acompañada de papas.',
+          precio:      8.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ham_2: {
+          nombre:      'Hamburguesa Clásica',
+          descripcion: 'Carne de res a la plancha, queso americano, lechuga, tomate y mostaza. Con papas fritas.',
+          precio:      6.75,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ham_3: {
+          nombre:      'Hamburguesa BBQ',
+          descripcion: 'Carne de res con salsa BBQ ahumada, cebolla frita, bacon crujiente y queso cheddar.',
+          precio:      9.25,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ham_4: {
+          nombre:      'Hamburguesa Vegetariana',
+          descripcion: 'Medallón de garbanzos y vegetales, aguacate, espinacas, tomate y aderezo de hierbas. Con papas al horno.',
+          precio:      7.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_ham_5: {
+          nombre:      'Hamburguesa Doble',
+          descripcion: 'Doble carne de res, doble queso, tocineta, lechuga, tomate y salsa especial. Para los que tienen buen apetito.',
+          precio:      11.00,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        }
+      },
+
+      /* ── POLLOS Y ALITAS ── */
+      'POLLOS Y ALITAS': {
+        prod_pol_1: {
+          nombre:      'Pollo Frito (2 piezas)',
+          descripcion: 'Dos piezas de pollo frito dorado y crujiente. Acompañadas de arroz, ensalada y tortillas.',
+          precio:      7.00,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_pol_2: {
+          nombre:      'Alitas BBQ (12 piezas)',
+          descripcion: 'Docena de alitas bañadas en salsa BBQ ahumada. Se acompañan con papas fritas y dip de rancho.',
+          precio:      10.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_pol_3: {
+          nombre:      'Alitas Buffalo (12 piezas)',
+          descripcion: 'Docena de alitas picantes estilo Buffalo. Con dip de queso azul y apio.',
+          precio:      10.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_pol_4: {
+          nombre:      'Pollo Asado a la Parilla',
+          descripcion: 'Pechuga de pollo a la parilla marinada con hierbas y limón. Con guarnición de vegetales y papas.',
+          precio:      8.75,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        }
+      },
+
+      /* ── BEBIDAS ── */
+      'BEBIDAS': {
+        prod_beb_1: {
+          nombre:      'Refresco en Lata',
+          descripcion: 'Coca-Cola, Pepsi, Sprite, Fanta o agua mineral. Bien fría.',
+          precio:      1.25,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_beb_2: {
+          nombre:      'Jugo Natural',
+          descripcion: 'Jugo fresco del día: naranja, sandía, melón o maracuyá. Preparado al momento.',
+          precio:      2.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_beb_3: {
+          nombre:      'Limonada Natural',
+          descripcion: 'Limonada fresca preparada con limones naturales, agua mineral y menta. Sin gas o con gas.',
+          precio:      2.00,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_beb_4: {
+          nombre:      'Michelada Sin Alcohol',
+          descripcion: 'Bebida refrescante de clamato, limón, chile en polvo y salsa inglesa. Con vaso escarchado.',
+          precio:      3.25,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_beb_5: {
+          nombre:      'Agua Pura (500ml)',
+          descripcion: 'Botella de agua purificada bien fría.',
+          precio:      0.75,
+          img:         '',
+          oculto:      false,
+          gravado:     false,
+          ts:          Date.now()
+        }
+      },
+
+      /* ── POSTRES ── */
+      'POSTRES': {
+        prod_pos_1: {
+          nombre:      'Pastel de Chocolate',
+          descripcion: 'Porción de pastel húmedo de chocolate con ganache y helado de vainilla.',
+          precio:      3.75,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_pos_2: {
+          nombre:      'Helado 2 Bolas',
+          descripcion: 'Dos bolas de helado artesanal. Sabores: vainilla, fresa, chocolate, mango o oreo.',
+          precio:      2.50,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        },
+        prod_pos_3: {
+          nombre:      'Churros con Chocolate',
+          descripcion: 'Porción de churros recién hechos espolvoreados con azúcar y canela. Con dip de chocolate caliente.',
+          precio:      3.00,
+          img:         '',
+          oculto:      false,
+          gravado:     true,
+          ts:          Date.now()
+        }
+      }
+    };
+
+    log('✏️  Escribiendo productos del menú...', 'inf');
+    var totalProd = 0;
+    for (var cat in productos) {
+      await db.ref('negocios/' + negocioID + '/productos/' + cat).set(productos[cat]);
+      var count = Object.keys(productos[cat]).length;
+      totalProd += count;
+      log('  ✓ ' + cat + ' — ' + count + ' platillos', 'ok');
+    }
+    log('✓ Total: ' + totalProd + ' platillos en ' + Object.keys(productos).length + ' categorías.', 'ok');
+
+    /* ══════════════════════════════════════════
+       INFO DEL NEGOCIO (si no existe)
+    ══════════════════════════════════════════ */
+    log('✏️  Verificando info del negocio...', 'inf');
+    var snapInfo = await db.ref('negocios/' + negocioID + '/info/nombre').once('value');
+    if (!snapInfo.exists()) {
+      await db.ref('negocios/' + negocioID + '/info').set({
+        nombre:    'EL PARCHE',
+        email:     'elparche919@gmail.com',
+        moneda:    'USD',
+        pais:      'SV',
+        created:   Date.now()
+      });
+      log('✓ Info del negocio creada.', 'ok');
+    } else {
+      log('✓ Info existente: ' + snapInfo.val(), 'ok');
+    }
+
+    log('', 'inf');
+    log('✅ ¡Menú demo cargado correctamente!', 'ok');
+
+    btn.textContent  = '✅ ¡Menú Cargado!';
+    btn.style.background = 'linear-gradient(135deg,#16a34a,#22c55e)';
+    document.getElementById('successBox').style.display = 'block';
+    document.querySelector('.success-box a').href = 'menu-cliente.html?negocio=' + negocioID;
+
+  } catch (e) {
+    log('❌ Error: ' + e.message, 'er');
+    log('→ Revisa las Reglas de Seguridad en Firebase Console.', 'er');
+    log('→ Deben estar en modo prueba: .read y .write = true', 'er');
+    btn.disabled = false;
+    btn.textContent = '🔄 Reintentar';
+  }
+}
+</script>
+</body>
+</html>

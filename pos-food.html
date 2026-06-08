@@ -275,47 +275,115 @@ body {
 .search-input:focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 5px var(--accent-light); }
 .search-icon { position: absolute; left: 40px; top: 50%; transform: translateY(-50%); color: var(--text-sub); font-size: 16px; }
 
-.prod-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; padding: 24px; }
+.prod-grid { flex: 1; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 16px; padding: 16px; }
 
-/* ── SPECTACULAR PRODUCT CARD ── */
-.prod-card {
-  background: var(--surface); border-radius: var(--radius-lg);
-  border: 1px solid var(--border); cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-  display: flex; flex-direction: column; height: auto;
-  position: relative; overflow: hidden; box-shadow: var(--shadow-sm);
-}
-.prod-card:hover { 
-  border-color: var(--accent); transform: translateY(-10px); 
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-}
+/* ── COLORFUL PRODUCT CARDS (TABLET-LIKE) ── */
 .prod-img {
-  width: 100%; aspect-ratio: 4/3;
-  background: #000; overflow: hidden; position: relative;
-  display: flex; align-items: center; justify-content: center;
+  display: none;
 }
-.prod-img img { width: 100%; height: 100%; object-fit: cover; transition: 0.6s cubic-bezier(0.4, 0, 0.2, 1); opacity: 0.85; }
-.prod-card:hover .prod-img img { transform: scale(1.1); opacity: 1; }
+.prod-card {
+  height: auto;
+  min-height: 140px;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.2s ease, border-color 0.2s ease;
+}
+.prod-card:active {
+  transform: scale(0.94);
+}
+.prod-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+}
 
-.prod-info-bar { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.prod-name { font-size: 15px; font-weight: 800; color: white; line-height: 1.3; min-height: 40px; }
-.prod-price { font-size: 18px; font-weight: 900; color: var(--accent); }
+/* Vibrant premium gradients for the text-only cards */
+.prod-card:nth-child(6n+1) {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+}
+.prod-card:nth-child(6n+2) {
+  background: linear-gradient(135deg, #064e3b 0%, #10b981 100%);
+}
+.prod-card:nth-child(6n+3) {
+  background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%);
+}
+.prod-card:nth-child(6n+4) {
+  background: linear-gradient(135deg, #701a75 0%, #d946ef 100%);
+}
+.prod-card:nth-child(6n+5) {
+  background: linear-gradient(135deg, #4c1d95 0%, #8b5cf6 100%);
+}
+.prod-card:nth-child(6n+6) {
+  background: linear-gradient(135deg, #7f1d1d 0%, #ef4444 100%);
+}
 
+.prod-info-bar {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+  gap: 8px;
+  margin-right: 28px; /* leave space for the "+" button */
+}
+.prod-name {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.25;
+  min-height: 54px;
+  word-break: break-word;
+}
+.prod-price {
+  font-size: 16px;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.95);
+  margin-top: auto;
+}
 .prod-add {
-  position: absolute; bottom: 16px; right: 16px;
-  width: 44px; height: 44px; border-radius: 15px;
-  background: var(--grad-vibrant); color: white;
-  border: none; cursor: pointer; font-size: 20px;
-  display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.3);
-  opacity: 0; transform: translateY(10px) scale(0.8); transition: all 0.4s;
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  font-size: 18px;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, background-color 0.2s ease;
+  box-shadow: none;
 }
-.prod-card:hover .prod-add { opacity: 1; transform: translateY(0) scale(1); }
+.prod-add:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.05);
+}
+.prod-add:active {
+  transform: scale(0.9);
+}
 .prod-tag {
-  position: absolute; top: 12px; left: 12px;
-  background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
-  color: white; font-size: 10px; font-weight: 900;
-  padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.1);
 }
 
 /* ── RIGHT PANEL — summary ── */
@@ -770,8 +838,88 @@ body {
   color: var(--accent);
 }
 
+/* ── OPTIMIZATION FOR 15-INCH TOUCH SCREENS & LANDSCAPE TABLETS (1024px - 1366px) ── */
+@media (min-width: 1024px) and (max-width: 1366px) {
+  .layout {
+    grid-template-columns: 300px 1fr 320px;
+  }
+  .pnl-l-body, .pnl-r-body {
+    padding: 14px;
+    gap: 14px;
+  }
+  .prod-grid {
+    padding: 12px;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+  }
+  .prod-card {
+    min-height: 125px;
+    padding: 12px;
+    border-radius: 16px;
+  }
+  .prod-name {
+    font-size: 15px;
+    min-height: 44px;
+  }
+  .prod-price {
+    font-size: 14px;
+  }
+  .prod-add {
+    width: 30px;
+    height: 30px;
+    bottom: 8px;
+    right: 8px;
+    font-size: 16px;
+  }
+  .tot-card {
+    padding: 16px;
+    gap: 10px;
+    border-radius: 16px;
+  }
+  .tot-row.bold {
+    padding-top: 12px;
+  }
+  .tot-row.bold span:last-child {
+    font-size: 28px;
+  }
+  .checkout-trigger {
+    padding: 14px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+  .send-kitchen-btn {
+    padding: 12px;
+    font-size: 13px;
+    border-radius: 10px;
+  }
+  .action-row {
+    gap: 8px;
+  }
+  .acc-btn {
+    padding: 12px 8px;
+    font-size: 10px;
+    border-radius: 10px;
+  }
+  .acc-btn i {
+    font-size: 16px;
+  }
+  .canal-detail {
+    padding: 12px;
+  }
+  .mesa-grid {
+    grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+    gap: 6px;
+  }
+  .mesa-btn {
+    border-radius: 8px;
+  }
+  .mesa-btn .mesa-num {
+    font-size: 14px;
+  }
+}
+
 /* ── RESPONSIVE MOBILE ── */
-@media (max-width: 1024px) {
+@media (max-width: 1023px) {
   .layout { 
     grid-template-columns: 1fr; 
     margin-bottom: 64px; /* padding for the bottom bar */
@@ -1552,28 +1700,54 @@ function renderCanalDetail(){
       '</div><div class="mesa-grid" id="mesa-grid">';
     if(Object.keys(_mesas).length === 0) {
       html += '<div style="font-size:11px;color:var(--muted);width:100%;text-align:center;padding:10px">Crea mesas en el Mapa primero</div>';
+      html += '</div>';
     } else {
-      const mesasArray = Object.entries(_mesas).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
+      // Group by sector
       var currentMesero = _loggedMesero;
-      mesasArray.forEach(([id, m]) => {
-        var st = m.estado || 'libre';
-        var sel = MESA_SEL == id ? 'seleccionada' : '';
-        var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
-        if(_esAdmin) isOtherMesero = false;
-        var classOther = isOtherMesero ? 'otro-mesero' : '';
-        var content = '<span class="mesa-num">'+id+'</span>';
-        if (st !== 'libre' && m.mesero) {
-          var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
-          var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
-          content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
-          if(isOtherMesero) content += '<span style="font-size:8px;color:#ef4444">🔒</span>';
-        } else {
-          content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
-        }
-        html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesa(\''+id+'\')" title="Mesa '+id+(m.zona?' — '+m.zona:'')+(m.mesero?' — Mesero: '+m.mesero:'')+'">'+
-          content +
-          '</button>';
+      var grouped = {};
+      Object.entries(_mesas).forEach(function(entry) {
+        var id = entry[0];
+        var m = entry[1];
+        var zona = m.zona || 'Principal';
+        if(!grouped[zona]) grouped[zona] = [];
+        grouped[zona].push([id, m]);
       });
+      
+      // Close the mesa-grid opened in the header since we will render multiple grids inside a scrollable wrapper
+      html = html.replace('<div class="mesa-grid" id="mesa-grid">', '<div id="mesas-wrapper" style="max-height:280px; overflow-y:auto; width:100%; padding-right:4px; display:flex; flex-direction:column; gap:4px;">');
+      
+      var sortedZonas = Object.keys(grouped).sort();
+      sortedZonas.forEach(function(zona) {
+        var mesasZona = grouped[zona];
+        mesasZona.sort(function(a, b) { return parseInt(a[0]) - parseInt(b[0]); });
+        
+        html += '<div class="zona-header" style="font-size:10px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 4px 0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:2px;width:100%">' + zona + '</div>';
+        html += '<div class="mesa-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(55px, 1fr));gap:8px;padding:2px 0;width:100%">';
+        
+        mesasZona.forEach(function(entry) {
+          var id = entry[0];
+          var m = entry[1];
+          var st = m.estado || 'libre';
+          var sel = MESA_SEL == id ? 'seleccionada' : '';
+          var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+          if(_esAdmin) isOtherMesero = false;
+          var classOther = isOtherMesero ? 'otro-mesero' : '';
+          var content = '<span class="mesa-num">'+id+'</span>';
+          if (st !== 'libre' && m.mesero) {
+            var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
+            var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
+            content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+            if(isOtherMesero) content += '<span style="font-size:8px;color:#ef4444">🔒</span>';
+          } else {
+            content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
+          }
+          html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesa(\''+id+'\')" title="Mesa '+id+(m.zona?' — '+m.zona:'')+(m.mesero?' — Mesero: '+m.mesero:'')+'">'+
+            content +
+            '</button>';
+        });
+        html += '</div>';
+      });
+      html += '</div>'; // close #mesas-wrapper
     }
     html += '</div><div class="cd-row cd-row-2" style="margin-top:8px">'+
       '<div><label class="fl">Mesero</label><select class="fi" id="mesa-mesero"><option value="">Seleccionar...</option></select></div>'+
@@ -1613,30 +1787,56 @@ function abrirMesaModal(){
     
   if(Object.keys(_mesas).length === 0) {
     html += '<div style="font-size:12px;color:var(--text-muted);width:100%;text-align:center;padding:20px">Sin mesas registradas</div>';
+    html += '</div>';
   } else {
-    const mesasArray = Object.entries(_mesas).sort((a,b) => parseInt(a[0]) - parseInt(b[0]));
+    // Group by sector
     var currentMesero = _loggedMesero;
-    mesasArray.forEach(([id, m]) => {
-      var st = m.estado || 'libre';
-      var sel = MESA_SEL == id ? 'seleccionada' : '';
-      var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
-      if(_esAdmin) isOtherMesero = false;
-      var classOther = isOtherMesero ? 'otro-mesero' : '';
-
-      var content = '<span class="mesa-num">'+id+'</span>';
-      if (st !== 'libre' && m.mesero) {
-        var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
-        var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
-        content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
-        if(isOtherMesero) content += '<span style="font-size:8px;color:#ef4444">🔒</span>';
-      } else {
-        content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
-      }
-
-      html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
-        content +
-        '</button>';
+    var grouped = {};
+    Object.entries(_mesas).forEach(function(entry) {
+      var id = entry[0];
+      var m = entry[1];
+      var zona = m.zona || 'Principal';
+      if(!grouped[zona]) grouped[zona] = [];
+      grouped[zona].push([id, m]);
     });
+    
+    // Replace the mesa-grid opened in the header
+    html = html.replace('<div class="mesa-grid" id="mesa-grid" style="margin-bottom:20px;">', '<div id="mesas-wrapper" style="max-height:350px; overflow-y:auto; width:100%; padding-right:4px; display:flex; flex-direction:column; gap:8px;">');
+    
+    var sortedZonas = Object.keys(grouped).sort();
+    sortedZonas.forEach(function(zona) {
+      var mesasZona = grouped[zona];
+      mesasZona.sort(function(a, b) { return parseInt(a[0]) - parseInt(b[0]); });
+      
+      html += '<div class="zona-header" style="font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px 0;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:6px;width:100%">' + zona + '</div>';
+      html += '<div class="mesa-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(70px, 1fr));gap:12px;padding:5px 0;width:100%">';
+      
+      mesasZona.forEach(function(entry) {
+        var id = entry[0];
+        var m = entry[1];
+        var st = m.estado || 'libre';
+        var sel = MESA_SEL == id ? 'seleccionada' : '';
+        var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+        if(_esAdmin) isOtherMesero = false;
+        var classOther = isOtherMesero ? 'otro-mesero' : '';
+
+        var content = '<span class="mesa-num">'+id+'</span>';
+        if (st !== 'libre' && m.mesero) {
+          var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
+          var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
+          content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+          if(isOtherMesero) content += '<span style="font-size:8px;color:#ef4444">🔒</span>';
+        } else {
+          content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
+        }
+
+        html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
+          content +
+          '</button>';
+      });
+      html += '</div>';
+    });
+    html += '</div>'; // close #mesas-wrapper
   }
   
   html += '</div>'+

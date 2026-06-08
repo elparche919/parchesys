@@ -132,20 +132,15 @@ body::before{
 
   <div class="field">
     <label>Correo electrónico</label>
-    <input type="email" id="email" class="inp" placeholder="correo@restaurante.com" autocomplete="email">
+    <input type="email" id="email" class="inp" placeholder="elparche919@gmail.com" autocomplete="email">
   </div>
   <div class="field">
-    <label>Contraseña</label>
-    <input type="password" id="pass" class="inp" placeholder="••••••••" autocomplete="current-password">
-  </div>
-  <div class="field">
-    <label>National ID / DUI <span style="text-transform:none;font-weight:400;color:rgba(255,255,255,.3)">(00000000-0)</span></label>
-    <input type="text" id="dui" class="inp" placeholder="00000000-0" maxlength="10" autocomplete="off"
-      oninput="var v=this.value.replace(/\D/g,'');this.value=v.length>8?v.slice(0,8)+'-'+v.slice(8,9):v">
+    <label>PIN de acceso</label>
+    <input type="password" id="pin" class="inp" placeholder="••••" maxlength="6" inputmode="numeric">
   </div>
 
   <button class="btn" id="btn" onclick="doLogin()">
-    <i class="fa-solid fa-right-to-bracket"></i> Login to System
+    <i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema
   </button>
 
   <div class="divider"></div>
@@ -202,55 +197,70 @@ function showErr(m){var e=document.getElementById('err');e.textContent=m;e.style
 function hideErr(){document.getElementById('err').style.display='none';}
 
 function doLogin(){
-  var email=document.getElementById('email').value.trim().toLowerCase();
-  var pass=document.getElementById('pass').value;
-  var duiRaw=document.getElementById('dui').value.trim();
-  var dui=cleanDUI(duiRaw);
-  var btn=document.getElementById('btn');
+  var email = document.getElementById('email').value.trim().toLowerCase();
+  var pin   = document.getElementById('pin').value.trim();
+  var btn   = document.getElementById('btn');
   hideErr();
-  if(!email||!pass||!dui){showErr('Completa todos los campos.');return;}
-  btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
+  if(!email || !pin){ showErr('Completa todos los campos.'); return; }
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Verificando...';
 
-  // Negocio único: verificar directamente contra el nodo fijo "elparche"
+  // Paso 1: verificar que el correo corresponde a este negocio
   db.ref('negocios/' + NEGOCIO_ID + '/info').once('value', function(infoSnap){
     var info = infoSnap.val();
-    if(!info || (info.email||'').toLowerCase() !== email || info.password !== pass){
-      showErr('Correo o contraseña incorrectos.');
-      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
+    if(!info || (info.email||'').toLowerCase() !== email){
+      showErr('Correo incorrecto.');
+      btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
       return;
     }
 
-    // Verificar empleado por DUI
+    // Paso 2: buscar empleado por PIN
     db.ref('negocios/' + NEGOCIO_ID + '/empleados').once('value', function(eSnap){
-      var emp=null;
-      eSnap.forEach(function(c){var e=c.val();if(cleanDUI(e.dui)===dui&&!emp)emp={key:c.key,data:e};});
+      var emp = null;
+      eSnap.forEach(function(c){
+        var e = c.val();
+        var empPin = String(e.pin || e.pin_app || '').trim();
+        if(empPin === pin && !emp) emp = { key: c.key, data: e };
+      });
+
       if(!emp){
-        showErr('DUI no registrado en este restaurante.');
-        btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
+        showErr('PIN incorrecto.');
+        btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';
         return;
       }
-      var e=emp.data;
-      var ses={tipo:(e.rol==='propietario'||e.rol==='admin')?'admin':'empleado',nombre:e.nombre||'Usuario',rol:e.rol||'empleado',dui:e.dui||duiRaw,puesto:e.puesto||'',empKey:emp.key,timestamp:Date.now()};
+
+      var e   = emp.data;
+      var ses = {
+        tipo: (e.rol === 'propietario' || e.rol === 'admin') ? 'admin' : 'empleado',
+        nombre: e.nombre || 'Usuario',
+        rol: e.rol || 'empleado',
+        dui: e.dui || '',
+        puesto: e.puesto || '',
+        empKey: emp.key,
+        timestamp: Date.now()
+      };
       localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
-      try{localStorage.setItem('food_biz_' + NEGOCIO_ID, JSON.stringify(info));}catch(ex){}
+      try{ localStorage.setItem('food_biz_' + NEGOCIO_ID, JSON.stringify(info)); }catch(ex){}
 
       // Registrar asistencia
-      var hoy=new Date().toISOString().split('T')[0];
-      db.ref('negocios/' + NEGOCIO_ID + '/asistencia/'+hoy+'/'+emp.key).update({
-        nombre:e.nombre, dui:e.dui||duiRaw,
-        entrada:new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}),
-        timestamp_entrada:Date.now(), estado:'presente'
+      var hoy = new Date().toISOString().split('T')[0];
+      db.ref('negocios/' + NEGOCIO_ID + '/asistencia/' + hoy + '/' + emp.key).update({
+        nombre: e.nombre, dui: e.dui || '',
+        entrada: new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}),
+        timestamp_entrada: Date.now(), estado: 'presente'
       });
 
       // Mostrar selector de interfaz
       document.getElementById('modalDispositivo').classList.add('open');
       document.getElementById('btnIrMovil').onclick = function(){ location.href = 'portal-food-movil.html'; };
-      document.getElementById('btnIrPC').onclick = function(){ location.href = 'portal-food.html'; };
-      btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check"></i> Acceso Concedido';
+      document.getElementById('btnIrPC').onclick    = function(){ location.href = 'portal-food.html'; };
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Acceso Concedido';
 
-    },function(err){showErr('Error: '+err.code);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';});
-  },function(err){showErr('Error de conexión: '+err.code);btn.disabled=false;btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema';});
+    }, function(err){ showErr('Error: ' + err.code); btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema'; });
+  }, function(err){ showErr('Error de conexión: ' + err.code); btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-right-to-bracket"></i> Entrar al Sistema'; });
 }
+
 </script>
 </body>
 </html>

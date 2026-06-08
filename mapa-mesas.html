@@ -293,6 +293,13 @@
       db.ref('negocios/'+negocioID+'/mesas').on('value', snap => {
         _mesas = snap.val() || {};
         renderMesas();
+        if(!window._firstLoadDone) {
+          window._firstLoadDone = true;
+          setTimeout(resetZoom, 400);
+        }
+      });
+      window.addEventListener('resize', () => {
+        if (!_isDragging) resetZoom();
       });
 
       // Cargar Pedidos para estados
@@ -357,7 +364,11 @@
 
       // Fondos de Lienzo
       if(window._fondosSalones && window._fondosSalones[_currentZona]) {
-        canvas.style.backgroundImage = `url('${window._fondosSalones[_currentZona]}')`;
+        let url = window._fondosSalones[_currentZona];
+        if (url.includes('github.com') && url.includes('/blob/')) {
+          url = url.replace('github.com', 'raw.githubusercontent.com').replace('/blob/', '/');
+        }
+        canvas.style.backgroundImage = `url('${url}')`;
         canvas.style.backgroundSize = 'contain';
         canvas.style.backgroundRepeat = 'no-repeat';
         canvas.style.backgroundPosition = 'center';
@@ -491,6 +502,7 @@
       _currentZona = zonaStr;
       _selectedMesaId = null;
       renderMesas();
+      setTimeout(resetZoom, 100);
     }
 
     function addRoom() {
@@ -563,20 +575,55 @@
       document.addEventListener('touchend', upHandler);
     }
 
-    /* â”€â”€ ZOOM & PAN â”€â”€ */
+    /* ── ZOOM & PAN ── */
     function zoomIn() { _zoom += 0.1; updateZoom(); }
     function zoomOut() { if(_zoom > 0.5) _zoom -= 0.1; updateZoom(); }
-    function resetZoom() { _zoom = 1; updateZoom(); centerCanvas(); }
-    function updateZoom() {
-      document.getElementById('canvas').style.transform = `scale(${_zoom})`;
+    
+    function resetZoom() {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+      
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      
+      const mesas = Object.values(_mesas).filter(m => (m.zona || 'Principal') === _currentZona);
+      
+      let minX = 0, maxX = 1200;
+      let minY = 0, maxY = 800;
+      
+      if (mesas.length > 0) {
+        minX = Math.min(...mesas.map(m => m.x || 0)) - 60;
+        maxX = Math.max(...mesas.map(m => (m.x || 0) + 120)) + 60;
+        minY = Math.min(...mesas.map(m => m.y || 0)) - 60;
+        maxY = Math.max(...mesas.map(m => (m.y || 0) + 120)) + 60;
+      }
+      
+      // Ensure we include at least the 0,0 to 1200,800 area
+      minX = Math.min(minX, 0);
+      maxX = Math.max(maxX, 1200);
+      minY = Math.min(minY, 0);
+      maxY = Math.max(maxY, 800);
+      
+      const contentWidth = maxX - minX;
+      const contentHeight = maxY - minY;
+      
+      const scaleX = width / contentWidth;
+      const scaleY = height / contentHeight;
+      
+      _zoom = Math.min(scaleX, scaleY);
+      // Limit scale bounds
+      _zoom = Math.max(0.25, Math.min(_zoom, 1.2));
+      
+      updateZoom();
+      
+      // Center the content bounding box in scroll container
+      container.scrollLeft = (minX * _zoom) - (width - contentWidth * _zoom) / 2;
+      container.scrollTop = (minY * _zoom) - (height - contentHeight * _zoom) / 2;
     }
 
-    function centerCanvas() {
-      const container = document.getElementById('canvas-container');
-      container.scrollLeft = (CANVAS_WIDTH - container.clientWidth) / 2;
-      container.scrollTop = (CANVAS_HEIGHT - container.clientHeight) / 2;
+    function updateZoom() {
+      document.getElementById('canvas').style.transform = `scale(${_zoom})`;
     }
   </script>
 </body>
 </html>
-
