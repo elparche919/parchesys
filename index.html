@@ -237,9 +237,11 @@ function doLogin(){
         dui: e.dui || '',
         puesto: e.puesto || '',
         empKey: emp.key,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        modulos: e.modulos || {}
       };
       localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
+      localStorage.setItem('food_operador_' + NEGOCIO_ID, JSON.stringify(ses));
       try{ localStorage.setItem('food_biz_' + NEGOCIO_ID, JSON.stringify(info)); }catch(ex){}
 
       // Registrar asistencia

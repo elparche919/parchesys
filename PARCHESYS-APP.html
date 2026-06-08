@@ -168,6 +168,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 .bio-ring.r3{border-color:rgba(234,88,12,.1);animation:bio-pulse 2s .7s infinite}
 @keyframes bio-pulse{0%{transform:scale(1);opacity:1}100%{transform:scale(1.35);opacity:0}}
 @keyframes scan-anim{0%{top:0%}50%{top:100%}100%{top:0%}}
+@keyframes pulse-icon{0%,100%{opacity:.4;transform:scale(.95)}50%{opacity:.85;transform:scale(1.05)}}
 .bio-inner{position:absolute;inset:18px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.3s}
 .bio-inner.scanning{background:rgba(234,88,12,.08);border-color:var(--a)}
 .bio-inner.success{background:rgba(16,185,129,.12);border-color:var(--gr)}
@@ -434,7 +435,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
   <div class="cam-card">
     <div class="bio-type-badge entrada" id="cam-badge">⬆ ENTRADA</div>
     <div class="cam-preview-container">
-      <video class="cam-video" id="cam-video" autoplay playsinline></video>
+      <video class="cam-video" id="cam-video" autoplay playsinline muted></video>
     </div>
     <div class="bio-name" id="cam-emp-name">—</div>
     <div class="bio-status" id="cam-status">Encuadra tu rostro y toma la foto</div>
@@ -453,8 +454,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
   <div class="cam-card" style="box-shadow: 0 40px 100px rgba(0,0,0,.6), 0 0 0 1px var(--gr);">
     <div class="bio-type-badge entrada" style="background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(52,211,153,.3)">REGISTRO FACIAL</div>
     <div class="cam-preview-container" style="border-color:var(--gr);position:relative;">
-      <video class="cam-video" id="reg-video" autoplay playsinline></video>
-      <div id="reg-scan-line" style="position:absolute;left:0;right:0;height:3px;background:var(--gr);box-shadow:0 0 8px var(--gr);top:0;display:none;animation:scan-anim 2s infinite linear;"></div>
+      <div id="reg-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1d24;color:var(--gr);font-size:56px;">
+        <i class="fa-solid fa-user" style="animation:pulse-icon 2s infinite ease-in-out;"></i>
+      </div>
+      <video class="cam-video" id="reg-video" autoplay playsinline muted style="display:none;position:relative;z-index:2;"></video>
+      <div id="reg-scan-line" style="position:absolute;left:0;right:0;height:3px;background:var(--gr);box-shadow:0 0 8px var(--gr);top:0;display:none;z-index:3;animation:scan-anim 2s infinite linear;"></div>
     </div>
     <div class="bio-name" id="reg-emp-name">—</div>
     <div class="bio-status" id="reg-status">Registro biométrico facial obligatorio. Haremos un escaneo corto.</div>
@@ -477,13 +481,13 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 // CONFIGURACIÓN — Firebase
 // ════════════════════════════════════════════════
 const FB={
-  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
-  authDomain: "parche-sys.firebaseapp.com",
-  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
-  projectId: "parche-sys",
-  storageBucket: "parche-sys.firebasestorage.app",
-  messagingSenderId: "5761192689",
-  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+  apiKey: "AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+  authDomain: "parche-sys-v2.firebaseapp.com",
+  databaseURL: "https://parche-sys-v2-default-rtdb.firebaseio.com",
+  projectId: "parche-sys-v2",
+  storageBucket: "parche-sys-v2.firebasestorage.app",
+  messagingSenderId: "367489065915",
+  appId: "1:367489065915:web:300a2bca022c6eb6a41a9e"
 };
 firebase.initializeApp(FB);
 const db=firebase.database();
@@ -1171,29 +1175,80 @@ function abrirRegistroFacial() {
   document.getElementById('reg-btn-start').textContent = 'Comenzar Registro';
   document.getElementById('reg-scan-line').style.display = 'none';
   
+  // Restablecer visibilidad del placeholder y video
+  const placeholder = document.getElementById('reg-placeholder');
+  const video = document.getElementById('reg-video');
+  if (placeholder) placeholder.style.display = 'flex';
+  if (video) video.style.display = 'none';
+
   // Abrir modal
   document.getElementById('face-reg-ov').classList.add('open');
-  
-  const video = document.getElementById('reg-video');
-  navigator.mediaDevices.getUserMedia({ 
-    video: { facingMode: "user", width: { ideal: 480 }, height: { ideal: 480 } } 
-  })
-  .then(stream => {
-    regStream = stream;
-    video.srcObject = stream;
-    video.play().catch(err => console.log(err));
-  })
-  .catch(err => {
-    console.error(err);
-    toast("No se pudo acceder a la cámara frontal", "err");
-    cerrarRegistroFacial();
-  });
+}
+
+// Función auxiliar robusta para solicitar cámara frontal
+function solicitarCamaraFrontal() {
+  const constraints = {
+    video: {
+      facingMode: "user",
+      width: { ideal: 480 },
+      height: { ideal: 480 }
+    }
+  };
+  return navigator.mediaDevices.getUserMedia(constraints)
+    .catch(err => {
+      console.warn("Error con resolución ideal, intentando básico:", err);
+      return navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+    })
+    .catch(err => {
+      console.warn("Error con facingMode, intentando genérico:", err);
+      return navigator.mediaDevices.getUserMedia({ video: true });
+    });
 }
 
 function iniciarEscaneoFacial() {
-  document.getElementById('reg-btn-start').style.display = 'none';
-  document.getElementById('reg-scan-line').style.display = 'block';
-  ejecutarPasoEscaneo(1);
+  document.getElementById('reg-btn-start').disabled = true;
+  document.getElementById('reg-status').textContent = 'Conectando cámara frontal…';
+
+  const video = document.getElementById('reg-video');
+  const placeholder = document.getElementById('reg-placeholder');
+
+  function continuarConSimulacion(msgWarning) {
+    if (msgWarning) toast(msgWarning, "warn");
+    if (placeholder) placeholder.style.display = 'flex';
+    if (video) video.style.display = 'none';
+    document.getElementById('reg-btn-start').style.display = 'none';
+    document.getElementById('reg-scan-line').style.display = 'block';
+    ejecutarPasoEscaneo(1);
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.warn("getUserMedia no soportado.");
+    continuarConSimulacion("Cámara no disponible (modo simulador)");
+    return;
+  }
+
+  solicitarCamaraFrontal()
+    .then(stream => {
+      regStream = stream;
+      video.srcObject = stream;
+      if (placeholder) placeholder.style.display = 'none';
+      video.style.display = 'block';
+      
+      video.play()
+        .then(() => {
+          document.getElementById('reg-btn-start').style.display = 'none';
+          document.getElementById('reg-scan-line').style.display = 'block';
+          ejecutarPasoEscaneo(1);
+        })
+        .catch(err => {
+          console.log("Autoplay blocked, pushing forward:", err);
+          continuarConSimulacion();
+        });
+    })
+    .catch(err => {
+      console.error("No se pudo obtener stream de cámara:", err);
+      continuarConSimulacion("Cámara no disponible (modo simulador)");
+    });
 }
 
 function ejecutarPasoEscaneo(paso) {
@@ -1260,23 +1315,25 @@ function iniciarCamara() {
   document.getElementById('camera-ov').classList.add('open');
 
   const video = document.getElementById('cam-video');
-  navigator.mediaDevices.getUserMedia({ 
-    video: { 
-      facingMode: "user",
-      width: { ideal: 480 },
-      height: { ideal: 480 }
-    } 
-  })
-  .then(stream => {
-    cameraStream = stream;
-    video.srcObject = stream;
-    video.play().catch(err => console.log("Video play error:", err));
-  })
-  .catch(err => {
-    console.error("Camera access error:", err);
-    toast("No se pudo abrir la cámara frontal", "err");
+  
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    console.error("getUserMedia no soportado.");
+    toast("No se pudo abrir la cámara frontal (inseguro)", "err");
     cerrarCamara();
-  });
+    return;
+  }
+
+  solicitarCamaraFrontal()
+    .then(stream => {
+      cameraStream = stream;
+      video.srcObject = stream;
+      video.play().catch(err => console.log("Video play error:", err));
+    })
+    .catch(err => {
+      console.error("Camera access error:", err);
+      toast("No se pudo abrir la cámara frontal", "err");
+      cerrarCamara();
+    });
 }
 
 function capturarFoto() {

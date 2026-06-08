@@ -491,17 +491,16 @@
 <script src="firebase-config.js"></script>
   <script>
     // ─── Firebase ────────────────────────────────────────────────────
-    /* Firebase centralizado en firebase-config.js */
-    if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
-    /* Firebase centralizado en firebase-config.js */
+    // Firebase centralizado e inicializado en firebase-config.js
+    var db = firebase.database();
 
-    // ─── Session ─────────────────────────────────────────────────────
-    const params = new URLSearchParams(window.location.search);
-    const negocioID = params.get('negocio') ||
-                      localStorage.getItem('food_negocioID') ||
-                      localStorage.getItem('modus_food_negocio') ||
-                      localStorage.getItem('negocioID');
-    const meseroId = localStorage.getItem('meseroId');
+    var params = new URLSearchParams(window.location.search);
+    var negocioID = params.get('negocio') ||
+                    localStorage.getItem('food_negocioID') ||
+                    localStorage.getItem('modus_food_negocio') ||
+                    localStorage.getItem('negocioID') ||
+                    'elparche';
+    var meseroId = localStorage.getItem('meseroId');
 
     if (!negocioID || !meseroId) {
       window.location.href = 'login.html';
@@ -790,9 +789,7 @@
         if (alarmInterval) clearInterval(alarmInterval);
         alarmInterval = setInterval(function() { playAlarmSound(true); }, 1500);
         
-        setTimeout(function() {
-          alert("🍹 ¡BEBIDA LISTA EN BAR! 🍹\n\n" + msg);
-        }, 200);
+        // Se removió el alert() nativo bloqueante para evitar congelamiento de la interfaz y sonido
       } else {
         overlay.classList.add('flash-red');
         if (titleEl) {
@@ -807,9 +804,7 @@
         if (alarmInterval) clearInterval(alarmInterval);
         alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
         
-        setTimeout(function() {
-          alert("🚨 ¡PEDIDO LISTO EN COCINA! 🚨\n\n" + msg);
-        }, 200);
+        // Se removió el alert() nativo bloqueante para evitar congelamiento de la interfaz y sonido
       }
     }
 
@@ -837,15 +832,39 @@
 
     // ─── Fullscreen Handlers ─────────────────────────────────────────
     function iniciarPantallaCompleta() {
-      const el = document.documentElement;
-      if (el.requestFullscreen) {
-        el.requestFullscreen();
-      } else if (el.webkitRequestFullscreen) {
-        el.webkitRequestFullscreen();
-      } else if (el.msRequestFullscreen) {
-        el.msRequestFullscreen();
+      // 1. Intentar activar pantalla completa con try-catch y catch de Promesa
+      try {
+        const el = document.documentElement;
+        if (el.requestFullscreen) {
+          el.requestFullscreen().catch(err => {
+            console.warn("Fullscreen request rejected:", err);
+          });
+        } else if (el.webkitRequestFullscreen) {
+          el.webkitRequestFullscreen();
+        } else if (el.msRequestFullscreen) {
+          el.msRequestFullscreen();
+        }
+      } catch (err) {
+        console.warn("Fullscreen request failed:", err);
       }
       
+      // 2. Desbloquear AudioContext en respuesta al gesto del usuario
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().then(() => {
+            console.log("AudioContext desbloqueado mediante interacción.");
+          }).catch(err => {
+            console.warn("Error al desbloquear AudioContext:", err);
+          });
+        }
+      } catch (e) {
+        console.warn("Fallo al inicializar AudioContext:", e);
+      }
+      
+      // 3. Ocultar el overlay de inicio
       const overlay = document.getElementById('fullscreen-start-overlay');
       if (overlay) overlay.style.display = 'none';
     }
@@ -853,19 +872,27 @@
     window.iniciarPantallaCompleta = iniciarPantallaCompleta;
 
     function toggleFullscreen() {
-      if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-          el.requestFullscreen();
-        } else if (el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen();
+      try {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          const el = document.documentElement;
+          if (el.requestFullscreen) {
+            el.requestFullscreen().catch(err => {
+              console.warn("Fullscreen toggle rejected:", err);
+            });
+          } else if (el.webkitRequestFullscreen) {
+            el.webkitRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch(err => {
+              console.warn("Exit fullscreen rejected:", err);
+            });
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
         }
-      } else {
-        if (document.exitFullscreen) {
-          document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) {
-          document.webkitExitFullscreen();
-        }
+      } catch (err) {
+        console.warn("Fullscreen toggle failed:", err);
       }
     }
 

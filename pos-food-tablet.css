@@ -511,21 +511,6 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   height: 40px !important;
   font-size: 18px !important;
   border-radius: 12px !important;
-}
-#mesa-modal-body {
-  padding: 20px 24px !important;
-  max-height: 70vh !important;
-  overflow-y: auto !important;
-}
-#mesa-modal-body .mesa-grid {
-  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
-  gap: 14px !important;
-}
-#mesa-modal-body .mesa-btn {
-  min-height: 80px !important;
-  border-radius: 18px !important;
-  font-size: 22px !important;
-}
 
 /* ═══════════════════════════════════════════
    4 QUICK ACTION BUTTONS GRID (Tablet mode)
@@ -550,7 +535,7 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
 
   /* Style all 4 buttons uniformly as premium touch-targets */
   #tablet-btn-mesas,
-  #tablet-btn-ordenes,
+  #tablet-btn-offline,
   .pnl-r-body .send-kitchen-btn,
   .pnl-r-body #btn-checkout-trigger {
     display: flex !important;
@@ -575,14 +560,14 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   }
 
   #tablet-btn-mesas:active,
-  #tablet-btn-ordenes:active,
+  #tablet-btn-offline:active,
   .pnl-r-body .send-kitchen-btn:active,
   .pnl-r-body #btn-checkout-trigger:active {
     transform: scale(0.95) !important;
   }
 
   #tablet-btn-mesas i,
-  #tablet-btn-ordenes i,
+  #tablet-btn-offline i,
   .pnl-r-body .send-kitchen-btn i,
   .pnl-r-body #btn-checkout-trigger i {
     font-size: 26px !important;
@@ -599,14 +584,15 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
     background: rgba(16, 185, 129, 0.15) !important;
   }
 
-  #tablet-btn-ordenes {
+  /* OFFLINE button replaces the old ORDENES button */
+  #tablet-btn-offline {
     order: 2 !important;
     background: rgba(245, 158, 11, 0.08) !important;
     border-color: rgba(245, 158, 11, 0.4) !important;
     color: #f59e0b !important;
     position: relative !important;
   }
-  #tablet-btn-ordenes:hover {
+  #tablet-btn-offline:hover {
     background: rgba(245, 158, 11, 0.15) !important;
   }
 
@@ -638,7 +624,7 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
     gap: 10px !important;
   }
   #tablet-btn-mesas,
-  #tablet-btn-ordenes,
+  #tablet-btn-offline,
   .pnl-r-body .send-kitchen-btn,
   .pnl-r-body #btn-checkout-trigger {
     min-height: 90px !important;
@@ -647,10 +633,36 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
     font-size: 13px !important;
   }
   #tablet-btn-mesas i,
-  #tablet-btn-ordenes i,
+  #tablet-btn-offline i,
   .pnl-r-body .send-kitchen-btn i,
   .pnl-r-body #btn-checkout-trigger i {
     font-size: 22px !important;
   }
 }
+
+/* ── MESA VIEW: list and map tabs inside the modal ── */
+#mesa-view-list {
+  padding: 20px 24px !important;
+  max-height: 70vh !important;
+  overflow-y: auto !important;
+}
+#mesa-view-list .mesa-grid {
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)) !important;
+  gap: 14px !important;
+}
+#mesa-view-list .mesa-btn {
+  min-height: 80px !important;
+  border-radius: 18px !important;
+  font-size: 22px !important;
+}
+#mesa-view-map {
+  height: 500px !important;
+  overflow: hidden !important;
+}
+#mapa-iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+}
+
 

@@ -169,9 +169,11 @@
 
       <div class="sb-nav-sec" id="sec-operaciones">Operaciones</div>
       <a href="pos-food.html?negocio=" id="link-pos" class="sb-item"><i class="fa-solid fa-cash-register"></i> Terminal POS</a>
+      <a href="pos-food-tablet.html?negocio=" id="link-pos-tablet" class="sb-item"><i class="fa-solid fa-tablet-screen-button"></i> POS Tablet</a>
       <a href="cocina.html?negocio=" id="link-cocina" class="sb-item"><i class="fa-solid fa-fire-burner"></i> Cocina (KDS)</a>
+      <a href="bar.html?negocio=" id="link-bar" class="sb-item"><i class="fa-solid fa-glass-martini-alt"></i> Bar (KDS)</a>
       <a href="mapa-mesas.html?negocio=" id="link-mapa" class="sb-item"><i class="fa-solid fa-table-cells-large"></i> Mapa de Mesas</a>
-      <a href="repartidores.html?negocio=" id="link-reparto" class="sb-item"><i class="fa-solid fa-motorcycle"></i> Reparto en Ruta</a>
+      <a href="portal-finanzas.html?negocio=" id="link-finanzas" class="sb-item"><i class="fa-solid fa-money-bill-trend-up"></i> Finanzas / Cierres</a>
       <a href="empleados.html?negocio=" id="link-empleados" class="sb-item"><i class="fa-solid fa-users"></i> Equipo / RR.HH.</a>
       
       <div class="sb-nav-sec" id="sec-fiscal">Fiscal / Libros</div>
@@ -214,9 +216,9 @@
           <div class="sc-val" id="stat-mesas">0</div>
           <div class="sc-lbl">Mesas Ocupadas</div>
         </div>
-        <div class="stat-card st-entregas">
-          <div class="sc-val" id="stat-reparto">0</div>
-          <div class="sc-lbl">Entregas en Ruta</div>
+        <div class="stat-card st-caja" id="stat-caja-card" style="cursor:pointer;" onclick="location.href='portal-finanzas.html?negocio='+negocioID">
+          <div class="sc-val" id="stat-caja-val" style="font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cargando...</div>
+          <div class="sc-lbl" id="stat-caja-lbl">Caja Activa</div>
         </div>
       </div>
 
@@ -265,31 +267,31 @@
       <!-- Grid de tarjetas web -->
       <div id="portal-web-grid" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;margin-bottom:30px" id="portal-web-grid"></div>
 
-      <!-- MOBILE APPS SECTION -->
+      <!-- ACCESOS RAPIDOS Y APPS SECTION -->
       <div class="hd" style="margin-top:40px; margin-bottom:15px;">
-        <h2 style="font-size:20px; font-weight:900;">Ecosistema Móvil</h2>
-        <p>Apps optimizadas para smartphones y tablets</p>
+        <h2 style="font-size:20px; font-weight:900;">Accesos Rápidos y Aplicaciones</h2>
+        <p>Terminales, pantallas de producción y portales administrativos</p>
       </div>
-      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:20px">
+      <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:20px">
         <a href="pos-food-movil.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
           <i class="fa-solid fa-cash-register" style="font-size:30px; color:#4ade80; margin-bottom:10px"></i>
           <div style="font-weight:900">App Mesero</div>
           <div style="font-size:11px; color:var(--m-muted)">POS Móvil</div>
         </a>
-        <a href="app-delivery.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
-          <i class="fa-solid fa-motorcycle" style="font-size:30px; color:#d946ef; margin-bottom:10px"></i>
-          <div style="font-weight:900">App Delivery</div>
-          <div style="font-size:11px; color:var(--m-muted)">Gestión de Reparto</div>
+        <a href="pos-food-tablet.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
+          <i class="fa-solid fa-tablet-screen-button" style="font-size:30px; color:#38bdf8; margin-bottom:10px"></i>
+          <div style="font-weight:900">POS Tablet</div>
+          <div style="font-size:11px; color:var(--m-muted)">Interfaz Tablet</div>
         </a>
-        <a href="app-empleado-food.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
-          <i class="fa-solid fa-user-tie" style="font-size:30px; color:#818cf8; margin-bottom:10px"></i>
-          <div style="font-weight:900">Mi Perfil</div>
-          <div style="font-size:11px; color:var(--m-muted)">Portal Empleado</div>
+        <a href="bar.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
+          <i class="fa-solid fa-glass-martini-alt" style="font-size:30px; color:#f43f5e; margin-bottom:10px"></i>
+          <div style="font-weight:900">Bar (KDS)</div>
+          <div style="font-size:11px; color:var(--m-muted)">Pantalla de Bebidas</div>
         </a>
-        <a href="menu-cliente.html?negocio=" target="_blank" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
-          <i class="fa-solid fa-mobile-screen-button" style="font-size:30px; color:#fb7185; margin-bottom:10px"></i>
-          <div style="font-weight:900">App Clientes</div>
-          <div style="font-size:11px; color:var(--m-muted)">Menú Interactivo Web</div>
+        <a href="portal-finanzas.html?negocio=" class="link-app-card" style="text-align:center; padding:20px; background:var(--m-surface); border-radius:15px; border:1px solid var(--m-border); text-decoration:none; color:inherit">
+          <i class="fa-solid fa-money-bill-trend-up" style="font-size:30px; color:#a78bfa; margin-bottom:10px"></i>
+          <div style="font-weight:900">Portal de Finanzas</div>
+          <div style="font-size:11px; color:var(--m-muted)">Cierres y Arqueos</div>
         </a>
       </div>
     </div>
@@ -1071,6 +1073,8 @@
           <div class="f-grp"><label style="color:var(--m-muted)">NIT / DUI</label><input type="text" class="f-inp" style="background:#0f172a; border-color:var(--m-border); color:var(--m-text)" id="cfg-nit"></div>
           <div class="f-grp"><label style="color:var(--m-muted)">NRC</label><input type="text" class="f-inp" style="background:#0f172a; border-color:var(--m-border); color:var(--m-text)" id="cfg-nrc"></div>
           <div class="f-grp"><label style="color:var(--m-muted)">Teléfono</label><input type="text" class="f-inp" style="background:#0f172a; border-color:var(--m-border); color:var(--m-text)" id="cfg-tel"></div>
+          <div class="f-grp"><label style="color:var(--m-muted)">Correo Electrónico</label><input type="email" class="f-inp" style="background:#0f172a; border-color:var(--m-border); color:var(--m-text)" id="cfg-email"></div>
+          <div class="f-grp" style="grid-column:1/-1"><label style="color:var(--m-muted)">Dirección</label><input type="text" class="f-inp" style="background:#0f172a; border-color:var(--m-border); color:var(--m-text)" id="cfg-dir"></div>
         </div>
       </div>
 
@@ -1283,7 +1287,7 @@
     if(!negocioID) location.href = '../index.html';
 
     // Update Sidebar & Dashboard Links to maintain session persistence
-    ['link-pos', 'link-cocina', 'link-mapa', 'link-reparto', 'link-empleados', 'link-dte', 'link-conta', 'link-movil'].forEach(id => {
+    ['link-pos', 'link-pos-tablet', 'link-cocina', 'link-bar', 'link-mapa', 'link-finanzas', 'link-empleados', 'link-dte', 'link-conta', 'link-movil'].forEach(id => {
       if(document.getElementById(id)) document.getElementById(id).href += negocioID;
     });
 
@@ -1361,9 +1365,20 @@
         document.getElementById('stat-mesas').textContent = ocupadas;
       });
 
-      db.ref(`negocios/${negocioID}/repartidores`).on('value', snap => {
-        const ruta = Object.values(snap.val() || {}).filter(r => r.estado === 'en_ruta').length;
-        document.getElementById('stat-reparto').textContent = ruta;
+      db.ref(`negocios/${negocioID}/caja_sesion_activa`).on('value', snap => {
+        const sesion = snap.val();
+        const valEl = document.getElementById('stat-caja-val');
+        const lblEl = document.getElementById('stat-caja-lbl');
+        if (sesion && sesion.estado === 'abierta') {
+          const fondo = parseFloat(sesion.monto_esperado || sesion.monto_inicial || 0);
+          valEl.textContent = `$${fondo.toFixed(2)}`;
+          lblEl.textContent = `Caja Abierta (${sesion.usuario_apertura || 'Sin Nombre'})`;
+          document.getElementById('stat-caja-card').style.background = '#4ade80';
+        } else {
+          valEl.textContent = 'CERRADA';
+          lblEl.textContent = 'Caja Activa (Iniciar)';
+          document.getElementById('stat-caja-card').style.background = '#fb7185';
+        }
       });
 
       // Real-time Listeners
@@ -3207,6 +3222,7 @@
         nrc: document.getElementById('cfg-nrc').value,
         direccion: document.getElementById('cfg-dir').value,
         telefono: document.getElementById('cfg-tel').value,
+        email: document.getElementById('cfg-email').value,
         token_dte: document.getElementById('cfg-token').value
       };
       db.ref(`negocios/${negocioID}/info`).update(info).then(() => alert('Salvado exitosamente en PARCHE SYS Core.'));
@@ -3242,9 +3258,11 @@
       if (!tiene('menu'))          { ocultar('link-menu'); }
       if (!tiene('inventario'))    { ocultar('link-inventario'); }
       if (!tiene('pos'))           { ocultar('link-pos'); }
+      if (!tiene('pos'))           { ocultar('link-pos-tablet'); }
       if (!tiene('cocina'))        { ocultar('link-cocina'); }
+      if (!tiene('cocina'))        { ocultar('link-bar'); }
       if (!tiene('mapa_mesas'))    { ocultar('link-mapa'); }
-      if (!tiene('delivery'))      { ocultar('link-reparto'); }
+      if (!tiene('auditoria'))     { ocultar('link-finanzas'); }
       if (!tiene('empleados'))     { ocultar('link-empleados'); }
       if (!tiene('dte'))           { ocultar('link-dte'); }
       if (!tiene('contabilidad'))  { ocultar('link-conta'); }
@@ -3260,7 +3278,7 @@
 
       // Sección Operaciones
       var opsVis = tiene('pos') || tiene('cocina') || tiene('mapa_mesas')
-                || tiene('delivery') || tiene('empleados');
+                || tiene('auditoria') || tiene('empleados');
       if (!opsVis) ocultar('sec-operaciones');
 
       // Sección Sistema
@@ -3284,9 +3302,11 @@
       // Links externos que pueden ser destino único del empleado
       var extLinks = [
         { key: 'pos',       id: 'link-pos'      },
+        { key: 'pos',       id: 'link-pos-tablet'},
         { key: 'cocina',    id: 'link-cocina'   },
+        { key: 'cocina',    id: 'link-bar'      },
         { key: 'mapa_mesas',id: 'link-mapa'     },
-        { key: 'delivery',  id: 'link-reparto'  },
+        { key: 'auditoria',  id: 'link-finanzas' },
         { key: 'empleados', id: 'link-empleados'},
         { key: 'dte',       id: 'link-dte'      },
         { key: 'contabilidad',id:'link-conta'   },
@@ -3323,6 +3343,21 @@
               '<div style="font-size:13px">Tu rol solo tiene acceso al módulo asignado.</div></div>';
             setTimeout(function() { location.href = extEl.href; }, 800);
           }
+        }
+      }
+      // Override panel if specified in URL query params
+      var urlParams = new URLSearchParams(window.location.search);
+      var panelParam = urlParams.get('panel');
+      if (panelParam) {
+        var panelEl = document.getElementById('panel-' + panelParam);
+        if (panelEl) {
+          document.querySelectorAll('.portal-panel').forEach(function(p){ p.classList.remove('active'); });
+          panelEl.classList.add('active');
+          document.querySelectorAll('.sb-item').forEach(function(a){ a.classList.remove('active'); });
+          var linkId = 'link-' + panelParam;
+          if (panelParam === 'config') linkId = 'link-ajustes';
+          var linkEl = document.getElementById(linkId);
+          if (linkEl) linkEl.classList.add('active');
         }
       }
     }

@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PARCHE SYS · Portal de Finanzas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <style>
+    :root {
+      --m-blue: #38bdf8; --m-blue-mid: #0284c7; --m-amber: #fbbf24; --m-green: #4ade80; --m-red: #f87171;
+      --m-bg: #0f1115; --m-surface: #1a1d24; --m-text: #f8fafc; --m-muted: #94a3b8; --m-border: #2a2e37;
+      --font-main: 'Outfit', sans-serif;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: var(--font-main); background: var(--m-bg); color: var(--m-text); display: flex; height: 100vh; overflow: hidden; }
+
+    /* SIDEBAR */
+    .sb { width: 260px; background: #000000; border-right: 1px solid var(--m-border); display: flex; flex-direction: column; flex-shrink: 0; }
+    .sb-head { padding: 30px 20px; border-bottom: 1px solid var(--m-border); }
+    .sb-logo-title { font-size: 20px; font-weight: 900; color: #ffffff; display: flex; align-items: center; gap: 10px; }
+    .sb-logo-title img { height: 28px; vertical-align: middle; }
+    .sb-biz-name { font-size: 13px; font-weight: 700; color: var(--m-muted); margin-top: 5px; }
+    .sb-nav { padding: 20px 10px; flex: 1; overflow-y: auto; }
+    .sb-nav-sec { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; padding: 10px 15px 5px; }
+    .sb-item { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 10px; font-size: 13px; font-weight: 700; color: #94a3b8; cursor: pointer; text-decoration: none; margin-bottom: 4px; transition: 0.2s; }
+    .sb-item:hover, .sb-item.active { background: #1e293b; color: #ffffff; }
+    .sb-item.active { background: #334155; box-shadow: inset 4px 0 0 #ffffff; }
+    .sb-item i { width: 20px; text-align: center; font-size: 15px; }
+    .sb-foot { padding: 20px; border-top: 1px solid var(--m-border); }
+    .btn-exit { width: 100%; background: transparent; color: #94a3b8; border: none; padding: 10px; border-radius: 8px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-exit:hover { color: #f43f5e; }
+
+    /* CONTENT */
+    #content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 40px; padding-bottom: 60px; }
+    .hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; }
+    .hd h1 { font-size: 28px; font-weight: 900; }
+    .hd p { color: var(--m-muted); font-size: 14px; }
+
+    /* CONTROLS */
+    .filter-bar { display: flex; align-items: center; gap: 15px; background: var(--m-surface); padding: 15px 20px; border-radius: 14px; border: 1px solid var(--m-border); margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-group label { font-size: 13px; font-weight: 700; color: var(--m-muted); }
+    .f-inp { background: #0f1115; border: 1px solid var(--m-border); color: white; padding: 8px 12px; border-radius: 8px; font-family: var(--font-main); font-size: 13px; outline: none; transition: 0.2s; }
+    .f-inp:focus { border-color: var(--m-blue); }
+    
+    /* STAT CARDS */
+    .grid-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .stat-card { padding: 20px; border-radius: 14px; color: #000; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
+    .stat-card::after { content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px; background: rgba(0,0,0,0.04); border-radius: 50%; transform: translate(30%, -30%); }
+    .sc-val { font-size: 28px; font-weight: 900; line-height: 1; margin-bottom: 8px; font-variant-numeric: tabular-nums; }
+    .sc-lbl { font-size: 12px; font-weight: 700; opacity: 0.8; }
+    .st-sales { background: var(--m-blue); }
+    .st-expected { background: var(--m-amber); }
+    .st-real { background: var(--m-green); }
+    .st-diff-ok { background: #a78bfa; } /* Purple */
+    .st-diff-bad { background: var(--m-red); }
+
+    /* TABLES */
+    .tbl-card { background: var(--m-surface); border-radius: 16px; border: 1px solid var(--m-border); overflow: hidden; margin-bottom: 30px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .tbl-title { padding: 18px 20px; font-size: 16px; font-weight: 800; border-bottom: 1px solid var(--m-border); display: flex; align-items: center; justify-content: space-between; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: #1f242e; padding: 14px 20px; text-align: left; font-size: 11px; font-weight: 800; color: var(--m-muted); text-transform: uppercase; border-bottom: 1px solid var(--m-border); }
+    td { padding: 14px 20px; border-bottom: 1px solid #1f242e; font-size: 13px; color: var(--m-text); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #262b36; }
+    .btn-detail { background: rgba(56,189,248,0.1); color: var(--m-blue); border: 1px solid rgba(56,189,248,0.3); padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: 0.2s; }
+    .btn-detail:hover { background: var(--m-blue); color: white; }
+
+    /* BADGES */
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; display: inline-block; }
+    .badge-open { background: rgba(56,189,248,0.15); color: var(--m-blue); }
+    .badge-closed { background: rgba(148,163,184,0.15); color: var(--m-muted); }
+    .badge-surplus { background: rgba(74,222,128,0.15); color: var(--m-green); }
+    .badge-deficit { background: rgba(248,113,113,0.15); color: var(--m-red); }
+    .badge-balanced { background: rgba(167,139,250,0.15); color: #c084fc; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-box { background: #0f172a; color: white; width: 100%; max-width: 950px; max-height: 90vh; border-radius: 18px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--m-border); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .mb-head { padding: 20px 24px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .mb-head h2 { font-size: 20px; font-weight: 800; }
+    .mb-close { background: transparent; border: none; color: var(--m-muted); font-size: 24px; cursor: pointer; }
+    .mb-close:hover { color: white; }
+    .mb-body { padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; }
+    .mb-foot { padding: 16px 24px; border-top: 1px solid #1e293b; display: flex; justify-content: flex-end; background: #0b1120; }
+    
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .modal-panel-card { background: #1e293b; padding: 20px; border-radius: 12px; border: 1px solid #334155; }
+    .modal-panel-title { font-size: 14px; font-weight: 800; border-bottom: 1px solid #334155; padding-bottom: 8px; margin-bottom: 14px; color: var(--m-muted); text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+    
+    .item-row { display: flex; justify-content: space-between; font-size: 13px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .item-row:last-child { border-bottom: none; }
+    .item-row .lbl { color: var(--m-muted); }
+    .item-row .val { font-weight: 700; }
+    .item-row.total-highlight { border-top: 1px dashed #334155; margin-top: 8px; padding-top: 12px; font-size: 15px; }
+    .item-row.total-highlight .val { color: var(--m-blue); }
+    .item-row.diff-highlight .val { font-size: 16px; font-weight: 900; }
+
+    .cash-log-list { max-height: 120px; overflow-y: auto; margin-top: 8px; background: rgba(0,0,0,0.2); border-radius: 8px; padding: 8px; }
+    .cash-log-item { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.03); }
+    .cash-log-item:last-child { border-bottom: none; }
+
+    /* TOAST */
+    #toast { position: fixed; bottom: 20px; right: 20px; background: #334155; color: white; padding: 12px 24px; border-radius: 8px; font-size: 13px; font-weight: 800; box-shadow: 0 10px 25px rgba(0,0,0,0.3); transform: translateY(100px); opacity: 0; transition: 0.3s; z-index: 2000; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.ok { background: #10b981; }
+    #toast.err { background: #ef4444; }
+
+    @media (max-width: 1024px) {
+      .modal-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sb">
+    <div class="sb-head">
+      <div class="sb-logo-title"><img src="LOGOPARCHESYS.png" alt="PARCHE SYS"> PARCHE SYS</div>
+      <div class="sb-biz-name" id="sb-biz-name">Portal de Finanzas</div>
+    </div>
+    
+    <div class="sb-nav">
+      <div class="sb-nav-sec">Principal</div>
+      <a href="portal-food.html?negocio=" id="link-dashboard" class="sb-item"><i class="fa-solid fa-chart-line"></i> Panóptico / Ventas</a>
+      <a href="portal-food.html?negocio=&panel=reportes" id="link-reportes" class="sb-item"><i class="fa-solid fa-chart-pie"></i> Reportes / Auditoría</a>
+      <a href="portal-food.html?negocio=&panel=menu" id="link-menu" class="sb-item"><i class="fa-solid fa-list-ul"></i> Menú / Platillos</a>
+      <a href="portal-food.html?negocio=&panel=inventario" id="link-inventario" class="sb-item"><i class="fa-solid fa-box-open"></i> Inventarios / Servs.</a>
+
+      <div class="sb-nav-sec" id="sec-operaciones">Operaciones</div>
+      <a href="pos-food.html?negocio=" id="link-pos" class="sb-item"><i class="fa-solid fa-cash-register"></i> Terminal POS</a>
+      <a href="pos-food-tablet.html?negocio=" id="link-pos-tablet" class="sb-item"><i class="fa-solid fa-tablet-screen-button"></i> POS Tablet</a>
+      <a href="cocina.html?negocio=" id="link-cocina" class="sb-item"><i class="fa-solid fa-fire-burner"></i> Cocina (KDS)</a>
+      <a href="bar.html?negocio=" id="link-bar" class="sb-item"><i class="fa-solid fa-glass-martini-alt"></i> Bar (KDS)</a>
+      <a href="mapa-mesas.html?negocio=" id="link-mapa" class="sb-item"><i class="fa-solid fa-table-cells-large"></i> Mapa de Mesas</a>
+      <a href="portal-finanzas.html?negocio=" id="link-finanzas" class="sb-item active"><i class="fa-solid fa-money-bill-trend-up"></i> Finanzas / Cierres</a>
+      <a href="empleados.html?negocio=" id="link-empleados" class="sb-item"><i class="fa-solid fa-users"></i> Equipo / RR.HH.</a>
+      
+      <div class="sb-nav-sec" id="sec-fiscal">Fiscal / Libros</div>
+      <a href="dte.html?negocio=" id="link-dte" class="sb-item"><i class="fa-solid fa-file-invoice-dollar"></i> Facturación DTE</a>
+      <a href="contabilidad.html?negocio=" id="link-conta" class="sb-item"><i class="fa-solid fa-landmark"></i> Contabilidad SV</a>
+      
+      <div class="sb-nav-sec" id="sec-sistema">Sistema</div>
+      <a href="portal-food-movil.html?negocio=" id="link-movil" class="sb-item"><i class="fa-solid fa-mobile-screen-button"></i> Versión Móvil</a>
+      <a href="portal-food.html?negocio=&panel=config" id="link-ajustes" class="sb-item"><i class="fa-solid fa-gear"></i> Ajustes / Empresa</a>
+    </div>
+
+    <div class="sb-foot">
+      <button class="btn-exit" onclick="location.href='../index.html'"><i class="fa-solid fa-right-from-bracket"></i> Salir del Portal</button>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="content">
+    <div class="hd">
+      <div>
+        <h1>Cierres y Arqueos de Caja</h1>
+        <p>Auditoría diaria de turnos, ingresos de efectivo y diferencias contables</p>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <label for="filtro-fecha"><i class="fa-solid fa-calendar-days"></i> Filtrar Fecha:</label>
+        <input type="date" id="filtro-fecha" class="f-inp">
+      </div>
+      <button class="btn-detail" onclick="cargarCierresDia()" style="background: rgba(251,191,36,0.1); color: var(--m-amber); border-color: rgba(251,191,36,0.3); padding: 8px 16px;">
+        <i class="fa-solid fa-rotate"></i> Actualizar Datos
+      </button>
+    </div>
+
+    <!-- ESTADISTICAS KPI -->
+    <div class="grid-stats">
+      <div class="stat-card st-sales">
+        <div class="sc-val" id="kpi-ventas">$0.00</div>
+        <div class="sc-lbl">Ventas Totales Registradas</div>
+      </div>
+      <div class="stat-card st-expected">
+        <div class="sc-val" id="kpi-esperado">$0.00</div>
+        <div class="sc-lbl">Esperado Neto en Caja</div>
+      </div>
+      <div class="stat-card st-real">
+        <div class="sc-val" id="kpi-real">$0.00</div>
+        <div class="sc-lbl">Declarado en Arqueos</div>
+      </div>
+      <div class="stat-card" id="kpi-diff-card" style="background: var(--m-muted);">
+        <div class="sc-val" id="kpi-diferencia">$0.00</div>
+        <div class="sc-lbl" id="kpi-diferencia-lbl">Diferencia Neta</div>
+      </div>
+    </div>
+
+    <!-- TABLA DE CIERRES -->
+    <div class="tbl-card">
+      <div class="tbl-title">
+        <span><i class="fa-solid fa-cash-register"></i> Sesiones y Arqueos del Día</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Cajero Responsable</th>
+            <th>Apertura</th>
+            <th>Cierre</th>
+            <th>Fondo Inicial</th>
+            <th>Ventas (Sist.)</th>
+            <th>Ingresos Ext.</th>
+            <th>Esperado</th>
+            <th>Arqueo (Real)</th>
+            <th>Diferencia</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="cierres-tbody">
+          <tr>
+            <td colspan="10" style="text-align: center; color: var(--m-muted); padding: 30px;">
+              <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+              Cargando cierres del día seleccionado...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- DETALLE CLOSURE MODAL -->
+  <div class="modal-overlay" id="modal-detalle">
+    <div class="modal-box">
+      <div class="mb-head">
+        <h2 id="md-title"><i class="fa-solid fa-receipt"></i> Detalle de Turno y Arqueo</h2>
+        <button class="mb-close" onclick="cerrarDetalleModal()">&times;</button>
+      </div>
+      <div class="mb-body">
+        
+        <!-- Grid: Breakdown -->
+        <div class="modal-grid">
+          
+          <!-- Column 1: Ventas en Sistema -->
+          <div class="modal-panel-card">
+            <div class="modal-panel-title"><i class="fa-solid fa-chart-line"></i> Reporte de Ventas (Sistema)</div>
+            
+            <div class="item-row">
+              <span class="lbl">Ventas Efectivo</span>
+              <span class="val" id="md-ventas-efectivo">$0.00</span>
+            </div>
+            <div class="item-row">
+              <span class="lbl">Ventas Tarjeta</span>
+              <span class="val" id="md-ventas-tarjeta">$0.00</span>
+            </div>
+            <div class="item-row">
+              <span class="lbl">Ventas Transferencia</span>
+              <span class="val" id="md-ventas-transferencia">$0.00</span>
+            </div>
+            
+            <div class="item-row total-highlight">
+              <span class="lbl">Ventas Totales</span>
+              <span class="val" id="md-ventas-total">$0.00</span>
+            </div>
+          </div>
+
+          <!-- Column 2: Dinero Físico y Arqueo -->
+          <div class="modal-panel-card">
+            <div class="modal-panel-title"><i class="fa-solid fa-coins"></i> Conciliación y Caja Físico</div>
+            
+            <div class="item-row">
+              <span class="lbl">Fondo Inicial de Caja</span>
+              <span class="val" id="md-fondo-inicial">$0.00</span>
+            </div>
+            <div class="item-row">
+              <span class="lbl">(+) Ventas Efectivo</span>
+              <span class="val" id="md-fondo-ventas-efec">$0.00</span>
+            </div>
+            <div class="item-row">
+              <span class="lbl">(+) Ingresos de Efectivo / Extras</span>
+              <span class="val" id="md-ingresos-extras">$0.00</span>
+            </div>
+            
+            <div class="cash-log-list" id="md-ingresos-log">
+              <!-- Log de ingresos -->
+            </div>
+
+            <div class="item-row total-highlight">
+              <span class="lbl">Dinero Esperado en Caja</span>
+              <span class="val" id="md-monto-esperado">$0.00</span>
+            </div>
+            <div class="item-row">
+              <span class="lbl">Dinero Real Declarado</span>
+              <span class="val" id="md-monto-real">$0.00</span>
+            </div>
+            
+            <div class="item-row diff-highlight" id="md-diff-row" style="margin-top: 10px; border-top: 1px solid #334155; padding-top: 8px;">
+              <span class="lbl" style="font-weight: 800;">Diferencia de Arqueo</span>
+              <span class="val" id="md-diferencia">$0.00</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Section: Order Receipt Lists -->
+        <div style="background: #1a1d24; border: 1px solid var(--m-border); border-radius: 12px; overflow: hidden;">
+          <div style="padding: 14px 20px; font-weight: 800; border-bottom: 1px solid var(--m-border); display: flex; align-items: center; justify-content: space-between; background: #16191f;">
+            <span><i class="fa-solid fa-list"></i> Comprobantes Emitidos en este Turno</span>
+            <span style="font-size: 11px; color: var(--m-muted);" id="md-orders-count">0 órdenes</span>
+          </div>
+          <div style="max-height: 250px; overflow-y: auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pedido ID</th>
+                  <th>Cliente</th>
+                  <th>Detalle</th>
+                  <th>Método Pago</th>
+                  <th>Total</th>
+                  <th>Fecha y Hora</th>
+                </tr>
+              </thead>
+              <tbody id="md-orders-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; color: var(--m-muted); padding: 20px;">
+                    Ninguna orden registrada en este periodo.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+      <div class="mb-foot">
+        <button class="btn-detail" onclick="cerrarDetalleModal()" style="padding: 10px 20px; font-size: 13px;">Cerrar Ficha</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- FIREBASE CONFIG & APP LOGIC -->
+  <script src="firebase-config.js"></script>
+  <script>
+    // Propagate business ID to links
+    const getNegocio = () => {
+      const params = new URLSearchParams(window.location.search);
+      let n = params.get('negocio');
+      if (n) {
+        localStorage.setItem('negocioID', n);
+        return n;
+      }
+      return localStorage.getItem('negocioID') || 'elparche';
+    };
+
+    const negocioID = getNegocio();
+    window.negocioID = negocioID;
+
+    // Propagate to all links
+    document.querySelectorAll('a[id^="link-"]').forEach(link => {
+      let href = link.getAttribute('href') || '';
+      if (href.includes('negocio=')) {
+        link.setAttribute('href', href.replace(/negocio=[^&]*/, `negocio=${encodeURIComponent(negocioID)}`));
+      } else if (href.includes('?')) {
+        link.setAttribute('href', `${href}&negocio=${encodeURIComponent(negocioID)}`);
+      } else {
+        link.setAttribute('href', `${href}?negocio=${encodeURIComponent(negocioID)}`);
+      }
+    });
+
+    // Default filter date to today
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local format
+      document.getElementById('filtro-fecha').value = today;
+
+      // Start Firebase listeners
+      cargarCierresDia();
+
+      // Listen for date changes
+      document.getElementById('filtro-fecha').addEventListener('change', cargarCierresDia);
+    });
+
+    let _cierresCache = {};
+
+    function toast(msg, type = '') {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'show ' + type;
+      setTimeout(() => { t.classList.remove('show'); }, 3000);
+    }
+
+    function formatCurrency(val) {
+      return '$' + (parseFloat(val) || 0).toFixed(2);
+    }
+
+    function formatTime(isoStr) {
+      if (!isoStr) return '--';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return '--';
+      }
+    }
+
+    function formatFullDate(isoStr) {
+      if (!isoStr) return '--';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('es-SV', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+               d.toLocaleTimeString('es-SV', { hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return '--';
+      }
+    }
+
+    function cargarCierresDia() {
+      const selectDate = document.getElementById('filtro-fecha').value; // YYYY-MM-DD
+      const tbody = document.getElementById('cierres-tbody');
+      
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="10" style="text-align: center; color: var(--m-muted); padding: 30px;">
+            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+            Consultando registros en base de datos...
+          </td>
+        </tr>
+      `;
+
+      // Read historic closures
+      db.ref(`negocios/${negocioID}/cajas`).once('value').then(snap => {
+        const data = snap.val() || {};
+        _cierresCache = data;
+        renderCierres(selectDate, data);
+      }).catch(err => {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;color:var(--m-red)">Error al consultar Firebase Realtime Database.</td></tr>`;
+      });
+    }
+
+    function renderCierres(selectedDate, allCajas) {
+      const tbody = document.getElementById('cierres-tbody');
+      const list = Object.values(allCajas);
+
+      // Filter: Match date string (fecha_apertura starts with selectedDate YYYY-MM-DD)
+      const filtered = list.filter(c => {
+        if (!c.fecha_apertura) return false;
+        const appDate = c.fecha_apertura.substring(0, 10);
+        return appDate === selectedDate;
+      }).sort((a,b) => (b.timestamp_apertura || 0) - (a.timestamp_apertura || 0));
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" style="text-align: center; color: var(--m-muted); padding: 40px;">
+              <i class="fa-solid fa-folder-open" style="font-size: 32px; opacity: 0.3; margin-bottom: 10px;"></i><br>
+              No se encontraron cierres ni arqueos registrados para el día ${selectedDate}.
+            </td>
+          </tr>
+        `;
+        // Reset KPIs
+        document.getElementById('kpi-ventas').textContent = '$0.00';
+        document.getElementById('kpi-esperado').textContent = '$0.00';
+        document.getElementById('kpi-real').textContent = '$0.00';
+        document.getElementById('kpi-diferencia').textContent = '$0.00';
+        document.getElementById('kpi-diferencia-lbl').textContent = 'Diferencia Neta';
+        document.getElementById('kpi-diff-card').style.background = 'var(--m-muted)';
+        return;
+      }
+
+      tbody.innerHTML = '';
+
+      let totalVentas = 0;
+      let totalEsperado = 0;
+      let totalReal = 0;
+      let totalDiferencia = 0;
+
+      filtered.forEach(c => {
+        // Calculate variables
+        const vEfectivo = parseFloat(c.ventas_efectivo || 0);
+        const vTarjeta = parseFloat(c.ventas_tarjeta || 0);
+        const vTransf = parseFloat(c.ventas_transferencia || 0);
+        const totalV = vEfectivo + vTarjeta + vTransf;
+
+        let ingresosSum = 0;
+        if (c.ingresos_efectivo && c.ingresos_efectivo.length) {
+          c.ingresos_efectivo.forEach(i => { ingresosSum += parseFloat(i.monto) || 0; });
+        }
+
+        const esperado = (parseFloat(c.monto_inicial) || parseFloat(c.caja_inicial) || 0) + vEfectivo + ingresosSum;
+        const real = c.estado === 'cerrada' ? (parseFloat(c.monto_real) || 0) : esperado;
+        const dif = c.estado === 'cerrada' ? (parseFloat(c.diferencia) || 0) : 0;
+
+        totalVentas += totalV;
+        totalEsperado += esperado;
+        totalReal += real;
+        totalDiferencia += dif;
+
+        // Render Row
+        const tr = document.createElement('tr');
+        
+        let statusBadge = '';
+        if (c.estado === 'abierta') {
+          statusBadge = '<span class="badge badge-open">Activa / Abierta</span>';
+        } else {
+          if (dif > 0) {
+            statusBadge = `<span class="badge badge-surplus">Sobrante (+${formatCurrency(dif)})</span>`;
+          } else if (dif < 0) {
+            statusBadge = `<span class="badge badge-deficit">Faltante (${formatCurrency(dif)})</span>`;
+          } else {
+            statusBadge = '<span class="badge badge-balanced">Cuadrado</span>';
+          }
+        }
+
+        tr.innerHTML = `
+          <td><strong>${c.usuario_apertura || 'Desconocido'}</strong></td>
+          <td>${formatTime(c.fecha_apertura)}</td>
+          <td>${c.estado === 'cerrada' ? formatTime(c.fecha_cierre) : '--'}</td>
+          <td>${formatCurrency(c.monto_inicial || c.caja_inicial)}</td>
+          <td>${formatCurrency(totalV)}</td>
+          <td>${formatCurrency(ingresosSum)}</td>
+          <td>${formatCurrency(esperado)}</td>
+          <td>${c.estado === 'cerrada' ? formatCurrency(real) : '--'}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <button class="btn-detail" onclick="verDetalleCierre('${c.id}')">
+              <i class="fa-solid fa-eye"></i> Auditoría
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      // Render KPIs
+      document.getElementById('kpi-ventas').textContent = formatCurrency(totalVentas);
+      document.getElementById('kpi-esperado').textContent = formatCurrency(totalEsperado);
+      document.getElementById('kpi-real').textContent = formatCurrency(totalReal);
+      document.getElementById('kpi-diferencia').textContent = formatCurrency(totalDiferencia);
+
+      const diffCard = document.getElementById('kpi-diff-card');
+      if (totalDiferencia > 0) {
+        document.getElementById('kpi-diferencia-lbl').textContent = 'Sobrante Neto';
+        diffCard.style.background = 'var(--m-green)';
+      } else if (totalDiferencia < 0) {
+        document.getElementById('kpi-diferencia-lbl').textContent = 'Faltante Neto';
+        diffCard.style.background = 'var(--m-red)';
+      } else {
+        document.getElementById('kpi-diferencia-lbl').textContent = 'Cajas Cuadradas';
+        diffCard.style.background = 'var(--m-muted)';
+      }
+    }
+
+    function verDetalleCierre(cajaId) {
+      const c = _cierresCache[cajaId];
+      if (!c) return;
+
+      document.getElementById('md-title').innerHTML = `
+        <i class="fa-solid fa-receipt"></i> Auditoría de Turno: ${c.usuario_apertura || 'Desconocido'} 
+        <span style="font-size:12px; font-weight:normal; margin-left:10px; color:var(--m-muted);">
+          (${c.estado === 'abierta' ? 'ABIERTA' : 'CERRADA'})
+        </span>
+      `;
+
+      // Sales
+      const vEfectivo = parseFloat(c.ventas_efectivo || 0);
+      const vTarjeta = parseFloat(c.ventas_tarjeta || 0);
+      const vTransf = parseFloat(c.ventas_transferencia || 0);
+      const totalV = vEfectivo + vTarjeta + vTransf;
+
+      document.getElementById('md-ventas-efectivo').textContent = formatCurrency(vEfectivo);
+      document.getElementById('md-ventas-tarjeta').textContent = formatCurrency(vTarjeta);
+      document.getElementById('md-ventas-transferencia').textContent = formatCurrency(vTransf);
+      document.getElementById('md-ventas-total').textContent = formatCurrency(totalV);
+
+      // Reconciliation
+      const fInicial = parseFloat(c.monto_inicial || c.caja_inicial || 0);
+      document.getElementById('md-fondo-inicial').textContent = formatCurrency(fInicial);
+      document.getElementById('md-fondo-ventas-efec').textContent = formatCurrency(vEfectivo);
+
+      let ingresosSum = 0;
+      const logList = document.getElementById('md-ingresos-log');
+      logList.innerHTML = '';
+
+      if (c.ingresos_efectivo && c.ingresos_efectivo.length) {
+        c.ingresos_efectivo.forEach(i => {
+          ingresosSum += parseFloat(i.monto) || 0;
+          const logDiv = document.createElement('div');
+          logDiv.className = 'cash-log-item';
+          logDiv.innerHTML = `
+            <span>${i.concepto || 'Ingreso de Caja'}</span>
+            <span style="font-weight:700; color:var(--m-green);">+${formatCurrency(i.monto)}</span>
+          `;
+          logList.appendChild(logDiv);
+        });
+      } else {
+        logList.innerHTML = `<div style="text-align:center; color:var(--m-muted); font-size:11px; padding:6px 0;">Sin ingresos extras registrados</div>`;
+      }
+
+      document.getElementById('md-ingresos-extras').textContent = formatCurrency(ingresosSum);
+
+      const esperado = fInicial + vEfectivo + ingresosSum;
+      const real = c.estado === 'cerrada' ? (parseFloat(c.monto_real) || 0) : esperado;
+      const dif = c.estado === 'cerrada' ? (parseFloat(c.diferencia) || 0) : 0;
+
+      document.getElementById('md-monto-esperado').textContent = formatCurrency(esperado);
+      document.getElementById('md-monto-real').textContent = c.estado === 'cerrada' ? formatCurrency(real) : 'TURNO ACTIVO';
+      document.getElementById('md-diferencia').textContent = formatCurrency(dif);
+
+      const diffRow = document.getElementById('md-diff-row');
+      if (c.estado === 'abierta') {
+        diffRow.style.color = 'white';
+        document.getElementById('md-diferencia').textContent = '--';
+      } else if (dif > 0) {
+        diffRow.style.color = 'var(--m-green)';
+      } else if (dif < 0) {
+        diffRow.style.color = 'var(--m-red)';
+      } else {
+        diffRow.style.color = 'var(--m-blue)';
+      }
+
+      // Load orders processed during this turn
+      cargarOrdenesTurno(c);
+      
+      // Open Modal
+      document.getElementById('modal-detalle').classList.add('active');
+    }
+
+    function cargarOrdenesTurno(cajaSesion) {
+      const tbody = document.getElementById('md-orders-tbody');
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; color: var(--m-muted); padding: 20px;">
+            <i class="fa-solid fa-spinner fa-spin"></i> Filtrando comprobantes en este periodo...
+          </td>
+        </tr>
+      `;
+
+      // Read historic paid sales
+      db.ref(`negocios/${negocioID}/ventas`).once('value').then(snap => {
+        const data = snap.val() || {};
+        const orders = Object.values(data);
+        
+        // Filter orders within the session timestamps
+        const tStart = cajaSesion.timestamp_apertura || 0;
+        const tEnd = cajaSesion.timestamp_cierre || Date.now();
+
+        const filtered = orders.filter(o => {
+          const t = o.timestamp || 0;
+          return t >= tStart && t <= tEnd;
+        }).sort((a,b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+        document.getElementById('md-orders-count').textContent = `${filtered.length} órdenes`;
+
+        if (filtered.length === 0) {
+          tbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--m-muted); padding: 25px;">
+                No se registraron ventas procesadas durante este turno.
+              </td>
+            </tr>
+          `;
+          return;
+        }
+
+        tbody.innerHTML = '';
+        filtered.forEach(o => {
+          // Format item list briefly
+          let itemsText = '';
+          if (o.items) {
+            const list = Object.values(o.items);
+            itemsText = list.map(i => `${i.cant || 1}x ${i.nombre || 'Platillo'}`).join(', ');
+            if (itemsText.length > 55) itemsText = itemsText.substring(0, 52) + '...';
+          } else if (o.pedido) {
+            const list = Object.values(o.pedido);
+            itemsText = list.map(i => `${i.cant || 1}x ${i.nombre || 'Platillo'}`).join(', ');
+            if (itemsText.length > 55) itemsText = itemsText.substring(0, 52) + '...';
+          }
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${o.id || o.orden || '--'}</strong></td>
+            <td>${o.cliente || 'Consumidor Final'}</td>
+            <td title="${itemsText}">${itemsText || 'Sin detalle'}</td>
+            <td><span class="badge badge-open" style="background:#334155;color:white;">${(o.forma_pago || 'efectivo').toUpperCase()}</span></td>
+            <td><strong>${formatCurrency(o.total)}</strong></td>
+            <td>${formatFullDate(o.timestamp)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }).catch(err => {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--m-red)">Error al filtrar comprobantes.</td></tr>`;
+      });
+    }
+
+    function cerrarDetalleModal() {
+      document.getElementById('modal-detalle').classList.remove('active');
+    }
+  </script>
+</body>
+</html>

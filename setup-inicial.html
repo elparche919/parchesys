@@ -83,14 +83,13 @@
   <p class="sub">Inicializa toda la base de datos Firebase con datos del negocio, empleados y menú demo.</p>
 
   <div class="cred">
-    <strong>Credenciales que se crearán</strong>
+    <strong>Credenciales principales</strong>
     <table>
       <tr><td>Negocio ID</td><td>elparche</td></tr>
       <tr><td>Nombre</td><td>EL PARCHE</td></tr>
-      <tr><td>Correo login</td><td>elparche919@gmail.com</td></tr>
-      <tr><td>PIN propietario</td><td>1919</td></tr>
-      <tr><td>PIN cajero demo</td><td>2020</td></tr>
-      <tr><td>PIN mesero demo</td><td>3030</td></tr>
+      <tr><td>Correo login</td><td>cast152025@gmail.com</td></tr>
+      <tr><td>PIN Propietario (Walter)</td><td>1919</td></tr>
+      <tr><td>Total Empleados</td><td>16 registrados</td></tr>
     </table>
   </div>
 
@@ -130,7 +129,7 @@
     <h3>✅ ¡Sistema listo!</h3>
     <p style="font-size:13px; color:rgba(255,255,255,.6);">
       Credenciales de acceso al portal:<br>
-      <strong style="color:white">Correo:</strong> elparche919@gmail.com &nbsp;|&nbsp; <strong style="color:white">PIN:</strong> 1919
+      <strong style="color:white">Correo:</strong> cast152025@gmail.com &nbsp;|&nbsp; <strong style="color:white">PIN:</strong> 1919
     </p>
     <a href="index.html">→ Ir al Login del Portal</a>
     <a href="menu-cliente.html?negocio=elparche" target="_blank">→ Ver Menú del Cliente</a>
@@ -141,13 +140,13 @@
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script>
 var firebaseConfig = {
-  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
-  authDomain: "parche-sys.firebaseapp.com",
-  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
-  projectId: "parche-sys",
-  storageBucket: "parche-sys.firebasestorage.app",
-  messagingSenderId: "5761192689",
-  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+  apiKey: "AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+  authDomain: "parche-sys-v2.firebaseapp.com",
+  databaseURL: "https://parche-sys-v2-default-rtdb.firebaseio.com",
+  projectId: "parche-sys-v2",
+  storageBucket: "parche-sys-v2.firebasestorage.app",
+  messagingSenderId: "367489065915",
+  appId: "1:367489065915:web:300a2bca022c6eb6a41a9e"
 };
 firebase.initializeApp(firebaseConfig);
 var db = firebase.database();
@@ -173,7 +172,7 @@ async function setup() {
     log('📋 Escribiendo info del negocio...', 'inf');
     await db.ref('negocios/' + NEGOCIO + '/info').set({
       nombre:    'EL PARCHE',
-      email:     'elparche919@gmail.com',
+      email:     'cast152025@gmail.com',
       password:  'parcherumba',
       telefono:  '7700-0000',
       direccion: 'San Salvador, El Salvador',
@@ -194,31 +193,112 @@ async function setup() {
 
     /* ─── 3. EMPLEADOS ─── */
     log('👥 Creando empleados...', 'inf');
-    await db.ref('negocios/' + NEGOCIO + '/empleados').set({
-      emp_propietario: {
-        nombre: 'Propietario', rol: 'propietario', puesto: 'Propietario',
-        dui: '06741021-6', pin: '1919', pin_app: '1919',
-        activo: true, created: Date.now(),
-        modulos: {
-          pronostico: true, auditoria: true, menu: true, inventario: true,
-          pos: true, cocina: true, mapa_mesas: true, delivery: true,
-          empleados: true, dte: true, contabilidad: true
-        }
-      },
-      emp_cajero: {
-        nombre: 'Cajero Demo', rol: 'cajero', puesto: 'Cajero',
-        dui: '00000000-0', pin: '2020', pin_app: '2020',
-        activo: true, created: Date.now(),
-        modulos: { pos: true, cocina: true, mapa_mesas: true }
-      },
-      emp_mesero: {
-        nombre: 'Mesero Demo', rol: 'mesero', puesto: 'Mesero',
-        dui: '11111111-1', pin: '3030', pin_app: '3030',
-        activo: true, created: Date.now(),
-        modulos: { pos: true, mapa_mesas: true }
+    var emps = {};
+    
+    function addEmp(key, nombre, puesto, dept, rol, pin) {
+      var modules = {};
+      if (rol === 'propietario' || rol === 'admin') {
+        modules = {
+          pos: true, pronostico: true, auditoria: true, menu: true, inventario: true,
+          cocina: true, mapa_mesas: true, delivery: true, pos_movil: true,
+          app_cliente: true, empleados: true, dte: true, contabilidad: true,
+          ajustes: true, mi_empresa: true, mi_perfil: true
+        };
+      } else if (rol === 'supervisor') {
+        modules = {
+          pos: true, pronostico: true, auditoria: true, menu: true, inventario: true,
+          cocina: true, mapa_mesas: true, delivery: true, pos_movil: true,
+          app_cliente: true, empleados: true, dte: true, contabilidad: true,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
+      } else if (rol === 'cajero') {
+        modules = {
+          pos: true, pronostico: false, auditoria: false, menu: false, inventario: false,
+          cocina: true, mapa_mesas: true, delivery: true, pos_movil: false,
+          app_cliente: false, empleados: false, dte: false, contabilidad: false,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
+      } else if (rol === 'mesero') {
+        modules = {
+          pos: true, pronostico: false, auditoria: false, menu: false, inventario: false,
+          cocina: false, mapa_mesas: true, delivery: false, pos_movil: true,
+          app_cliente: false, empleados: false, dte: false, contabilidad: false,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
+      } else if (rol === 'cocinero') {
+        modules = {
+          pos: false, pronostico: false, auditoria: false, menu: false, inventario: false,
+          cocina: true, mapa_mesas: false, delivery: false, pos_movil: false,
+          app_cliente: false, empleados: false, dte: false, contabilidad: false,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
+      } else if (rol === 'delivery') {
+        modules = {
+          pos: false, pronostico: false, auditoria: false, menu: false, inventario: false,
+          cocina: false, mapa_mesas: false, delivery: true, pos_movil: false,
+          app_cliente: false, empleados: false, dte: false, contabilidad: false,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
+      } else { // empleado
+        modules = {
+          pos: false, pronostico: false, auditoria: false, menu: false, inventario: false,
+          cocina: false, mapa_mesas: false, delivery: false, pos_movil: false,
+          app_cliente: false, empleados: false, dte: false, contabilidad: false,
+          ajustes: false, mi_empresa: false, mi_perfil: true
+        };
       }
-    });
-    log('✓ 3 empleados creados (propietario PIN:1919, cajero PIN:2020, mesero PIN:3030).', 'ok');
+
+      var cleanDui = "0000" + pin;
+      var duiFormatted = cleanDui.substring(0, 8) + "-" + cleanDui.substring(cleanDui.length - 1);
+
+      emps[key] = {
+        nombre: nombre,
+        puesto: puesto,
+        dept: dept,
+        rol: rol,
+        dui: duiFormatted,
+        tel: "7000-0000",
+        email: nombre.toLowerCase().replace(/[^a-z0-9]/g, ".") + "@elparche.com",
+        salario: 365.0,
+        fecha: new Date().toISOString().split('T')[0],
+        hora_in: "08:00",
+        hora_out: "17:00",
+        activo: true,
+        created: Date.now(),
+        color: ['#1B4E8B','#10b981','#f59e0b','#ec4899','#1B4E8B','#06b6d4','#f97316','#14b8a6'][Math.floor(Math.random() * 8)],
+        pin: pin,
+        pin_app: pin,
+        acceso_campo: (rol === 'delivery' || puesto.toLowerCase().includes('delivery')),
+        isss_num: "",
+        afp_num: "",
+        afp_inst: "Crecer",
+        aplica_isss: true,
+        aplica_afp: true,
+        modulos: modules,
+        modulos_permitidos: modules,
+        modulos_custom: modules
+      };
+    }
+
+    addEmp('emp_walter', 'Walter Campos', 'CEO', 'Dirección', 'propietario', '1919');
+    addEmp('emp_sofia', 'Ana Sofía Osorio Ayala', 'Cocinero', 'Producción', 'cocinero', '5051');
+    addEmp('emp_ribidia', 'Ribidia del Carmen Ávalos', 'Cocinero', 'Producción', 'cocinero', '5052');
+    addEmp('emp_oscar', 'Oscar Romero Vásquez', 'Cocinero', 'Producción', 'cocinero', '5053');
+    addEmp('emp_bessy', 'Bessy Cecilia', 'Cocinero', 'Producción', 'cocinero', '5054');
+    addEmp('emp_edwin', 'Edwin Jaime González', 'Jefe de Meseros', 'Servicio al Cliente', 'supervisor', '5055');
+    addEmp('emp_yajaira', 'Yajaira Arely Zavala Amaya', 'Mesero', 'Servicio al Cliente', 'mesero', '5056');
+    addEmp('emp_yoselyn', 'Yoselyn Vanessa Chávez Jurado', 'Mesero', 'Servicio al Cliente', 'mesero', '5057');
+    addEmp('emp_katerin', 'Katerin Julissa Machado Gonzales', 'Mesero', 'Servicio al Cliente', 'mesero', '5058');
+    addEmp('emp_camila', 'Camila Alejandra Machado Gonzales', 'Mesero', 'Servicio al Cliente', 'mesero', '5059');
+    addEmp('emp_rudy', 'Rudy René de la O Bolaines', 'Asistente', 'Administración', 'empleado', '5060');
+    addEmp('emp_angela', 'Ángela Cristabel Manzano Sura', 'Cajero', 'Servicio al Cliente', 'cajero', '5061');
+    addEmp('emp_levi', 'Levi Dany Bernal Villanueva', 'Ayudante de Cocina', 'Producción', 'cocinero', '5062');
+    addEmp('emp_jose_adony', 'José Adony Zavala Amaya', 'Supervisor', 'Servicio al Cliente', 'supervisor', '5063');
+    addEmp('emp_emanuel', 'Emanuel molina', 'Empleado demo 1', 'MESERO', 'mesero', '5064');
+    addEmp('emp_jose_tovar', 'JOSE TOVAR', 'EMPLEADO DEMO 2', 'SUPERVISOR', 'supervisor', '5065');
+
+    await db.ref('negocios/' + NEGOCIO + '/empleados').set(emps);
+    log('✓ 16 empleados creados correctamente en la base de datos.', 'ok');
 
     /* ─── 4. MÓDULOS ─── */
     await db.ref('negocios/' + NEGOCIO + '/modulos').set({
@@ -228,49 +308,102 @@ async function setup() {
 
     /* ─── 5. CATEGORÍAS DEL MENÚ ─── */
     log('🗂️  Creando categorías del menú...', 'inf');
-    await db.ref('negocios/' + NEGOCIO + '/menu_categorias').set({
-      cat_entradas:     { nombre: 'ENTRADAS',         emoji: '🥗', descripcion: 'Sopas y botanas',             orden: 1, ts: Date.now() },
-      cat_hamburguesas: { nombre: 'HAMBURGUESAS',     emoji: '🍔', descripcion: 'Hamburguesas artesanales',    orden: 2, ts: Date.now() },
-      cat_pollos:       { nombre: 'POLLOS Y ALITAS',  emoji: '🍗', descripcion: 'Pollo frito, asado y alitas', orden: 3, ts: Date.now() },
-      cat_bebidas:      { nombre: 'BEBIDAS',          emoji: '🥤', descripcion: 'Refrescos y jugos naturales', orden: 4, ts: Date.now() },
-      cat_postres:      { nombre: 'POSTRES',          emoji: '🍰', descripcion: 'Dulces y postres de la casa', orden: 5, ts: Date.now() }
-    });
-    log('✓ 5 categorías del menú creadas.', 'ok');
+    var categorias = {
+      "PLATOS FUERTES": {
+        "nombre": "PLATOS FUERTES",
+        "emoji": "🍽️",
+        "descripcion": "",
+        "orden": 1,
+        "ts": 1749369600000
+      },
+      "BOCAS": {
+        "nombre": "BOCAS",
+        "emoji": "🍢",
+        "descripcion": "",
+        "orden": 2,
+        "ts": 1749369600000
+      },
+      "PLATOS BOQUEADOS": {
+        "nombre": "PLATOS BOQUEADOS",
+        "emoji": "🥘",
+        "descripcion": "",
+        "orden": 3,
+        "ts": 1749369600000
+      },
+      "CERVEZAS NACIONALES": {
+        "nombre": "CERVEZAS NACIONALES",
+        "emoji": "🍺",
+        "descripcion": "",
+        "orden": 4,
+        "ts": 1749369600000
+      },
+      "CERVEZAS EXTRANJERAS": {
+        "nombre": "CERVEZAS EXTRANJERAS",
+        "emoji": "🍻",
+        "descripcion": "",
+        "orden": 5,
+        "ts": 1749369600000
+      },
+      "OTRAS BEBIDAS": {
+        "nombre": "OTRAS BEBIDAS",
+        "emoji": "🥤",
+        "descripcion": "",
+        "orden": 6,
+        "ts": 1749369600000
+      }
+    };
+    await db.ref('negocios/' + NEGOCIO + '/menu_categorias').set(categorias);
+    log('✓ ' + Object.keys(categorias).length + ' categorías del menú creadas.', 'ok');
 
     /* ─── 6. PRODUCTOS ─── */
     log('🍽️  Cargando platillos del menú...', 'inf');
-
     var productos = {
-      'ENTRADAS': {
-        prod_ent_1: { nombre: 'Sopa del Día',         descripcion: 'Sopa casera con ingredientes frescos. Se sirve con pan francés.', precio: 3.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ent_2: { nombre: 'Ensalada César',       descripcion: 'Lechuga romana, crutones, parmesano y aderezo César artesanal.', precio: 5.25, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ent_3: { nombre: 'Alitas de Entrada (6)', descripcion: 'Seis alitas fritas con salsa BBQ o Buffalo. Con dip de queso azul.', precio: 6.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ent_4: { nombre: 'Nachos con Queso',    descripcion: 'Totopos con queso derretido, jalapeños, crema y guacamole.', precio: 4.75, img: '', oculto: false, gravado: true, ts: Date.now() }
+      "PLATOS FUERTES": {
+        "p001": { "nombre": "Consome de Camarón con Jaiba", "descripcion": "Consomé de camarón con jaiba", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p002": { "nombre": "Camarones al Ajillo", "descripcion": "Camarones al ajillo", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p003": { "nombre": "Camarones Empanizados", "descripcion": "Camarones empanizados", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p004": { "nombre": "Ceviche de Camarón", "descripcion": "Ceviche de camarón", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p005": { "nombre": "Carne a la Plancha", "descripcion": "Carne a la plancha", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p006": { "nombre": "Costilla de Cerdo a la Plancha", "descripcion": "Costilla de cerdo a la plancha", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p007": { "nombre": "Costilla de Cerdo BBQ", "descripcion": "Costilla de cerdo BBQ", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p008": { "nombre": "Tacos de Res", "descripcion": "Tacos de res", "precio": 6.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p009": { "nombre": "Tacos de Pollo", "descripcion": "Tacos de pollo", "precio": 6.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p010": { "nombre": "Tacos Mixtos", "descripcion": "Tacos mixtos", "precio": 7.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p011": { "nombre": "Alitas Tradicionales", "descripcion": "Alitas con Ranch, Queso Parmesano, BBQ y Ajo", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p012": { "nombre": "Pechuga a la Plancha", "descripcion": "Pechuga a la plancha", "precio": 8.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
       },
-      'HAMBURGUESAS': {
-        prod_ham_1: { nombre: 'Hamburguesa El Parche', descripcion: 'Carne 100% res, doble queso, cebolla caramelizada y salsa especial. Con papas.', precio: 8.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ham_2: { nombre: 'Hamburguesa Clásica',  descripcion: 'Carne de res, queso americano, lechuga, tomate y mostaza. Con papas fritas.', precio: 6.75, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ham_3: { nombre: 'Hamburguesa BBQ',      descripcion: 'Carne de res con salsa BBQ ahumada, bacon crujiente y queso cheddar.', precio: 9.25, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ham_4: { nombre: 'Hamburguesa Vegetariana', descripcion: 'Medallón de garbanzos, aguacate, espinacas y aderezo de hierbas. Con papas al horno.', precio: 7.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_ham_5: { nombre: 'Hamburguesa Doble',   descripcion: 'Doble carne, doble queso, tocineta, lechuga y salsa especial. Para buen apetito.', precio: 11.00, img: '', oculto: false, gravado: true, ts: Date.now() }
+      "BOCAS": {
+        "p013": { "nombre": "Consome de Camarón con Jaiba", "descripcion": "", "precio": 2.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p014": { "nombre": "Alita", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p015": { "nombre": "Costilla", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p016": { "nombre": "Costilla BBQ", "descripcion": "", "precio": 2.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p017": { "nombre": "Pescado Frito", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p018": { "nombre": "Camarón Empanizado", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p019": { "nombre": "Ceviche de Camarón", "descripcion": "", "precio": 2.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p020": { "nombre": "Chorizo de Tuza", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p021": { "nombre": "Queso Frito", "descripcion": "", "precio": 1.75, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
       },
-      'POLLOS Y ALITAS': {
-        prod_pol_1: { nombre: 'Pollo Frito (2 piezas)', descripcion: 'Dos piezas de pollo dorado y crujiente. Con arroz, ensalada y tortillas.', precio: 7.00, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_pol_2: { nombre: 'Alitas BBQ (12 piezas)', descripcion: 'Docena de alitas bañadas en salsa BBQ ahumada. Con papas y dip de rancho.', precio: 10.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_pol_3: { nombre: 'Alitas Buffalo (12 piezas)', descripcion: 'Docena de alitas picantes estilo Buffalo. Con dip de queso azul y apio.', precio: 10.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_pol_4: { nombre: 'Pollo a la Parrilla', descripcion: 'Pechuga marinada con hierbas y limón. Con vegetales y papas al horno.', precio: 8.75, img: '', oculto: false, gravado: true, ts: Date.now() }
+      "PLATOS BOQUEADOS": {
+        "p022": { "nombre": "Boqueado #1", "descripcion": "Consome, Costilla, Camaron Empanizado, Queso Frito", "precio": 8.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p023": { "nombre": "Boqueado #2", "descripcion": "Costilla, Camaron Empanizado, Consome, Alita, Queso Frito, Aguacate", "precio": 11.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": false, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
       },
-      'BEBIDAS': {
-        prod_beb_1: { nombre: 'Refresco en Lata',  descripcion: 'Coca-Cola, Pepsi, Sprite, Fanta o agua mineral. Bien fría.', precio: 1.25, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_beb_2: { nombre: 'Jugo Natural',       descripcion: 'Jugo fresco: naranja, sandía, melón o maracuyá. Preparado al momento.', precio: 2.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_beb_3: { nombre: 'Limonada Natural',  descripcion: 'Limonada con limones naturales, agua mineral y menta. Con o sin gas.', precio: 2.00, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_beb_4: { nombre: 'Michelada Sin Alcohol', descripcion: 'Clamato, limón, chile en polvo y salsa inglesa. Vaso escarchado.', precio: 3.25, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_beb_5: { nombre: 'Agua Pura 500ml',   descripcion: 'Botella de agua purificada bien fría.', precio: 0.75, img: '', oculto: false, gravado: false, ts: Date.now() }
+      "CERVEZAS NACIONALES": {
+        "p024": { "nombre": "Pilsener", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p025": { "nombre": "Golden Light", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p026": { "nombre": "Golden Extra", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p027": { "nombre": "Suprema", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p028": { "nombre": "Smirnoff Ice", "descripcion": "", "precio": 2.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
       },
-      'POSTRES': {
-        prod_pos_1: { nombre: 'Pastel de Chocolate', descripcion: 'Porción de pastel húmedo con ganache y helado de vainilla.', precio: 3.75, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_pos_2: { nombre: 'Helado 2 Bolas',     descripcion: 'Dos bolas artesanales: vainilla, fresa, chocolate, mango u oreo.', precio: 2.50, img: '', oculto: false, gravado: true, ts: Date.now() },
-        prod_pos_3: { nombre: 'Churros con Chocolate', descripcion: 'Churros recién hechos con azúcar, canela y dip de chocolate caliente.', precio: 3.00, img: '', oculto: false, gravado: true, ts: Date.now() }
+      "CERVEZAS EXTRANJERAS": {
+        "p029": { "nombre": "Corona", "descripcion": "", "precio": 2.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p030": { "nombre": "Michelob Ultra", "descripcion": "", "precio": 2.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
+      },
+      "OTRAS BEBIDAS": {
+        "p031": { "nombre": "Gaseosa", "descripcion": "", "precio": 1.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p032": { "nombre": "Agua Mineral", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p033": { "nombre": "Salutaris (Limón y Naranja)", "descripcion": "", "precio": 1.5, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p034": { "nombre": "Agua", "descripcion": "", "precio": 1.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 },
+        "p035": { "nombre": "Café", "descripcion": "", "precio": 1.0, "img": "", "oculto": false, "gravado": true, "stockFijo": 10.0, "descuenta": true, "ingredientes": [], "variantes": [], "extras": [], "ts": 1749369600000 }
       }
     };
 

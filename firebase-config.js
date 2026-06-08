@@ -5,13 +5,13 @@
  */
 
 var FB_CFG = {
-  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
-  authDomain: "parche-sys.firebaseapp.com",
-  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
-  projectId: "parche-sys",
-  storageBucket: "parche-sys.firebasestorage.app",
-  messagingSenderId: "5761192689",
-  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+  apiKey: "AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+  authDomain: "parche-sys-v2.firebaseapp.com",
+  databaseURL: "https://parche-sys-v2-default-rtdb.firebaseio.com",
+  projectId: "parche-sys-v2",
+  storageBucket: "parche-sys-v2.firebasestorage.app",
+  messagingSenderId: "367489065915",
+  appId: "1:367489065915:web:300a2bca022c6eb6a41a9e"
 };
 
 // Initialize Firebase if not already initialized

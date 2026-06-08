@@ -194,15 +194,10 @@
   <script>
     // Firebase configurado a través de firebase-config.js
     
-    // Pre-fill email if saved
+    // Focus PIN input on load
     window.addEventListener('load', () => {
-      const savedEmail = localStorage.getItem('modus_empresa_email');
-      if (savedEmail) {
-        document.getElementById('email').value = savedEmail;
-        document.getElementById('pin').focus();
-      } else {
-        document.getElementById('email').focus();
-      }
+      const pinField = document.getElementById('pin');
+      if (pinField) pinField.focus();
     });
     
     // Enter key handler
@@ -259,6 +254,20 @@
         const emp = foundEmp.data;
         const meseroId = emp.nombre || foundEmp.key;
 
+        // Crear sesión para pasar el validador de firebase-config.js
+        const ses = {
+          tipo: (emp.rol === 'propietario' || emp.rol === 'admin') ? 'admin' : 'empleado',
+          nombre: emp.nombre || 'Usuario',
+          rol: emp.rol || 'empleado',
+          dui: emp.dui || '',
+          puesto: emp.puesto || '',
+          empKey: foundEmp.key,
+          timestamp: Date.now(),
+          modulos: emp.modulos || {}
+        };
+
+        localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
+        localStorage.setItem('food_operador_' + NEGOCIO_ID, JSON.stringify(ses));
         localStorage.setItem('meseroId', meseroId);
         localStorage.setItem('mesero', meseroId);
         localStorage.setItem('modus_emp', JSON.stringify(emp));
