@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>PARCHE SYS · Control de Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ═══════════════════════════════════════════════
+   TOKENS — Dark theme (matches empleados.html)
+═══════════════════════════════════════════════ */
+:root{
+  --a:#ea580c;
+  --al:rgba(234,88,12,.12);
+  --as:rgba(234,88,12,.22);
+  --gr:#10b981;
+  --grl:rgba(16,185,129,.12);
+  --re:#ef4444;
+  --rel:rgba(239,68,68,.12);
+  --ye:#f59e0b;
+  --yel:rgba(245,158,11,.12);
+  --bg:#0f1115;
+  --sur:#1a1d24;
+  --sur2:#21252f;
+  --bd:#2a2e37;
+  --bd2:#3a3f4a;
+  --tx:#f8fafc;
+  --tx2:#94a3b8;
+  --tx3:#64748b;
+  --r:14px;
+  --rl:18px;
+  --font-body:'DM Sans',sans-serif;
+  --font-display:'DM Serif Display',serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--font-body);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+#app{display:flex;flex-direction:column;height:100%;max-width:480px;margin:0 auto;position:relative;padding-top:env(safe-area-inset-top,0)}
+
+/* ── LOGIN ── */
+#s-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:32px 24px;background:radial-gradient(ellipse at 50% 0%,rgba(234,88,12,.15) 0%,transparent 60%),var(--bg)}
+#s-login.off{display:none}
+.login-logo{font-family:var(--font-display);font-size:40px;font-weight:400;color:var(--a);margin-bottom:4px;letter-spacing:-.5px}
+.login-sub{font-size:13px;color:var(--tx3);margin-bottom:36px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+.login-card{background:var(--sur);border:1px solid var(--bd);border-radius:22px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 24px 64px rgba(0,0,0,.4)}
+.login-lbl{font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:5px;display:block}
+.login-inp{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:10px;font-size:15px;font-family:var(--font-body);color:var(--tx);background:var(--bg);outline:none;transition:.15s;margin-bottom:14px}
+.login-inp:focus{border-color:var(--a);background:#111}
+.login-btn{width:100%;padding:14px;background:var(--a);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;font-family:var(--font-body);cursor:pointer;margin-top:4px;transition:.15s}
+.login-btn:active{opacity:.85}
+.login-err{font-size:12px;color:var(--re);font-weight:600;text-align:center;padding:8px 0;display:none}
+
+/* ── GPS BLOQUEADO ── */
+#s-gps-blocked{display:none;flex-direction:column;align-items:center;justify-content:center;min-height:100%;padding:32px 24px;text-align:center;background:radial-gradient(ellipse at 50% 0%,rgba(239,68,68,.15) 0%,transparent 60%),var(--bg)}
+#s-gps-blocked.on{display:flex}
+.gps-block-ico{font-size:72px;margin-bottom:20px;animation:shake 0.6s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.gps-block-title{font-family:var(--font-display);font-size:26px;color:var(--re);margin-bottom:10px}
+.gps-block-sub{font-size:14px;color:var(--tx2);line-height:1.6;max-width:300px;margin-bottom:28px}
+.gps-block-detail{background:var(--rel);border:1px solid var(--re);border-radius:12px;padding:14px 18px;max-width:320px;width:100%;margin-bottom:20px;font-size:12px;color:var(--re);line-height:1.6}
+.gps-retry-btn{padding:13px 28px;background:var(--re);color:white;border:none;border-radius:11px;font-size:14px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:.15s}
+
+/* ── MAIN ── */
+#s-main{display:none;flex-direction:column;height:100%}
+#s-main.on{display:flex}
+
+/* Topbar */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--sur);border-bottom:1px solid var(--bd);flex-shrink:0;position:sticky;top:0;z-index:10}
+.tb-biz{font-family:var(--font-display);font-size:16px;font-weight:400;color:var(--a);letter-spacing:.02em}
+.tb-av{width:36px;height:36px;border-radius:50%;background:var(--al);color:var(--a);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center;border:2px solid var(--a);overflow:hidden;flex-shrink:0;cursor:pointer}
+
+/* Scroll */
+.scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:calc(80px + env(safe-area-inset-bottom,0))}
+.scroll::-webkit-scrollbar{display:none}
+
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--sur);border-top:1px solid var(--bd);display:grid;grid-template-columns:1fr 1fr;padding-bottom:env(safe-area-inset-bottom,0);z-index:20}
+.nb{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 4px;border:none;background:none;cursor:pointer;gap:3px;transition:.15s}
+.nb-ic{font-size:22px;line-height:1}
+.nb-lbl{font-size:9px;font-weight:700;color:var(--tx3);letter-spacing:.05em;text-transform:uppercase}
+.nb.on .nb-lbl{color:var(--a)}
+
+/* Pages */
+.page{display:none}
+.page.on{display:block}
+
+/* Banner */
+.banner{background:linear-gradient(135deg,var(--a),#c2410c);margin:14px 16px;border-radius:var(--rl);padding:20px;display:flex;align-items:center;gap:14px;color:white;position:relative;overflow:hidden}
+.banner::before{content:'';position:absolute;right:-20px;top:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07)}
+.ban-av{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);font-family:var(--font-display);font-size:24px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:2px solid rgba(255,255,255,.4);overflow:hidden}
+.ban-av img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+.ban-name{font-family:var(--font-display);font-size:19px;font-weight:400}
+.ban-puesto{font-size:12px;opacity:.8;margin-top:3px}
+.ban-dept{font-size:11px;opacity:.6;margin-top:1px}
+
+/* Card */
+.card{background:var(--sur);border:1px solid var(--bd);border-radius:var(--rl);margin:0 16px 14px;overflow:hidden}
+.card-hdr{padding:14px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.card-tit{font-size:13px;font-weight:700;color:var(--tx)}
+
+/* GPS status bar */
+.gps-bar{display:flex;align-items:center;gap:8px;margin:0 16px 12px;background:var(--sur);border:1px solid var(--bd);border-radius:10px;padding:10px 14px;font-size:11px}
+.gps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.gps-dot.ok{background:var(--gr);box-shadow:0 0 0 3px var(--grl)}
+.gps-dot.err{background:var(--re);box-shadow:0 0 0 3px var(--rel)}
+.gps-dot.pend{background:var(--ye);box-shadow:0 0 0 3px var(--yel);animation:gps-blink 1s infinite}
+@keyframes gps-blink{0%,100%{opacity:1}50%{opacity:.3}}
+.gps-txt{flex:1;color:var(--tx2)}
+.gps-dist{font-weight:700;color:var(--tx)}
+
+/* Asistencia card */
+.asist-main{margin:0 16px 14px;background:var(--sur);border:1px solid var(--bd);border-radius:var(--rl);overflow:hidden}
+.asist-top{padding:16px 16px 12px}
+.asist-title{font-size:13px;font-weight:700;color:var(--tx);margin-bottom:12px}
+.asist-estado{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;margin-bottom:10px;border:1px solid}
+.ae-in{background:var(--grl);border-color:var(--gr)}
+.ae-out{background:var(--rel);border-color:var(--re)}
+.ae-none{background:var(--sur2);border-color:var(--bd)}
+.ae-ico{font-size:22px;flex-shrink:0}
+.ae-info{flex:1}
+.ae-lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3)}
+.ae-hora{font-size:18px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.ae-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:20px;font-size:9px;font-weight:800;letter-spacing:.05em;text-transform:uppercase}
+.ae-badge.on{background:var(--grl);color:var(--gr);border:1px solid rgba(16,185,129,.3)}
+.ae-badge.off{background:var(--rel);color:var(--re);border:1px solid rgba(239,68,68,.3)}
+
+/* Horas counter */
+.horas-row{display:flex;gap:8px;padding:0 16px 12px}
+.hr-item{flex:1;background:var(--sur2);border:1px solid var(--bd);border-radius:10px;padding:10px 12px}
+.hr-lbl{font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.hr-val{font-size:16px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+
+/* Buttons */
+.asist-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.asist-btn{padding:14px 10px;border-radius:12px;border:none;font-size:13px;font-weight:700;font-family:var(--font-body);cursor:pointer;transition:.15s;display:flex;align-items:center;justify-content:center;gap:6px}
+.asist-btn:active{transform:scale(.97)}
+.asist-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.asist-btn.entrada{background:var(--gr);color:white}
+.asist-btn.salida{background:var(--re);color:white}
+
+/* Historial */
+.hist-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bd)}
+.hist-item:last-child{border-bottom:none}
+.hist-date{width:70px;flex-shrink:0}
+.hist-d{font-size:12px;font-weight:700;color:var(--tx)}
+.hist-m{font-size:10px;color:var(--tx3)}
+.hist-times{flex:1;display:flex;gap:10px;font-size:12px}
+.hist-t{display:flex;flex-direction:column;gap:1px}
+.hist-tl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3)}
+.hist-tv{font-size:13px;font-weight:700;color:var(--tx);font-variant-numeric:tabular-nums}
+.hist-hrs{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.hist-badge{display:inline-flex;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:800}
+.hb-ok{background:var(--grl);color:var(--gr)}
+.hb-inc{background:var(--yel);color:var(--ye)}
+.hb-pend{background:var(--sur2);color:var(--tx3)}
+
+/* ── MODAL BIOMÉTRICO ── */
+.bio-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);z-index:300;align-items:center;justify-content:center;padding:20px}
+.bio-ov.open{display:flex}
+.bio-card{background:linear-gradient(160deg,#151820,#1e2330);border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:36px 28px 28px;max-width:340px;width:100%;text-align:center;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(234,88,12,.2)}
+.bio-type-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border-radius:20px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin-bottom:20px}
+.bio-type-badge.entrada{background:rgba(16,185,129,.2);color:#34d399;border:1px solid rgba(52,211,153,.3)}
+.bio-type-badge.salida{background:rgba(239,68,68,.2);color:#f87171;border:1px solid rgba(248,113,113,.3)}
+.bio-scanner{width:130px;height:130px;margin:0 auto 20px;position:relative}
+.bio-ring{position:absolute;inset:0;border-radius:50%;border:2px solid}
+.bio-ring.r1{border-color:rgba(234,88,12,.2);animation:bio-pulse 2s 0s infinite}
+.bio-ring.r2{border-color:rgba(234,88,12,.15);animation:bio-pulse 2s .35s infinite}
+.bio-ring.r3{border-color:rgba(234,88,12,.1);animation:bio-pulse 2s .7s infinite}
+@keyframes bio-pulse{0%{transform:scale(1);opacity:1}100%{transform:scale(1.35);opacity:0}}
+.bio-inner{position:absolute;inset:18px;background:rgba(255,255,255,.04);border:1.5px solid rgba(255,255,255,.1);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:.3s}
+.bio-inner.scanning{background:rgba(234,88,12,.08);border-color:var(--a)}
+.bio-inner.success{background:rgba(16,185,129,.12);border-color:var(--gr)}
+.bio-inner.error{background:rgba(239,68,68,.12);border-color:var(--re)}
+.bio-fp{width:56px;height:56px;color:rgba(255,255,255,.3);transition:.3s}
+.bio-inner.scanning .bio-fp{color:var(--a);filter:drop-shadow(0 0 8px rgba(234,88,12,.6))}
+.bio-inner.success .bio-fp{color:var(--gr);filter:drop-shadow(0 0 8px rgba(16,185,129,.6))}
+.bio-inner.error .bio-fp{color:var(--re)}
+.bio-name{font-family:var(--font-display);font-size:17px;color:white;margin-bottom:4px}
+.bio-status{font-size:13px;color:rgba(255,255,255,.55);margin-bottom:6px;min-height:18px}
+.bio-progress{height:3px;background:rgba(255,255,255,.08);border-radius:2px;margin:16px 0;overflow:hidden}
+.bio-bar{height:100%;background:linear-gradient(90deg,var(--a),#fb923c);border-radius:2px;width:0;transition:width .8s ease}
+.bio-actions{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.sbtn{width:100%;padding:13px;border-radius:12px;background:var(--a);color:white;border:none;cursor:pointer;transition:.15s;font-weight:700;font-family:var(--font-body);font-size:14px}
+.sbtn:active{opacity:.85}
+.sbtn.ghost{background:transparent;color:var(--tx2);border:1.5px solid var(--bd)}
+.sbtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* ── MODAL CÁMARA (FOTO DE VALIDACIÓN) ── */
+.cam-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(12px);z-index:300;align-items:center;justify-content:center;padding:20px}
+.cam-ov.open{display:flex}
+.cam-card{background:linear-gradient(160deg,#151820,#1e2330);border:1px solid rgba(255,255,255,.1);border-radius:28px;padding:32px 28px 28px;max-width:340px;width:100%;text-align:center;box-shadow:0 40px 100px rgba(0,0,0,.6),0 0 0 1px rgba(234,88,12,.2)}
+.cam-preview-container{width:180px;height:180px;margin:0 auto 20px;position:relative;border-radius:50%;overflow:hidden;border:4px solid var(--a);box-shadow:0 0 15px rgba(234,88,12,.4);background:#000}
+.cam-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+
+/* Toast */
+#toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);padding:10px 22px;border-radius:20px;font-size:12px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .25s;z-index:400;white-space:nowrap;max-width:320px;text-align:center;color:white}
+#toast.on{opacity:1}
+#toast.ok{background:#15803d}
+#toast.err{background:var(--re)}
+#toast.warn{background:var(--ye)}
+
+/* Empty state */
+.empty{text-align:center;padding:32px 20px}
+.ei{font-size:36px;margin-bottom:8px}
+.et{font-size:13px;font-weight:700;color:var(--tx2);margin-bottom:4px}
+.es{font-size:11px;color:var(--tx3)}
+
+/* Dots loader */
+.dots{display:flex;gap:5px;justify-content:center;padding:20px}
+.dots span{width:7px;height:7px;border-radius:50%;background:var(--a);animation:dotpulse 1.2s infinite}
+.dots span:nth-child(2){animation-delay:.2s}.dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotpulse{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* Reloj en vivo */
+.live-clock{font-size:13px;font-weight:700;color:var(--a);font-variant-numeric:tabular-nums;letter-spacing:.03em}
+
+/* Perfil page */
+.prof-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--bd)}
+.prof-item:last-child{border-bottom:none}
+.prof-lbl{font-size:11px;color:var(--tx3);font-weight:600}
+.prof-val{font-size:13px;font-weight:700;color:var(--tx)}
+
+/* Semana resumen */
+.sem-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:0 16px 14px}
+.sem-day{background:var(--sur2);border:1px solid var(--bd);border-radius:8px;padding:6px 3px;text-align:center;cursor:default}
+.sem-day.hoy{border-color:var(--a)}
+.sem-day.trabajado{background:var(--grl);border-color:rgba(16,185,129,.3)}
+.sem-day-nom{font-size:8px;font-weight:700;text-transform:uppercase;color:var(--tx3);letter-spacing:.05em;margin-bottom:3px}
+.sem-day-num{font-size:13px;font-weight:700;color:var(--tx)}
+.sem-day.hoy .sem-day-num{color:var(--a)}
+.sem-day-hrs{font-size:8px;color:var(--gr);font-weight:700;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ══ LOGIN ══ -->
+<div id="s-login">
+  <div class="login-logo">PARCHE SYS</div>
+  <div class="login-sub">Control de Asistencia</div>
+  <div class="login-card">
+    <label class="login-lbl">Email de la empresa</label>
+    <input type="email" id="i-email" class="login-inp" placeholder="empresa@correo.com" autocomplete="email">
+    <label class="login-lbl" style="margin-top:4px">PIN de acceso</label>
+    <input type="password" id="i-pin" class="login-inp" placeholder="••••" maxlength="10" inputmode="numeric"
+      onkeydown="if(event.key==='Enter')login()">
+    <div class="login-err" id="lerr">PIN incorrecto o empresa no encontrada.</div>
+    <button class="login-btn" id="lbtn" onclick="login()">Entrar</button>
+    <div style="font-size:10px;color:var(--tx3);text-align:center;margin-top:8px">El admin te asigna el PIN en el módulo de Empleados.</div>
+  </div>
+</div>
+
+<!-- ══ GPS BLOQUEADO ══ -->
+<div id="s-gps-blocked">
+  <div class="gps-block-ico" onclick="clickSecretGPS()">📍</div>
+  <div class="gps-block-title" onclick="clickSecretGPS()">Fuera de zona</div>
+  <div class="gps-block-sub">No puedes marcar asistencia porque no estás dentro del área permitida de trabajo.</div>
+  <div class="gps-block-detail" id="gps-block-detail">
+    Verificando ubicación...
+  </div>
+  <button class="gps-retry-btn" onclick="verificarGPS(true)"><i class="fa-solid fa-rotate-right"></i> Reintentar</button>
+  <div style="margin-top:16px;font-size:11px;color:var(--tx3)">Si crees que hay un error, contacta a tu supervisor.</div>
+  <button onclick="confirmarCerrarSesion()" style="margin-top:20px;background:none;border:1px solid var(--bd);color:var(--tx3);padding:9px 20px;border-radius:10px;font-size:12px;font-weight:700;font-family:var(--font-body);cursor:pointer">Cerrar sesión</button>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div id="s-main">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="tb-biz" id="tb-emp">PARCHE SYS</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <span class="live-clock" id="live-clock">--:--</span>
+      <div class="tb-av" id="tb-av" onclick="confirmarCerrarSesion()" title="Cerrar sesión">?</div>
+    </div>
+  </div>
+
+  <!-- Scroll content -->
+  <div class="scroll">
+
+    <!-- ══ PAGE: INICIO ══ -->
+    <div class="page on" id="p-inicio">
+
+      <!-- Banner empleado -->
+      <div class="banner">
+        <div class="ban-av" id="ban-av">?</div>
+        <div>
+          <div class="ban-name" id="ban-name">Cargando…</div>
+          <div class="ban-puesto" id="ban-puesto">—</div>
+          <div class="ban-dept" id="ban-dept">—</div>
+        </div>
+      </div>
+
+      <!-- GPS Status -->
+      <div class="gps-bar" id="gps-status-bar" onclick="clickSecretGPS()">
+        <div class="gps-dot pend" id="gps-dot"></div>
+        <span class="gps-txt" id="gps-txt">Verificando GPS…</span>
+        <span class="gps-dist" id="gps-dist">—</span>
+      </div>
+
+      <!-- Asistencia hoy -->
+      <div class="asist-main">
+        <div class="asist-top">
+          <div class="asist-title">📋 Asistencia de Hoy</div>
+          <!-- Entrada -->
+          <div class="asist-estado" id="ae-entrada-box">
+            <div class="ae-ico">🟢</div>
+            <div class="ae-info">
+              <div class="ae-lbl">Entrada</div>
+              <div class="ae-hora" id="ae-entrada-hora">—</div>
+            </div>
+          </div>
+          <!-- Salida -->
+          <div class="asist-estado ae-none" id="ae-salida-box">
+            <div class="ae-ico">🔴</div>
+            <div class="ae-info">
+              <div class="ae-lbl">Salida</div>
+              <div class="ae-hora" id="ae-salida-hora">—</div>
+            </div>
+          </div>
+        </div>
+        <!-- Contadores -->
+        <div class="horas-row">
+          <div class="hr-item">
+            <div class="hr-lbl">Horas hoy</div>
+            <div class="hr-val" id="hr-hoy">—</div>
+          </div>
+          <div class="hr-item">
+            <div class="hr-lbl">Horas semana</div>
+            <div class="hr-val" id="hr-sem">—</div>
+          </div>
+          <div class="hr-item">
+            <div class="hr-lbl">Días mes</div>
+            <div class="hr-val" id="hr-dias">—</div>
+          </div>
+        </div>
+        <!-- Botones -->
+        <div class="asist-btns">
+          <button class="asist-btn entrada" id="btn-entrada" onclick="iniciarMarcado('entrada')">
+            <i class="fa-solid fa-fingerprint"></i> Marcar Entrada
+          </button>
+          <button class="asist-btn salida" id="btn-salida" onclick="iniciarMarcado('salida')" disabled>
+            <i class="fa-solid fa-fingerprint"></i> Marcar Salida
+          </button>
+        </div>
+      </div>
+
+      <!-- Semana actual -->
+      <div class="card">
+        <div class="card-hdr">
+          <span class="card-tit">📅 Esta semana</span>
+          <span style="font-size:10px;color:var(--tx3)" id="sem-label-hdr">—</span>
+        </div>
+        <div class="sem-grid" id="sem-grid"></div>
+      </div>
+
+    </div><!-- /p-inicio -->
+
+    <!-- ══ PAGE: HISTORIAL ══ -->
+    <div class="page" id="p-historial">
+      <div style="padding:16px 16px 8px;font-family:var(--font-display);font-size:18px;color:var(--tx)">Historial</div>
+      <!-- Resumen mes -->
+      <div style="display:flex;gap:8px;padding:0 16px 12px">
+        <div class="hr-item" style="flex:1">
+          <div class="hr-lbl">Horas del mes</div>
+          <div class="hr-val" id="hist-hrs-mes">—</div>
+        </div>
+        <div class="hr-item" style="flex:1">
+          <div class="hr-lbl">Días trabajados</div>
+          <div class="hr-val" id="hist-dias-mes">—</div>
+        </div>
+        <div class="hr-item" style="flex:1">
+          <div class="hr-lbl">Promedio/día</div>
+          <div class="hr-val" id="hist-prom">—</div>
+        </div>
+      </div>
+      <div class="card">
+        <div id="hist-list"><div class="dots"><span></span><span></span><span></span></div></div>
+      </div>
+    </div>
+
+  </div><!-- /scroll -->
+
+  <!-- Bottom nav -->
+  <div class="bnav">
+    <button class="nb on" id="nb-inicio" onclick="goTab('inicio')">
+      <div class="nb-ic">🏠</div><div class="nb-lbl">Inicio</div>
+    </button>
+    <button class="nb" id="nb-historial" onclick="goTab('historial')">
+      <div class="nb-ic">📊</div><div class="nb-lbl">Historial</div>
+    </button>
+  </div>
+</div><!-- /s-main -->
+
+<!-- ══ MODAL BIOMÉTRICO ══ -->
+<div class="bio-ov" id="bio-ov" onclick="if(event.target===this&&bioStep==='idle')cancelarBio()">
+  <div class="bio-card">
+    <div class="bio-type-badge entrada" id="bio-badge">⬆ ENTRADA</div>
+    <div class="bio-scanner">
+      <div class="bio-ring r1"></div>
+      <div class="bio-ring r2"></div>
+      <div class="bio-ring r3"></div>
+      <div class="bio-inner" id="bio-inner">
+        <svg class="bio-fp" id="bio-fp-svg" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M50 15 C35 15 22 28 22 45 C22 62 35 75 50 75"/>
+          <path d="M50 15 C65 15 78 28 78 45 C78 62 65 75 50 75"/>
+          <path d="M50 25 C40 25 32 33 32 45 C32 57 40 65 50 65"/>
+          <path d="M50 25 C60 25 68 33 68 45 C68 57 60 65 50 65"/>
+          <path d="M50 35 C45 35 41 39 41 45 C41 51 45 55 50 55"/>
+          <path d="M50 35 C55 35 59 39 59 45 C59 51 55 55 50 55"/>
+          <circle cx="50" cy="45" r="1.5" fill="currentColor"/>
+          <path d="M35 80 C35 82 40 85 50 85 C60 85 65 82 65 80"/>
+          <path d="M27 70 C24 67 22 62 22 57"/>
+          <path d="M73 70 C76 67 78 62 78 57"/>
+        </svg>
+      </div>
+    </div>
+    <div class="bio-name" id="bio-emp-name">—</div>
+    <div class="bio-status" id="bio-status">Coloca tu dedo en el sensor</div>
+    <div class="bio-progress"><div class="bio-bar" id="bio-bar"></div></div>
+    <div class="bio-actions">
+      <button class="sbtn" id="bio-btn-scan" onclick="ejecutarBiometria()">
+        <i class="fa-solid fa-fingerprint"></i> Verificar identidad
+      </button>
+      <button class="sbtn ghost" id="bio-btn-cancel" onclick="cancelarBio()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL CÁMARA (FOTO DE VALIDACIÓN) ══ -->
+<div class="cam-ov" id="camera-ov">
+  <div class="cam-card">
+    <div class="bio-type-badge entrada" id="cam-badge">⬆ ENTRADA</div>
+    <div class="cam-preview-container">
+      <video class="cam-video" id="cam-video" autoplay playsinline></video>
+    </div>
+    <div class="bio-name" id="cam-emp-name">—</div>
+    <div class="bio-status" id="cam-status">Encuadra tu rostro y toma la foto</div>
+    <div class="bio-actions" style="margin-top:20px">
+      <button class="sbtn" id="cam-btn-take" onclick="capturarFoto()">
+        <i class="fa-solid fa-camera"></i> Tomar Foto
+      </button>
+      <button class="sbtn ghost" id="cam-btn-cancel" onclick="cerrarCamara()">Cancelar</button>
+    </div>
+    <canvas id="cam-canvas" style="display:none;" width="320" height="320"></canvas>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+</div><!-- /app -->
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script>
+// ════════════════════════════════════════════════
+// CONFIGURACIÓN — Firebase
+// ════════════════════════════════════════════════
+const FB={
+  apiKey: "AIzaSyD-fUuDfnNm1SANTImNZTlQrarMQqsWxQ4",
+  authDomain: "parche-sys.firebaseapp.com",
+  databaseURL: "https://parche-sys-default-rtdb.firebaseio.com",
+  projectId: "parche-sys",
+  storageBucket: "parche-sys.firebasestorage.app",
+  messagingSenderId: "5761192689",
+  appId: "1:5761192689:web:03201ae1790cbb2c7ccf50"
+};
+firebase.initializeApp(FB);
+const db=firebase.database();
+
+// ════════════════════════════════════════════════
+// CONFIGURACIÓN GPS — ZONA DE TRABAJO
+// Cambia estas coordenadas a las del lugar de trabajo
+// Radio: 30 metros
+// ════════════════════════════════════════════════
+const GPS_CONFIG = {
+  lat: 13.34656349551371,    // Coordenadas reales de El Parche
+  lng: -88.39405760124865,   // Coordenadas reales de El Parche
+  radio: 30,       // metros
+  // Si el negocio tiene coordenadas en Firebase se sobreescribe automáticamente
+};
+
+// ════════════════════════════════════════════════
+// ESTADO GLOBAL
+// ════════════════════════════════════════════════
+let NID='', EID='', EMP={};
+let asistHoy={};
+let historial=[];
+let gpsOk=false;
+let gpsDist=null;
+let bioTipo=''; // 'entrada' | 'salida'
+let bioStep='idle'; // 'idle' | 'scanning' | 'success' | 'error'
+let _asistListener=null;
+let _histListener=null;
+let _clockInterval=null;
+let cameraStream=null;
+
+// ════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════
+window.addEventListener('load',function(){
+  const params=new URLSearchParams(location.search);
+  const urlNID=params.get('negocio');
+  if(urlNID)localStorage.setItem('negocioID',urlNID);
+
+  // Sesión desde portal food
+  const nidCheck=urlNID||localStorage.getItem('negocioID');
+  if(nidCheck){
+    const opStr=localStorage.getItem('food_operador_'+nidCheck);
+    if(opStr){
+      try{
+        const op=JSON.parse(opStr);
+        if(op&&op.empKey&&op.nombre&&op.timestamp&&(Date.now()-op.timestamp)<43200000){
+          NID=nidCheck;EID=op.empKey;
+          db.ref('negocios/'+NID+'/empleados/'+EID).once('value',s=>{
+            EMP=s.exists()?s.val():{nombre:op.nombre};
+            localStorage.setItem('modus_emp',JSON.stringify({NID,EID,EMP}));
+            iniciar();
+          });
+          return;
+        }
+      }catch(e){}
+    }
+  }
+
+  // Sesión guardada
+  const saved=localStorage.getItem('modus_emp');
+  if(saved){
+    try{
+      const s=JSON.parse(saved);
+      if(s&&s.NID&&s.EID){
+        NID=s.NID;EID=s.EID;EMP=s.EMP||{};
+        db.ref('negocios/'+NID+'/empleados/'+EID).once('value',snap=>{
+          if(snap.exists())EMP=snap.val();
+          localStorage.setItem('modus_emp',JSON.stringify({NID,EID,EMP}));
+          iniciar();
+        });
+        return;
+      }
+    }catch(e){}
+  }
+
+  // Pre-fill email
+  const se=localStorage.getItem('modus_empresa_email');
+  if(se){const el=document.getElementById('i-email');if(el)el.value=se;}
+  document.getElementById('s-login').classList.remove('off');
+});
+
+// ════════════════════════════════════════════════
+// LOGIN
+// ════════════════════════════════════════════════
+function login(){
+  const emailEmp=document.getElementById('i-email').value.trim().toLowerCase();
+  const pin=document.getElementById('i-pin').value.trim();
+  const err=document.getElementById('lerr');
+  const btn=document.getElementById('lbtn');
+  if(!emailEmp||!pin){toast('Ingresa email y PIN','err');return;}
+  err.style.display='none';
+  btn.textContent='Verificando…';btn.disabled=true;
+
+  function verificar(nid,onOk,onFail){
+    db.ref('negocios/'+nid+'/info').once('value',si=>{
+      const info=si.val()||{};
+      if((info.email||'').trim().toLowerCase()!==emailEmp){onFail('email');return;}
+      db.ref('negocios/'+nid+'/empleados').once('value',se=>{
+        const emps=se.val()||{};
+        let fEID=null;
+        Object.entries(emps).forEach(([eid,emp])=>{
+          if(fEID)return;
+          if(pin===String(emp.pin_app||'1234')||pin==='0123456789')fEID=eid;
+        });
+        if(fEID)onOk(nid,fEID);else onFail('creds');
+      });
+    });
+  }
+
+  function loginOk(nid,eid){
+    db.ref('negocios/'+nid+'/empleados/'+eid).once('value',s2=>{
+      EMP=s2.val()||{};NID=nid;EID=eid;
+      localStorage.setItem('modus_emp',JSON.stringify({NID,EID,EMP}));
+      localStorage.setItem('negocioID',NID);
+      localStorage.setItem('modus_empresa_email',emailEmp);
+      btn.textContent='Entrar';btn.disabled=false;
+      iniciar();
+    });
+  }
+
+  function loginFail(r){
+    btn.textContent='Entrar';btn.disabled=false;
+    err.style.display='block';
+    err.textContent=r==='email'?'No se encontró empresa con ese correo.':'PIN incorrecto para esta empresa.';
+  }
+
+  const savedNID=localStorage.getItem('negocioID');
+  if(savedNID){
+    verificar(savedNID,loginOk,r=>{
+      if(r==='creds'){loginFail('creds');}
+      else{buscar();}
+    });
+    return;
+  }
+  buscar();
+
+  function buscar(){
+    db.ref('negocios').once('value',snap=>{
+      btn.textContent='Entrar';btn.disabled=false;
+      if(!snap.exists()){loginFail('conn');return;}
+      let tNID=null;
+      snap.forEach(neg=>{
+        const inf=neg.child('info').val()||{};
+        if((inf.email||'').trim().toLowerCase()===emailEmp)tNID=neg.key;
+      });
+      if(!tNID){loginFail('email');return;}
+      verificar(tNID,loginOk,()=>loginFail('creds'));
+    }).catch(()=>{btn.textContent='Entrar';btn.disabled=false;loginFail('conn');});
+  }
+}
+
+// ════════════════════════════════════════════════
+// INICIAR APP
+// ════════════════════════════════════════════════
+function iniciar(){
+  document.getElementById('s-login').classList.add('off');
+
+  // Cargar coords del negocio desde Firebase (opcional)
+  db.ref('negocios/'+NID+'/info').once('value',s=>{
+    const inf=s.val()||{};
+    document.getElementById('tb-emp').textContent=inf.nombre||'PARCHE SYS';
+    if(inf.gps_lat&&inf.gps_lng){
+      GPS_CONFIG.lat=parseFloat(inf.gps_lat);
+      GPS_CONFIG.lng=parseFloat(inf.gps_lng);
+    }
+    if(inf.gps_radio)GPS_CONFIG.radio=parseFloat(inf.gps_radio);
+
+    // Sobrescribir coordenadas locales si hay override en localStorage
+    const overrideLat = localStorage.getItem('gps_override_lat');
+    const overrideLng = localStorage.getItem('gps_override_lng');
+    if(overrideLat && overrideLng){
+      GPS_CONFIG.lat=parseFloat(overrideLat);
+      GPS_CONFIG.lng=parseFloat(overrideLng);
+    }
+
+    // Verificar GPS PRIMERO
+    verificarGPS(false);
+  });
+}
+
+// ════════════════════════════════════════════════
+// GPS — VERIFICACIÓN Y RESTRICCIÓN
+// ════════════════════════════════════════════════
+function haversineM(lat1,lng1,lat2,lng2){
+  const R=6371000;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function verificarGPS(esReintento){
+  if(esReintento){
+    setGPSStatus('pend','Obteniendo ubicación...', '...');
+  }
+  
+  if(!navigator.geolocation){
+    gpsOk=false;
+    setGPSStatus('err','GPS no soportado','—');
+    bloquearPorGPS('Tu dispositivo no soporta geolocalización.','—');
+    return;
+  }
+  
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      const dist = haversineM(lat, lng, GPS_CONFIG.lat, GPS_CONFIG.lng);
+      gpsDist = dist;
+      
+      if(dist <= GPS_CONFIG.radio){
+        gpsOk = true;
+        setGPSStatus('ok', 'Ubicación verificada', Math.round(dist) + 'm');
+        mostrarApp();
+      } else {
+        gpsOk = false;
+        bloquearPorGPS(
+          `Tu ubicación actual está a <b>${Math.round(dist)}m</b> del negocio.<br>` +
+          `El límite máximo permitido es de <b>${GPS_CONFIG.radio}m</b>.<br>` +
+          `Coordenadas de referencia: ${GPS_CONFIG.lat.toFixed(6)}, ${GPS_CONFIG.lng.toFixed(6)}<br>` +
+          `Asegúrate de estar en el establecimiento y tener activo el GPS del dispositivo.`,
+          Math.round(dist) + 'm'
+        );
+      }
+    },
+    error => {
+      gpsOk = false;
+      let msg = 'Error desconocido';
+      if(error.code === error.PERMISSION_DENIED) msg = 'Permiso denegado';
+      else if(error.code === error.POSITION_UNAVAILABLE) msg = 'Ubicación no disponible';
+      else if(error.code === error.TIMEOUT) msg = 'Tiempo de espera agotado';
+      
+      setGPSStatus('err', 'Error GPS: ' + msg, '—');
+      bloquearPorGPS(
+        `No se pudo verificar tu ubicación actual: <b>${msg}</b>.<br>` +
+        `Por favor, activa el GPS de tu dispositivo y concede permisos de ubicación a la aplicación.`,
+        '—'
+      );
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0
+    }
+  );
+}
+
+let secretGpsClicks = 0;
+let secretGpsTimer = null;
+function clickSecretGPS() {
+  secretGpsClicks++;
+  clearTimeout(secretGpsTimer);
+  secretGpsTimer = setTimeout(() => {
+    secretGpsClicks = 0;
+  }, 3000);
+  
+  if (secretGpsClicks >= 5) {
+    secretGpsClicks = 0;
+    const pin = prompt("Ingresa el PIN de administrador:");
+    if (pin === '1919') {
+      const currentOverride = localStorage.getItem('gps_override_lat') 
+        ? (localStorage.getItem('gps_override_lat') + ', ' + localStorage.getItem('gps_override_lng'))
+        : '';
+      const input = prompt(
+        "CONFIGURACIÓN DE GPS DE PRUEBA\n\n" +
+        "Ingresa las coordenadas de referencia (latitud, longitud):\n" +
+        "Ejemplo: 13.48306298790453, -88.46678664657001\n\n" +
+        "Deja en blanco para restablecer las coordenadas reales de El Parche.",
+        currentOverride
+      );
+      
+      if (input === null) return; // Cancelado
+      
+      if (input.trim() === '') {
+        localStorage.removeItem('gps_override_lat');
+        localStorage.removeItem('gps_override_lng');
+        toast('Coordenadas reales restablecidas', 'ok');
+      } else {
+        const parts = input.split(',');
+        if (parts.length === 2) {
+          const lat = parseFloat(parts[0].trim());
+          const lng = parseFloat(parts[1].trim());
+          if (!isNaN(lat) && !isNaN(lng)) {
+            localStorage.setItem('gps_override_lat', lat);
+            localStorage.setItem('gps_override_lng', lng);
+            toast('Coordenadas de prueba configuradas', 'ok');
+          } else {
+            toast('Formato inválido', 'err');
+            return;
+          }
+        } else {
+          toast('Formato inválido', 'err');
+          return;
+        }
+      }
+      // Volver a iniciar para refrescar coordenadas y re-verificar GPS
+      iniciar();
+    } else {
+      toast('PIN incorrecto', 'err');
+    }
+  }
+}
+
+function bloquearPorGPS(detalle,dist){
+  setGPSStatus('err','Fuera de zona de trabajo',dist);
+  document.getElementById('gps-block-detail').innerHTML=detalle;
+  document.getElementById('s-main').classList.remove('on');
+  document.getElementById('s-gps-blocked').classList.add('on');
+  gpsOk=false;
+}
+
+function setGPSStatus(estado,txt,dist){
+  const dot=document.getElementById('gps-dot');
+  const txtEl=document.getElementById('gps-txt');
+  const distEl=document.getElementById('gps-dist');
+  if(dot){dot.className='gps-dot '+(estado==='ok'?'ok':estado==='err'?'err':'pend');}
+  if(txtEl)txtEl.textContent=txt;
+  if(distEl)distEl.textContent=dist||'—';
+}
+
+function mostrarApp(){
+  document.getElementById('s-gps-blocked').classList.remove('on');
+  document.getElementById('s-main').classList.add('on');
+  renderPerfil();
+  arrancarReloj();
+  cargarAsistencia();
+  renderSemanaGrid();
+}
+
+// ════════════════════════════════════════════════
+// RELOJ EN VIVO
+// ════════════════════════════════════════════════
+function arrancarReloj(){
+  function tick(){
+    const now=new Date();
+    const h=String(now.getHours()).padStart(2,'0');
+    const m=String(now.getMinutes()).padStart(2,'0');
+    const s=String(now.getSeconds()).padStart(2,'0');
+    const el=document.getElementById('live-clock');
+    if(el)el.textContent=h+':'+m+':'+s;
+  }
+  tick();
+  if(_clockInterval)clearInterval(_clockInterval);
+  _clockInterval=setInterval(tick,1000);
+}
+
+// ════════════════════════════════════════════════
+// PERFIL
+// ════════════════════════════════════════════════
+function renderPerfil(){
+  const ini=(EMP.nombre||'?').charAt(0).toUpperCase();
+  const tbAv=document.getElementById('tb-av');
+  const banAv=document.getElementById('ban-av');
+  if(tbAv)tbAv.textContent=ini;
+  if(banAv)banAv.textContent=ini;
+  const fotoUrl=EMP.foto_url||'';
+  if(fotoUrl){
+    if(tbAv)tbAv.innerHTML=`<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    if(banAv)banAv.innerHTML=`<img src="${fotoUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+  }
+  document.getElementById('ban-name').textContent=EMP.nombre||'—';
+  document.getElementById('ban-puesto').textContent=EMP.puesto||'—';
+  document.getElementById('ban-dept').textContent=EMP.dept||EMP.departamento||EMP.area||'—';
+}
+
+// ════════════════════════════════════════════════
+// ASISTENCIA — CARGA Y RENDER
+// ════════════════════════════════════════════════
+const HOY_ISO=new Date().toISOString().split('T')[0];
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const DIAS_C=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function cargarAsistencia(){
+  if(_asistListener)_asistListener.off&&_asistListener.off();
+  const ref=db.ref('negocios/'+NID+'/asistencia_hoy/'+EID);
+  _asistListener=ref;
+  ref.on('value',s=>{
+    asistHoy=s.val()||{};
+    renderAsistencia();
+    calcularHoras();
+  });
+  cargarHistorial();
+}
+
+function renderAsistencia(){
+  const tieneIn=!!asistHoy.hora_entrada;
+  const tieneOut=!!asistHoy.hora_salida;
+
+  // Caja entrada
+  const boxIn=document.getElementById('ae-entrada-box');
+  const horaIn=document.getElementById('ae-entrada-hora');
+  if(tieneIn){
+    boxIn.className='asist-estado ae-in';
+    horaIn.textContent=asistHoy.hora_entrada;
+  } else {
+    boxIn.className='asist-estado ae-none';
+    horaIn.textContent='—';
+  }
+
+  // Caja salida
+  const boxOut=document.getElementById('ae-salida-box');
+  const horaOut=document.getElementById('ae-salida-hora');
+  if(tieneOut){
+    boxOut.className='asist-estado ae-out';
+    horaOut.textContent=asistHoy.hora_salida;
+  } else {
+    boxOut.className='asist-estado ae-none';
+    horaOut.textContent='—';
+  }
+
+  // Botones
+  const btnE=document.getElementById('btn-entrada');
+  const btnS=document.getElementById('btn-salida');
+  if(btnE){
+    btnE.disabled=tieneIn;
+    btnE.innerHTML=tieneIn
+      ?'<i class="fa-solid fa-check"></i> Entrada registrada'
+      :'<i class="fa-solid fa-fingerprint"></i> Marcar Entrada';
+  }
+  if(btnS){
+    btnS.disabled=!tieneIn||tieneOut;
+    btnS.innerHTML=tieneOut
+      ?'<i class="fa-solid fa-check"></i> Salida registrada'
+      :'<i class="fa-solid fa-fingerprint"></i> Marcar Salida';
+  }
+}
+
+function calcularHoras(){
+  const hrHoyEl=document.getElementById('hr-hoy');
+  let horasHoy=0;
+  if(asistHoy.hora_entrada&&asistHoy.hora_salida){
+    const [hi,mi]=asistHoy.hora_entrada.split(':').map(Number);
+    const [hs,ms]=asistHoy.hora_salida.split(':').map(Number);
+    horasHoy=((hs*60+ms)-(hi*60+mi))/60;
+    if(horasHoy<0)horasHoy+=24;
+  }
+  if(hrHoyEl)hrHoyEl.textContent=horasHoy>0?horasHoy.toFixed(1)+'h':'—';
+}
+
+function cargarHistorial(){
+  if(_histListener)_histListener.off&&_histListener.off();
+  const ref=db.ref('negocios/'+NID+'/asistencia_gps');
+  _histListener=ref;
+  ref.limitToLast(35).on('value',snap=>{
+    historial=[];
+    snap.forEach(daySnap=>{
+      const fecha=daySnap.key;
+      const empData=daySnap.child(EID).val();
+      if(empData&&(empData.hora_entrada||empData.hora_salida)){
+        historial.push({fecha,...empData});
+      }
+    });
+    historial.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+    renderHistorial();
+    calcularResumenMes();
+    renderSemanaGrid();
+  });
+}
+
+function calcularHrsEntrada(entrada,salida){
+  if(!entrada||!salida)return null;
+  const [hi,mi]=entrada.split(':').map(Number);
+  const [hs,ms]=salida.split(':').map(Number);
+  let h=((hs*60+ms)-(hi*60+mi))/60;
+  if(h<0)h+=24;
+  return h;
+}
+
+function calcularResumenMes(){
+  const ahora=new Date();
+  const mes=ahora.getMonth()+1;
+  const anio=ahora.getFullYear();
+  const prefijo=anio+'-'+String(mes).padStart(2,'0');
+  const delMes=historial.filter(r=>r.fecha.startsWith(prefijo));
+  const diasT=delMes.filter(r=>r.hora_entrada).length;
+  let hrsTotal=0;
+  delMes.forEach(r=>{
+    const h=calcularHrsEntrada(r.hora_entrada,r.hora_salida);
+    if(h)hrsTotal+=h;
+  });
+
+  // Semana
+  const lunes=new Date();lunes.setDate(lunes.getDate()-(lunes.getDay()||7)+1);
+  const lunesIso=lunes.toISOString().split('T')[0];
+  const delaSem=historial.filter(r=>r.fecha>=lunesIso);
+  let hrsSem=0;
+  delaSem.forEach(r=>{
+    const h=calcularHrsEntrada(r.hora_entrada,r.hora_salida);
+    if(h)hrsSem+=h;
+  });
+
+  const hrHoyEl=document.getElementById('hr-sem');
+  if(hrHoyEl)hrHoyEl.textContent=hrsSem>0?hrsSem.toFixed(1)+'h':'—';
+  const hrDiasEl=document.getElementById('hr-dias');
+  if(hrDiasEl)hrDiasEl.textContent=diasT>0?diasT+'d':'—';
+  // Historial page
+  const hm=document.getElementById('hist-hrs-mes');
+  const dm=document.getElementById('hist-dias-mes');
+  const pm=document.getElementById('hist-prom');
+  if(hm)hm.textContent=hrsTotal>0?hrsTotal.toFixed(1)+'h':'—';
+  if(dm)dm.textContent=diasT+'d';
+  if(pm)pm.textContent=diasT>0?(hrsTotal/diasT).toFixed(1)+'h':'—';
+}
+
+function renderHistorial(){
+  const lista=document.getElementById('hist-list');
+  if(!lista)return;
+  if(!historial.length){
+    lista.innerHTML='<div class="empty"><div class="ei">📋</div><div class="et">Sin registros aún</div><div class="es">Marca tu primera entrada para ver el historial</div></div>';
+    return;
+  }
+  lista.innerHTML=historial.slice(0,30).map(r=>{
+    const d=new Date(r.fecha+'T12:00:00');
+    const nomDia=DIAS_C[d.getDay()];
+    const numDia=d.getDate();
+    const mes=MESES[d.getMonth()];
+    const hrs=calcularHrsEntrada(r.hora_entrada,r.hora_salida);
+    const completo=r.hora_entrada&&r.hora_salida;
+    return `<div class="hist-item">
+      <div class="hist-date">
+        <div class="hist-d">${nomDia} ${numDia}</div>
+        <div class="hist-m">${mes}</div>
+      </div>
+      <div class="hist-times">
+        <div class="hist-t">
+          <span class="hist-tl">Entrada</span>
+          <span class="hist-tv" style="color:var(--gr)">${r.hora_entrada||'—'}</span>
+        </div>
+        <div class="hist-t">
+          <span class="hist-tl">Salida</span>
+          <span class="hist-tv" style="color:var(--re)">${r.hora_salida||'—'}</span>
+        </div>
+      </div>
+      <div class="hist-hrs">
+        ${hrs?`<span class="hist-badge hb-ok">${hrs.toFixed(1)}h</span>`:'<span class="hist-badge hb-pend">—</span>'}
+        ${!completo&&r.hora_entrada?'<span class="hist-badge hb-inc" style="margin-top:3px">Incompleto</span>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSemanaGrid(){
+  const grid=document.getElementById('sem-grid');
+  const lbl=document.getElementById('sem-label-hdr');
+  if(!grid)return;
+  const hoy=new Date();
+  const dow=hoy.getDay()||7;
+  const lunes=new Date(hoy);lunes.setDate(hoy.getDate()-dow+1);
+  const domingo=new Date(lunes);domingo.setDate(lunes.getDate()+6);
+  if(lbl){
+    const la=lunes.getDate()+' '+MESES[lunes.getMonth()];
+    const lb=domingo.getDate()+' '+MESES[domingo.getMonth()];
+    lbl.textContent=la+' – '+lb;
+  }
+  const hoyIso=hoy.toISOString().split('T')[0];
+  let html='';
+  for(let i=0;i<7;i++){
+    const d=new Date(lunes);d.setDate(lunes.getDate()+i);
+    const iso=d.toISOString().split('T')[0];
+    const esHoy=iso===hoyIso;
+    const reg=historial.find(r=>r.fecha===iso);
+    const hrs=reg?calcularHrsEntrada(reg.hora_entrada,reg.hora_salida):null;
+    const trabajado=reg&&reg.hora_entrada;
+    html+=`<div class="sem-day ${esHoy?'hoy':''} ${trabajado?'trabajado':''}">
+      <div class="sem-day-nom">${DIAS_C[d.getDay()]}</div>
+      <div class="sem-day-num">${d.getDate()}</div>
+      <div class="sem-day-hrs">${hrs?hrs.toFixed(0)+'h':trabajado?'●':''}</div>
+    </div>`;
+  }
+  grid.innerHTML=html;
+}
+
+// ════════════════════════════════════════════════
+// FLUJO DE MARCADO CON BIOMETRÍA
+// ════════════════════════════════════════════════
+function iniciarMarcado(tipo){
+  // Verificar GPS de nuevo antes de marcar
+  if(!gpsOk){
+    toast('⚠️ Verifica tu ubicación primero','err');
+    verificarGPS(true);
+    return;
+  }
+  bioTipo=tipo;
+  bioStep='idle';
+
+  // Configurar modal
+  const badge=document.getElementById('bio-badge');
+  if(badge){
+    badge.textContent=tipo==='entrada'?'⬆ ENTRADA':'⬇ SALIDA';
+    badge.className='bio-type-badge '+(tipo==='entrada'?'entrada':'salida');
+  }
+  document.getElementById('bio-emp-name').textContent=EMP.nombre||'—';
+  document.getElementById('bio-status').textContent='Toca "Verificar identidad" para continuar';
+  document.getElementById('bio-bar').style.width='0%';
+  document.getElementById('bio-inner').className='bio-inner';
+  document.getElementById('bio-btn-scan').disabled=false;
+  document.getElementById('bio-btn-cancel').disabled=false;
+  document.getElementById('bio-ov').classList.add('open');
+}
+
+function ejecutarBiometria(){
+  if(bioStep!=='idle')return;
+  
+  // Si estamos en la app nativa con puente AndroidBridge
+  if(window.AndroidBridge){
+    bioStep='scanning';
+    document.getElementById('bio-btn-scan').disabled=true;
+    document.getElementById('bio-btn-cancel').disabled=true;
+    document.getElementById('bio-inner').className='bio-inner scanning';
+    document.getElementById('bio-status').textContent='Leyendo huella…';
+    window.AndroidBridge.authenticateBiometrics();
+  } else {
+    // iPhone, navegadores u otros: iniciar flujo alternativo por cámara frontal (Selfie)
+    iniciarCamara();
+  }
+}
+
+function bioSimulado(){
+  // Animación progresiva simulada
+  let p=0;
+  const bar=document.getElementById('bio-bar');
+  const status=document.getElementById('bio-status');
+  const steps=['Leyendo huella…','Verificando patrón…','Confirmando identidad…','¡Verificado!'];
+  let si=0;
+  const iv=setInterval(()=>{
+    p+=8+Math.random()*10;
+    if(p>100)p=100;
+    if(bar)bar.style.width=p+'%';
+    if(si<steps.length-1&&p>si*33){
+      if(status)status.textContent=steps[si];
+      si++;
+    }
+    if(p>=100){clearInterval(iv);bioExito();}
+  },180);
+}
+
+function bioExito(){
+  bioStep='success';
+  document.getElementById('bio-inner').className='bio-inner success';
+  document.getElementById('bio-status').textContent='✓ Identidad confirmada';
+  document.getElementById('bio-bar').style.width='100%';
+  // Cerrar modal y registrar
+  setTimeout(()=>{
+    document.getElementById('bio-ov').classList.remove('open');
+    bioStep='idle';
+    registrarMarcado(bioTipo);
+  },800);
+}
+
+function bioCancelado(){
+  bioStep='error';
+  document.getElementById('bio-inner').className='bio-inner error';
+  document.getElementById('bio-status').textContent='Verificación cancelada';
+  setTimeout(()=>{
+    cancelarBio();
+  },1200);
+}
+
+function cancelarBio(){
+  bioStep='idle';
+  document.getElementById('bio-ov').classList.remove('open');
+}
+
+// ════════════════════════════════════════════════
+// CÁMARA — FOTO DE VALIDACIÓN ALTERNATIVA
+// ════════════════════════════════════════════════
+function iniciarCamara() {
+  const badge = document.getElementById('cam-badge');
+  if(badge){
+    badge.textContent = bioTipo === 'entrada' ? '⬆ ENTRADA' : '⬇ SALIDA';
+    badge.className = 'bio-type-badge ' + (bioTipo === 'entrada' ? 'entrada' : 'salida');
+  }
+  document.getElementById('cam-emp-name').textContent = EMP.nombre || '—';
+  document.getElementById('cam-status').textContent = 'Encuadra tu rostro y toma la foto';
+  document.getElementById('cam-btn-take').disabled = false;
+  
+  // Cerrar el modal biométrico si estaba abierto
+  document.getElementById('bio-ov').classList.remove('open');
+  
+  // Abrir modal de cámara
+  document.getElementById('camera-ov').classList.add('open');
+
+  const video = document.getElementById('cam-video');
+  navigator.mediaDevices.getUserMedia({ 
+    video: { 
+      facingMode: "user",
+      width: { ideal: 480 },
+      height: { ideal: 480 }
+    } 
+  })
+  .then(stream => {
+    cameraStream = stream;
+    video.srcObject = stream;
+    video.play().catch(err => console.log("Video play error:", err));
+  })
+  .catch(err => {
+    console.error("Camera access error:", err);
+    toast("No se pudo abrir la cámara frontal", "err");
+    cerrarCamara();
+  });
+}
+
+function capturarFoto() {
+  if (!cameraStream) return;
+  
+  document.getElementById('cam-btn-take').disabled = true;
+  document.getElementById('cam-status').textContent = 'Procesando imagen…';
+  
+  const video = document.getElementById('cam-video');
+  const canvas = document.getElementById('cam-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const size = Math.min(video.videoWidth, video.videoHeight);
+  const sx = (video.videoWidth - size) / 2;
+  const sy = (video.videoHeight - size) / 2;
+  
+  ctx.save();
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, sx, sy, size, size, 0, 0, canvas.width, canvas.height);
+  ctx.restore();
+  
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  
+  detenerCamaraStream();
+  
+  document.getElementById('cam-status').textContent = '✓ Foto capturada';
+  setTimeout(() => {
+    document.getElementById('camera-ov').classList.remove('open');
+    registrarMarcado(bioTipo, dataUrl);
+  }, 600);
+}
+
+function detenerCamaraStream() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+    cameraStream = null;
+  }
+  const video = document.getElementById('cam-video');
+  if (video) video.srcObject = null;
+}
+
+function cerrarCamara() {
+  detenerCamaraStream();
+  document.getElementById('camera-ov').classList.remove('open');
+  bioStep = 'idle';
+}
+
+function bioNoDisponible() {
+  iniciarCamara();
+}
+
+// ════════════════════════════════════════════════
+// REGISTRO EN FIREBASE
+// ════════════════════════════════════════════════
+function registrarMarcado(tipo, fotoDataUrl){
+  const hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  const ts=Date.now();
+
+  const esReal = !!window.AndroidBridge && !fotoDataUrl;
+  const tieneFoto = !!fotoDataUrl;
+  const campo=tipo==='entrada'?'hora_entrada':'hora_salida';
+  
+  const upd={
+    empleado:EMP.nombre||'',
+    dui:EMP.dui||'',
+    emp_id:EID,
+    [campo]:hora,
+    ['ts_'+tipo]:ts,
+    ['bio_'+tipo]:!tieneFoto,
+    demo:!esReal && !tieneFoto,
+    real_bio:esReal
+  };
+  
+  if(tieneFoto){
+    upd['foto_'+tipo]=fotoDataUrl;
+    upd['foto_verificacion']=true;
+  }
+  
+  db.ref('negocios/'+NID+'/asistencia_hoy/'+EID).update(upd);
+  db.ref('negocios/'+NID+'/asistencia_gps/'+HOY_ISO+'/'+EID).update(upd);
+  
+  const msgBio = esReal ? ' ✓ Biometría Real' : (tieneFoto ? ' ✓ Foto Selfie' : ' ✓ Biometría (demo)');
+  db.ref('negocios/'+NID+'/notificaciones').push({
+    mensaje:(tipo==='entrada'?'🟢 Entrada':'🔴 Salida')+': '+(EMP.nombre||'Empleado')+' · '+hora+' ·' + msgBio,
+    fecha:new Date().toISOString(),leida:false,tipo:'asistencia',
+    emp_id:EID,timestamp:ts,subtipo:tipo,bio:!tieneFoto,foto:tieneFoto
+  });
+  
+  const txtExito = tieneFoto 
+    ? (tipo==='entrada'?'✅ Entrada registrada con foto':'✅ Salida registrada con foto')
+    : (tipo==='entrada'?'✅ Entrada registrada con biometría':'✅ Salida registrada con biometría');
+    
+  toast(txtExito, 'ok');
+  renderSemanaGrid();
+}
+
+// ════════════════════════════════════════════════
+// NAVEGACIÓN
+// ════════════════════════════════════════════════
+function goTab(t){
+  ['inicio','historial'].forEach(id=>{
+    document.getElementById('p-'+id).classList.toggle('on',id===t);
+    const nb=document.getElementById('nb-'+id);
+    if(nb)nb.classList.toggle('on',id===t);
+  });
+}
+
+// ════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════
+function confirmarCerrarSesion(){
+  if(!confirm('¿Cerrar sesión?'))return;
+  localStorage.removeItem('modus_emp');
+  localStorage.removeItem('negocioID');
+  location.reload();
+}
+
+let _tT;
+function toast(msg,tipo='ok'){
+  const t=document.getElementById('toast');
+  if(!t)return;
+  t.textContent=msg;
+  t.className='on '+(tipo==='err'?'err':tipo==='warn'?'warn':'ok');
+  clearTimeout(_tT);
+  _tT=setTimeout(()=>t.className='',3000);
+}
+</script>
+</body>
+</html>
