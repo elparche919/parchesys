@@ -149,8 +149,8 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
 </div>
 
 <!-- Firebase -->
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
 /* Firebase centralizado en firebase-config.js */
@@ -225,7 +225,10 @@ function iniciar(){
     _orders={};
     snap.forEach(c=>{
       var v=c.val();
-      if(v && v.estado!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+      if(v) {
+        var estBar = v.estado_bar || 'pendiente';
+        if(estBar!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+      }
     });
     var newCount=Object.keys(_orders).length;
 
@@ -242,6 +245,12 @@ function iniciar(){
   setInterval(renderBoard,30000);
 }
 
+/* ─── Categorías que van al Bar KDS ─── */
+var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS'];
+function _esBarCat(cat){
+  return _BAR_CATS.indexOf((cat||'').trim().toUpperCase()) !== -1;
+}
+
 /* ─── BOARD KDS ─── */
 function renderBoard(){
   var board=document.getElementById('board');
@@ -252,8 +261,14 @@ function renderBoard(){
   entries = entries.filter(function(e) {
     var items = e[1].items || [];
     return items.some(function(it) {
-      return (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+      return _esBarCat(it.cat);
     });
+  });
+
+  // Filtrar órdenes ya entregadas en el bar
+  entries = entries.filter(function(e) {
+    var estBar = e[1].estado_bar || 'pendiente';
+    return estBar !== 'entregado';
   });
 
   if(!entries.length){ board.innerHTML='<div class="empty-board"><div class="empty-icon">🍹</div><div class="empty-txt">Sin bebidas activas en el bar</div></div>'; return; }
@@ -263,7 +278,8 @@ function renderBoard(){
     var mins=Math.floor(diff/60000);
     var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
     var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
-    return `<div class="ord-card state-${o.estado}">
+    var estBar = o.estado_bar || 'pendiente';
+    return `<div class="ord-card state-${estBar}">
       <div class="card-head ${tc}">
         <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}</div>
         <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
@@ -275,7 +291,7 @@ function renderBoard(){
       </div>
       <div class="card-body">
         ${(o.items||[]).map((it,idx)=>{
-          var isDrink = (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+          var isDrink = _esBarCat(it.cat);
           if(!isDrink) return ''; // Ocultar si no es bebida
           
           var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
@@ -285,9 +301,9 @@ function renderBoard(){
         ${o.nota_cocina?'<div style="background:#0f172a;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
       </div>
       <div class="card-foot">
-        ${(o.estado==='pendiente'||o.estado==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
-        ${o.estado==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
-        ${o.estado==='listo'?'<button class="state-btn btn-entregado" style="background:#06b6d4;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Despachado</button>':''}
+        ${(estBar==='pendiente'||estBar==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
+        ${estBar==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
+        ${estBar==='listo'?'<button class="state-btn btn-entregado" style="background:#06b6d4;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Despachado</button>':''}
       </div>
     </div>`;
   }).join('');
@@ -322,31 +338,43 @@ function toggleCheck(orderId,itemIdx){
 }
 
 function cambiarEstado(id,nestado){
+  var o=_orders[id];
+  if(!o) return;
+
   if(nestado==='entregado'){
-    // Si la orden completa se marca entregada, se guarda en el historial
-    var o=_orders[id];
-    if(o){
-      var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
-      var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+    var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+    
+    // Verificamos si tiene cocina y si la cocina ya entregó
+    var tieneCocina = (o.items || []).some(function(it) { return !_esBarCat(it.cat); });
+    var cocinaEntregada = !tieneCocina || o.estado_cocina === 'entregado';
+
+    if (cocinaEntregada) {
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
         estado:'entregado',
+        estado_bar:'entregado',
         hora_entrega:hora,
         fecha_entrega:fecha,
         ts_entrega:Date.now()
       }));
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:'entregado'});
+      toast('Bebidas entregadas y orden retirada de KDS','ok');
+    } else {
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({
+        estado_bar: 'entregado'
+      });
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_bar:'entregado'});
+      toast('Bebidas despachadas. Esperando al KDS Cocina.','ok');
     }
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-    db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
-    toast('Bebidas entregadas y retiradas del KDS Bar','ok');
   } else {
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado:nestado});
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado_bar:nestado});
     if(nestado==='listo'){
-      var o=_orders[id];
-      var meseroTarget = o ? (o.mesero || o.tomada_por) : null;
-      if(o && meseroTarget){
+      var meseroTarget = o.mesero || o.tomada_por;
+      if(meseroTarget){
         var channel = o.tipo || o.canal || 'mesa';
         var mesaLabel = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
-        var drinkItems = (o.items||[]).filter(function(i){ return (i.cat||'').trim().toUpperCase() === 'BEBIDAS'; });
+        var drinkItems = (o.items||[]).filter(function(i){ return _esBarCat(i.cat); });
         var itemList = drinkItems.map(function(i){ return i.cant+'x '+i.desc; }).join(', ');
         
         db.ref('negocios/'+negocioID+'/notificaciones/'+meseroTarget.toLowerCase().trim()).push({
@@ -355,7 +383,9 @@ function cambiarEstado(id,nestado){
           timestamp: Date.now()
         });
       }
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_bar:nestado});
+    } else {
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_bar:nestado});
     }
   }
 }
@@ -364,14 +394,14 @@ function cambiarEstado(id,nestado){
 function updateStats(){
   var o=Object.values(_orders).filter(function(e) {
     return (e.items || []).some(function(it) {
-      return (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+      return _esBarCat(it.cat);
     });
   });
   
   var setT=(id,v)=>{ var el=document.getElementById(id); if(el) el.textContent=v; };
-  setT('cnt-pendiente', o.filter(x=>x.estado==='pendiente').length);
-  setT('cnt-prep',      o.filter(x=>x.estado==='en_prep').length);
-  setT('cnt-listo',     o.filter(x=>x.estado==='listo').length);
+  setT('cnt-pendiente', o.filter(x=>(x.estado_bar || 'pendiente')==='pendiente').length);
+  setT('cnt-prep',      o.filter(x=>(x.estado_bar || 'pendiente')==='en_prep').length);
+  setT('cnt-listo',     o.filter(x=>(x.estado_bar || 'pendiente')==='listo').length);
   setT('fc-all',   o.length);
   setT('fc-mesa',  o.filter(x=>x.tipo==='mesa').length);
   setT('fc-llevar',o.filter(x=>x.tipo==='llevar').length);

@@ -6,11 +6,11 @@
 <title>PARCHE SYS · POS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-database-compat.js"></script>
 <script src="dte-engine.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
 <script>
   // Cargar estilos de tablet de forma segura (evita bloqueos CORS locales 'file://' y caché)
   if (window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true') {
@@ -962,9 +962,60 @@ body {
     grid-template-columns: 1fr; 
     margin-bottom: 64px; /* padding for the bottom bar */
   }
-  .pnl-l, .pnl-c, .pnl-r { display: none; border: none; height: calc(100% - 64px); }
-  .pnl-l.active-tab, .pnl-c.active-tab, .pnl-r.active-tab { display: flex; }
-  .mobile-tabs { display: flex; }
+  .pnl-l, .pnl-c, .pnl-r { 
+    display: none; border: none; height: calc(100% - 64px); 
+  }
+  .pnl-l.active-tab, 
+  .pnl-c.active-tab, 
+  .pnl-r.active-tab { 
+    display: flex; 
+  }
+  .mobile-tabs { 
+    display: flex; 
+  }
+}
+
+/* ── GUIA DE MESA SUPERIOR NUEVA ── */
+.guia-mesa-bar {
+  flex-shrink: 0;
+  display: none;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 32px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  animation: barSlideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes barSlideDown {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.guia-mesa-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #e2e8f0;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.guia-mesa-item i {
+  font-size: 18px;
+  color: #818cf8;
+}
+#guia-mesa-num {
+  font-size: 18px;
+  font-weight: 900;
+  color: #38bdf8;
+}
+#guia-mesa-comensales {
+  color: #fb923c;
+}
+#guia-mesa-cliente {
+  color: #34d399;
 }
 </style>
 </head>
@@ -977,7 +1028,7 @@ body {
       <div id="ck-form-view" style="display:flex; flex-direction:column; width:100%;">
         <div class="ck-head">
           <h2>💳 Finalizar Cobro</h2>
-          <button class="ck-close" onclick="cerrarCheckout()">✕</button>
+          <button class="ck-close" onclick="cerrarCheckout(true)">✕</button>
         </div>
         <div class="ck-total-strip">
           <div>
@@ -1052,7 +1103,7 @@ body {
             <i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR
           </button>
           <div class="ck-row2">
-            <button class="btn-sec" onclick="cerrarCheckout()" style="background:rgba(255,255,255,0.05); color:white; border-color:var(--border)"><i class="fa-solid fa-xmark"></i> Cancelar</button>
+            <button class="btn-sec" onclick="cerrarCheckout(true)" style="background:rgba(255,255,255,0.05); color:white; border-color:var(--border)"><i class="fa-solid fa-xmark"></i> Cancelar</button>
             <button class="btn-sec" onclick="imprimirSolicitudCuenta()" style="background:rgba(56,189,248,0.12); color:#38bdf8; border-color:rgba(56,189,248,0.4)" title="Imprime cuenta informativa para el cliente (sin valor fiscal)"><i class="fa-solid fa-receipt"></i> Solicitar Cuenta</button>
             <button class="btn-sec" onclick="abrirDescuento()" style="background:rgba(245,158,11,0.12); color:#f59e0b; border-color:rgba(245,158,11,0.4)"><i class="fa-solid fa-percent"></i> Descuento</button>
             <button class="btn-sec" onclick="abrirSplit()" style="background:rgba(255,255,255,0.05); color:white; border-color:var(--border)"><i class="fa-solid fa-divide"></i> Dividir</button>
@@ -1207,8 +1258,18 @@ body {
     <button class="tbb" id="btn-caja-status" onclick="abrirModalCaja()" style="border-color:var(--danger); color:var(--danger); background:rgba(239,68,68,0.1)">
       <i class="fa-solid fa-cash-register"></i> <span id="caja-status-text">Caja Cerrada</span>
     </button>
+    <!-- Mov. Caja: solo visible para cajero 5061 o admin -->
+    <button class="tbb" id="btn-mov-caja" onclick="abrirModalMovCaja()" style="display:none;border-color:#a78bfa;color:#a78bfa;background:rgba(167,139,250,0.1)" title="Movimientos de Caja">
+      <i class="fa-solid fa-money-bill-transfer"></i> Mov. Caja
+    </button>
+    <button class="tbb" id="btn-pax-config" onclick="abrirPaxConfig()" style="display:none; border-color:#a78bfa; color:#a78bfa; background:rgba(167,139,250,0.1)" title="Configurar Terminal PAX">
+      <i class="fa-solid fa-credit-card"></i> Config PAX
+    </button>
     <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
+    <a class="tbb" id="link-menu" href="menu.html" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
+    <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
+    <a class="tbb" id="link-dte" href="dte.html" target="_blank" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
     <a class="tbb" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
     <span id="tb-clock" style="font-size:10px;font-weight:700;color:var(--muted);min-width:44px;text-align:right">--:--</span>
   </div>
@@ -1220,7 +1281,16 @@ body {
   <button class="canal-btn" id="canal-llevar" onclick="setCanal('llevar')">🥡 Para llevar</button>
   <button class="canal-btn" id="canal-domicilio" onclick="setCanal('domicilio')">🛵 Domicilio</button>
   <button class="canal-btn" onclick="addItemLibre()" style="border-color: var(--secondary); color: var(--secondary); background: rgba(245, 158, 11, 0.1);"><i class="fa-solid fa-plus-circle"></i> Item Libre</button>
+  <button class="canal-btn" id="tablet-btn-respaldo-local" onclick="guardarMenuLocal()" style="display:none; border-color:#22c55e; color:#22c55e; background:rgba(34,197,94,0.1); font-weight:bold;"><i class="fa-solid fa-cloud-arrow-down"></i> RESPALDO LOCAL</button>
+  <button class="canal-btn" id="tablet-btn-cobrar-offline" onclick="acumularOrdenOffline()" style="display:none; border-color:#fb923c; color:#fb923c; background:rgba(249,115,22,0.1); font-weight:bold;"><i class="fa-solid fa-box-archive"></i> COBRAR OFFLINE</button>
   <button class="canal-btn" id="canal-nueva" onclick="nuevaOrden()" style="margin-left:auto;border-style:dashed">+ Nueva orden</button>
+</div>
+
+<!-- GUIA DE MESA ACTIVADA (BARRA SUPERIOR NUEVA) -->
+<div id="guia-mesa-bar" class="guia-mesa-bar" style="display:none; cursor:pointer;" onclick="abrirMesaModal()">
+  <div class="guia-mesa-item"><i class="fa-solid fa-chair"></i> <span id="guia-mesa-num">Mesa: Ninguna</span></div>
+  <div class="guia-mesa-item"><i class="fa-solid fa-users"></i> <span id="guia-mesa-comensales">Comensales: --</span></div>
+  <div class="guia-mesa-item"><i class="fa-solid fa-user"></i> <span id="guia-mesa-cliente">Cliente: --</span></div>
 </div>
 
 <!-- MAIN LAYOUT -->
@@ -1293,15 +1363,34 @@ body {
         <div class="tot-row bold"><span>TOTAL</span><span id="r-total">$0.00</span></div>
       </div>
 
-      <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
+      <div id="tablet-checkout-wrapper" style="display:flex; flex-direction:column; gap:12px; margin-bottom:12px;">
         <button class="send-kitchen-btn" onclick="procesarOrden('guardar')" style="background:var(--surface-light); border:1px solid var(--border); color:white; padding:16px;">
           <i class="fa-solid fa-bell-concierge"></i> ENVIAR A COCINA
         </button>
         <button class="checkout-trigger" id="btn-checkout-trigger" onclick="abrirCheckout()">
           <i class="fa-solid fa-cash-register"></i> COBRAR
         </button>
+        <button class="checkout-trigger" id="btn-tablet-big-pre-ticket" onclick="imprimirTicket()" style="display:none; background:#f59e0b; color:black; border:none; padding:16px; font-weight:bold;">
+          <i class="fa-solid fa-print"></i> PRE-TIKET
+        </button>
         <button class="checkout-trigger" onclick="acumularOrdenOffline()" style="background:linear-gradient(135deg, #fb923c, #f97316); box-shadow:0 10px 25px rgba(249,115,22,0.2); border:none; padding:16px;">
           <i class="fa-solid fa-box-archive"></i> COBRAR OFFLINE
+        </button>
+      </div>
+
+      <!-- TABLET 2x2 ACTIONS GRID -->
+      <div class="tablet-actions-grid" id="tablet-actions-grid" style="display:none;">
+        <button class="t-btn send-kitchen" onclick="procesarOrden('guardar')">
+          <i class="fa-solid fa-bell-concierge"></i> ENVIAR A COCINA
+        </button>
+        <button class="t-btn fire-alarm" onclick="activarFire()">
+          <i class="fa-solid fa-fire"></i> FIRE — PREPARAR AHORA
+        </button>
+        <button class="t-btn show-tables" onclick="abrirMesaModal()">
+          <i class="fa-solid fa-table-cells"></i> <span id="tablet-grid-mesa-label">MESAS</span>
+        </button>
+        <button class="t-btn pre-ticket" onclick="imprimirTicket()">
+          <i class="fa-solid fa-print"></i> PRE-TIKET
         </button>
       </div>
 
@@ -1332,9 +1421,9 @@ body {
 
 <!-- BOTTOM APP BAR FOR MOBILE MESEROS -->
 <div class="mobile-tabs" id="mobile-tabs">
-  <div class="mtab active" id="mtab-1" onclick="switchMobileTab(1)"><i class="fa-solid fa-list-check"></i> Orden</div>
-  <div class="mtab" id="mtab-2" onclick="switchMobileTab(2)"><i class="fa-solid fa-burger"></i> Menú</div>
-  <div class="mtab" id="mtab-3" onclick="switchMobileTab(3)"><i class="fa-solid fa-receipt"></i> Cobro</div>
+  <div class="mtab active" id="mtab-1" onclick="switchMobileTab(1)"><i class="fa-solid fa-chair"></i> Mesa</div>
+  <div class="mtab" id="mtab-2" onclick="switchMobileTab(2)"><i class="fa-solid fa-utensils"></i> Orden</div>
+  <div class="mtab" id="mtab-3" onclick="switchMobileTab(3)"><i class="fa-solid fa-receipt"></i> Pago</div>
 </div>
 
 <!-- MESA SELECTION OVERLAY -->
@@ -1552,7 +1641,43 @@ body {
   </div>
 </div>
 
+<!-- ══ MODAL MOVIMIENTOS DE CAJA ══ -->
+<div class="overlay" id="movcaja-overlay" style="z-index:29000;display:none" onclick="if(event.target===this)cerrarModalMovCaja()">
+  <div class="modal" style="max-width:440px;width:95%">
+    <div class="modal-head" style="background:linear-gradient(135deg,rgba(167,139,250,0.15),rgba(139,92,246,0.08))">
+      <h3 style="display:flex;align-items:center;gap:10px"><i class="fa-solid fa-money-bill-transfer" style="color:#a78bfa"></i> Movimiento de Caja</h3>
+      <button class="modal-close" onclick="cerrarModalMovCaja()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="movcaja-caja-info" style="background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:10px;padding:12px;margin-bottom:16px;font-size:12px;color:#c4b5fd;text-align:center"></div>
+      <!-- Tipo -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <button class="tbb movcaja-tipo-btn active" id="movcaja-btn-ingreso" onclick="setMovCajaTipo('ingreso')" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.15);padding:10px;justify-content:center;font-size:13px">
+          <i class="fa-solid fa-circle-arrow-down"></i> Ingreso
+        </button>
+        <button class="tbb movcaja-tipo-btn" id="movcaja-btn-egreso" onclick="setMovCajaTipo('egreso')" style="border-color:var(--border);padding:10px;justify-content:center;font-size:13px">
+          <i class="fa-solid fa-circle-arrow-up"></i> Egreso
+        </button>
+      </div>
+      <!-- Monto -->
+      <label class="fl">Monto ($)</label>
+      <input type="number" class="fi" id="movcaja-monto" placeholder="0.00" min="0.01" step="0.01" style="font-size:22px;font-weight:900;text-align:center;letter-spacing:2px;margin-bottom:14px">
+      <!-- Concepto -->
+      <label class="fl">Concepto</label>
+      <input type="text" class="fi" id="movcaja-concepto" placeholder="Ej: Compra insumos, fondo cambio..." maxlength="100" style="margin-bottom:14px">
+      <!-- PIN de autorización -->
+      <label class="fl">PIN de cajero (autorización)</label>
+      <input type="password" class="fi" id="movcaja-pin" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:18px;font-weight:bold;text-align:center;letter-spacing:4px;margin-bottom:6px">
+      <div id="movcaja-err" style="display:none;color:var(--danger);font-size:12px;font-weight:700;text-align:center;margin-bottom:10px"></div>
+      <button class="checkout-trigger" id="movcaja-confirm-btn" onclick="confirmarMovCaja()" style="padding:14px;font-size:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">
+        <i class="fa-solid fa-check"></i> Registrar Movimiento
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
+
 
 <!-- ══ ALARMA COCINA → MESERO ══ -->
 <div id="kitchen-alarm-overlay" style="
@@ -1588,6 +1713,55 @@ body {
 #kitchen-alarm-overlay.ka-flash-blue { animation:kaFlashBlue 0.55s infinite alternate; }
 </style>
 
+<!-- MODAL CONFIGURACIÓN PAX -->
+<div class="overlay" id="pax-config-overlay" style="z-index:28500; display:none;">
+  <div class="ck-modal" style="max-width:400px; width:90%;">
+    <div class="ck-head">
+      <h2><i class="fa-solid fa-credit-card"></i> Configurar Terminal PAX</h2>
+      <button class="ck-close" onclick="cerrarPaxConfig()">✕</button>
+    </div>
+    <div class="ck-body" style="display:flex; flex-direction:column; gap:16px; padding:20px;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <input type="checkbox" id="pax-habilitado" style="width:20px; height:20px; cursor:pointer;">
+        <label for="pax-habilitado" style="font-size:14px; font-weight:bold; color:white; cursor:pointer;">Habilitar cobro integrado PAX</label>
+      </div>
+      <div>
+        <label class="fl">Dirección IP de la terminal</label>
+        <input type="text" id="pax-ip" class="fi" placeholder="Ej: 192.168.1.150" style="font-size:16px; font-weight:bold;">
+      </div>
+      <div>
+        <label class="fl">Puerto de la terminal</label>
+        <input type="number" id="pax-port" class="fi" placeholder="10009" value="10009" style="font-size:16px; font-weight:bold;">
+      </div>
+      <button class="checkout-trigger" onclick="guardarPaxConfig()" style="padding:12px; font-size:13px; margin-top:10px;">
+        <i class="fa-solid fa-floppy-disk"></i> GUARDAR CONFIGURACIÓN
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- OVERLAY DE CARGA COBRO PAX -->
+<div id="pax-loading-overlay" style="
+  display:none; position:fixed; inset:0; z-index:99999;
+  flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; padding:24px; box-sizing:border-box;
+  background:rgba(15,25,35,0.95);
+">
+  <div style="font-size:72px; margin-bottom:24px; animation:kaBellShake 1s infinite alternate ease-in-out;">💳</div>
+  <div style="font-family:'Outfit',sans-serif; font-size:28px; font-weight:800; color:white; margin-bottom:12px;">ESPERANDO TRANSACCIÓN...</div>
+  <div id="pax-loading-msg" style="font-size:16px; color:var(--text-sub); margin-bottom:30px; line-height:1.5; max-width:400px;">
+    Acerque, inserte o deslice la tarjeta en la terminal PAX.<br>Monto a cobrar: <strong id="pax-loading-amount" style="color:var(--accent); font-size:22px; display:block; margin-top:8px;">$0.00</strong>
+  </div>
+  <div style="display:flex; justify-content:center; align-items:center; gap:8px; color:var(--text-sub); font-size:13px; margin-bottom:24px;">
+    <i class="fa-solid fa-spinner fa-spin"></i> Comunicando con terminal de pago
+  </div>
+  <button onclick="cancelarPagoPax()" class="btn-sec" style="
+    padding:10px 24px; font-size:13px; font-weight:bold;
+    background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.3);
+    cursor:pointer;
+  ">Cancelar en el POS</button>
+</div>
+
 <script src="firebase-config.js"></script>
 <script src="modus-return.js"></script>
 <script>
@@ -1614,10 +1788,19 @@ var _timerInterval;
 var _modItemIdx = -1;
 var _modSels = {};
 
+// ── CONFIGURACIÓN PAX ──
+var _paxIP = localStorage.getItem('modus_pax_ip') || '';
+var _paxPort = parseInt(localStorage.getItem('modus_pax_port')) || 10009;
+var _paxHabilitado = localStorage.getItem('modus_pax_habilitado') === 'true';
+var _paxAprobado = false;
+var _paxCancelado = false;
+
 // ── SESIÓN Y ROL ──
 var _loggedMesero = localStorage.getItem('meseroId') || localStorage.getItem('mesero') || '';
 var _esAdmin = false;  // se resuelve desde Firebase
+var _esCajero = false; // empleado código 5061
 var _kaInterval = null; // kitchen alarm interval
+var _CAJERO_CODE = '5061'; // código exclusivo para Mov.Caja
 
 /* ═══════════════════════════════════════
    INIT
@@ -1634,6 +1817,15 @@ document.addEventListener('DOMContentLoaded', function(){
   cargarPendientes();
   // Show pending offline orders count on load
   setTimeout(_actualizarBadgeOffline, 1000);
+
+  // Cargar mesa por URL si existe
+  var mesaUrl = new URLSearchParams(window.location.search).get('mesa');
+  if (mesaUrl) {
+    setTimeout(function() {
+      setCanal('mesa');
+      selMesa(mesaUrl);
+    }, 800);
+  }
 
   if(window.innerWidth <= 900) {
     document.querySelector('.pnl-l').classList.add('active-tab');
@@ -1671,10 +1863,48 @@ document.addEventListener('DOMContentLoaded', function(){
             var roleIcon = document.getElementById('tb-mesero-role-icon');
             if(roleIcon) roleIcon.textContent = '👑';
           }
+          // ── Detectar cajero por código 5061 ──
+          var empCodigo = String(e.codigo || e.code || e.id_empleado || '').trim();
+          _esCajero = (empCodigo === _CAJERO_CODE);
+          // Guardar código en var global para uso en movimientos
+          window._empCodigoActivo = empCodigo;
         }
       });
+      // Mostrar botón Mov. Caja si es cajero (5061) o admin
+      var btnMovCaja = document.getElementById('btn-mov-caja');
+      if(btnMovCaja) btnMovCaja.style.display = (_esCajero || _esAdmin) ? '' : 'none';
       // Re-renderizar mesas con el rol correcto
       if(CANAL === 'mesa') renderCanalDetail();
+      // ── Actualizar links de nav con negocioID ──
+      var lm = document.getElementById('link-menu');
+      if(lm && lm.href.indexOf('?') === -1) lm.href = 'menu.html?negocio=' + negocioID;
+      var lmesas = document.getElementById('link-mesas');
+      if(lmesas && lmesas.href.indexOf('?') === -1) lmesas.href = (_isTablet ? 'mapa-mesas-tablet.html' : 'mapa-mesas.html') + '?negocio=' + negocioID + (_isTablet ? '&tablet=true' : '');
+      var ldte = document.getElementById('link-dte');
+      if(ldte && ldte.href.indexOf('?') === -1) ldte.href = 'dte.html?negocio=' + negocioID;
+
+      // Restricciones de Electron (Parche)
+      var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+      if (isElectron) {
+        // Ocultar links restringidos (Cocina y Portal)
+        var lCocina = document.getElementById('link-cocina');
+        if (lCocina) lCocina.style.display = 'none';
+        var lPortal = document.getElementById('link-portal');
+        if (lPortal) lPortal.style.display = 'none';
+
+        // Redireccionar menú al editor de menú del portal y remover target
+        if (lm) {
+          lm.removeAttribute('target');
+          lm.href = 'portal-food.html?panel=menu&negocio=' + negocioID;
+        }
+        // Remover target de mesas y dte
+        if (lmesas) {
+          lmesas.removeAttribute('target');
+        }
+        if (ldte) {
+          ldte.removeAttribute('target');
+        }
+      }
     });
 
     // ── Botón cerrar sesión ──
@@ -1689,7 +1919,12 @@ document.addEventListener('DOMContentLoaded', function(){
         localStorage.removeItem('food_session_'+negocioID);
         window.location.href = 'login.html';
       };
-      topbarR.prepend(btnSalir);
+    }
+
+    // Mostrar botón Config PAX si es Android o Electron
+    if (window.AndroidBridge || (window.electronAPI && window.electronAPI.isElectron)) {
+      var btnPax = document.getElementById('btn-pax-config');
+      if (btnPax) btnPax.style.display = 'inline-flex';
     }
 
     // ── Escuchar notificaciones de cocina (ALARMA AGRESIVA) ──
@@ -1697,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', function(){
     var inIframe = false;
     try { inIframe = (window.self !== window.top); } catch (e) { inIframe = true; }
 
-    if (!inIframe) {
+    if (!inIframe && !_isTablet) {
       var notifRef = db.ref('negocios/'+negocioID+'/notificaciones/' + _loggedMesero.toLowerCase().trim());
       notifRef.on('child_added', function(snap) {
         var notif = snap.val();
@@ -1707,6 +1942,50 @@ document.addEventListener('DOMContentLoaded', function(){
         }
       });
     }
+  }
+
+  // Ajustes específicos para Tablet
+  if (_isTablet) {
+    document.body.classList.add('tablet-mode-active');
+    
+    // Ocultar botones superiores de forma permanente en la tablet
+    ['btn-caja-status', 'btn-mov-caja', 'btn-pax-config', 'link-cocina', 'link-menu', 'link-dte', 'link-portal'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.style.setProperty('display', 'none', 'important');
+      }
+    });
+    
+    // Mostrar botones propios de la tablet en el canal-bar
+    var btnRespaldo = document.getElementById('tablet-btn-respaldo-local');
+    if (btnRespaldo) btnRespaldo.style.display = 'inline-flex';
+    var btnCobrarOffline = document.getElementById('tablet-btn-cobrar-offline');
+    if (btnCobrarOffline) btnCobrarOffline.style.display = 'inline-flex';
+
+    // Ocultar botón COBRAR y mostrar PRE-TIKET grande en comanda (modo portrait)
+    var btnCobrar = document.getElementById('btn-checkout-trigger');
+    if (btnCobrar) btnCobrar.style.display = 'none';
+    var btnBigPreTicket = document.getElementById('btn-tablet-big-pre-ticket');
+    if (btnBigPreTicket) btnBigPreTicket.style.display = 'flex';
+
+    // Configurar botón "Mesas" del topbar para abrir el mapa en ventana flotante
+    var linkMesas = document.getElementById('link-mesas');
+    if (linkMesas) {
+      linkMesas.removeAttribute('target');
+      linkMesas.removeAttribute('href');
+      linkMesas.onclick = function(e) {
+        e.preventDefault();
+        abrirMesaModal('list');
+        return false;
+      };
+    }
+  }
+});
+
+// Listener seguro de mensajes de iframe para seleccionar mesa desde el croquis
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'selectMesa') {
+    selMesaModal(event.data.mesaId);
   }
 });
 
@@ -2206,7 +2485,10 @@ function cargarOrdenPendiente(id){
     var p = snap.val();
     if(!p) return;
     if(pedido.length && !confirm('¿Cargar pedido pendiente? Se perderá el carrito actual.')) return;
-    pedido = p.items || [];
+    pedido = (p.items || []).map(function(item) {
+      item.enviado = true;
+      return item;
+    });
     ORDEN = p.orden || id;
     setCanal(p.canal || 'llevar');
     setTimeout(function(){
@@ -2233,37 +2515,81 @@ function renderCanalDetail(){
   var d = document.getElementById('canal-detail');
   if(!d) return;
   if(CANAL === 'mesa'){
-    if(_isTablet){
-      var mesaLabel = MESA_SEL ? 'MESA #' + MESA_SEL : 'SELECCIONAR MESA';
-      var meseroVal = '';
-      var personasVal = '';
+    // Si los inputs ya existen en el DOM, solo actualizamos las mesas para evitar perder el foco del teclado
+    var wrapper = document.getElementById('mesas-wrapper');
+    var inputMesero = document.getElementById('mesa-mesero');
+    var inputPersonas = document.getElementById('mesa-personas');
+    var inputCliente = document.getElementById('mesa-cliente-nombre');
+    
+    if (wrapper && inputMesero && inputPersonas && inputCliente) {
+      var currentMesero = _loggedMesero;
+      var grouped = {};
+      Object.entries(_mesas).forEach(function(entry) {
+        var id = entry[0];
+        var m = entry[1];
+        var zona = m.zona || 'Principal';
+        if(!grouped[zona]) grouped[zona] = [];
+        grouped[zona].push([id, m]);
+      });
+      
+      var gridHtml = '';
+      var sortedZonas = Object.keys(grouped).sort();
+      sortedZonas.forEach(function(zona) {
+        var mesasZona = grouped[zona];
+        mesasZona.sort(function(a, b) { return parseInt(a[0]) - parseInt(b[0]); });
+        
+        gridHtml += '<div class="zona-header" style="font-size:10px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 4px 0;border-bottom:1px solid rgba(255,255,255,0.06);padding-bottom:2px;width:100%">' + zona + '</div>';
+        gridHtml += '<div class="mesa-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(55px, 1fr));gap:8px;padding:2px 0;width:100%">';
+        
+        mesasZona.forEach(function(entry) {
+          var id = entry[0];
+          var m = entry[1];
+          var st = m.estado || 'libre';
+          var sel = id == MESA_SEL ? 'seleccionada' : '';
+          var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+          if(_esAdmin) isOtherMesero = false;
+          var classOther = isOtherMesero ? 'otro-mesero' : '';
+          
+          var content = '<span class="mesa-num">'+id+'</span>';
+          if (st !== 'libre' && m.mesero) {
+            var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
+            var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
+            content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+            if(isOtherMesero) content += '<span style="font-size:8px;color:#ef4444">🔒</span>';
+          } else {
+            content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
+          }
+          gridHtml += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesa(\''+id+'\')" title="Mesa '+id+(m.zona?' — '+m.zona:'')+(m.mesero?' — Mesero: '+m.mesero:'')+'">'+
+            content +
+            '</button>';
+        });
+        gridHtml += '</div>';
+      });
+      
+      wrapper.innerHTML = gridHtml;
+      
+      var mVal = '';
+      var pVal = '';
+      var cVal = '';
       if(MESA_SEL && _mesas[MESA_SEL]) {
         var m = _mesas[MESA_SEL];
-        meseroVal = m.mesero || '';
-        personasVal = m.personas || '';
-        if(m.mesero) mesaLabel += ' (' + m.mesero.split(' ')[0] + ')';
+        mVal = m.mesero || '';
+        pVal = m.personas || '';
+        cVal = m.cliente_nombre || '';
       }
       
-      var html = '<div class="selected-mesa-summary-card" onclick="abrirMesaModal()" style="display:flex; align-items:center; justify-content:space-between; background:rgba(16, 185, 129, 0.12); border:1.5px solid var(--accent); border-radius:14px; padding:16px; cursor:pointer; width:100%;">'+
-        '<div style="display:flex; align-items:center; gap:12px;">'+
-          '<div style="font-size:24px; color:var(--accent);"><i class="fa-solid fa-chair"></i></div>'+
-          '<div style="text-align:left;">'+
-            '<div style="font-size:10px; font-weight:800; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;">Canal: Mesa</div>'+
-            '<div id="mesa-summary-text" style="font-size:16px; font-weight:900; color:white; margin-top:2px;">'+mesaLabel+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<button class="btn-sec" style="padding:6px 12px; font-size:11px; border-radius:8px; border-color:var(--accent); color:var(--accent); margin:0;" onclick="event.stopPropagation(); abrirMesaModal();">Cambiar</button>'+
-      '</div>'+
-      '<input type="hidden" id="mesa-mesero" value="'+meseroVal+'">'+
-      '<input type="hidden" id="mesa-personas" value="'+personasVal+'">';
+      if (document.activeElement !== inputMesero) inputMesero.value = mVal || _loggedMesero || '';
+      if (document.activeElement !== inputPersonas) inputPersonas.value = pVal;
+      if (document.activeElement !== inputCliente) inputCliente.value = cVal;
       
-      d.innerHTML = html;
+      actualizarGuiaMesaBar();
       return;
     }
+
     var total = parseInt(_biz.num_mesas) || 12;
     var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
       '<div class="fl" style="margin-bottom:0">Selecciona la mesa</div>'+
-      '<a href="mapa-mesas.html?negocio='+negocioID+'" target="_blank" style="font-size:9px;font-weight:800;color:var(--a);text-decoration:none;display:flex;align-items:center;gap:4px"><i class="fa-solid fa-map"></i> MAPA Y SALONES</a>'+
+      '<a href="'+(_isTablet ? 'mapa-mesas-tablet.html' : 'mapa-mesas.html')+'?negocio='+negocioID+(_isTablet ? '&tablet=true' : '')+'" '+((window.electronAPI && window.electronAPI.isElectron) ? '' : 'target="_blank"')+' style="font-size:9px;font-weight:800;color:var(--a);text-decoration:none;display:flex;align-items:center;gap:4px"><i class="fa-solid fa-map"></i> MAPA Y SALONES</a>'+
       '</div><div class="mesa-grid" id="mesa-grid">';
     if(Object.keys(_mesas).length === 0) {
       html += '<div style="font-size:11px;color:var(--muted);width:100%;text-align:center;padding:10px">Crea mesas en el Mapa primero</div>';
@@ -2316,9 +2642,19 @@ function renderCanalDetail(){
       });
       html += '</div>'; // close #mesas-wrapper
     }
-    html += '</div><div class="cd-row cd-row-2" style="margin-top:8px">'+
-      '<div><label class="fl">Mesero</label><select class="fi" id="mesa-mesero"><option value="">Seleccionar...</option></select></div>'+
-      '<div><label class="fl">Comensales</label><input class="fi" id="mesa-personas" type="number" min="1" placeholder="2"></div>'+
+    var mVal = '';
+    var pVal = '';
+    var cVal = '';
+    if(MESA_SEL && _mesas[MESA_SEL]) {
+      var m = _mesas[MESA_SEL];
+      mVal = m.mesero || '';
+      pVal = m.personas || '';
+      cVal = m.cliente_nombre || '';
+    }
+    html += '</div><div class="cd-row cd-row-3" style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:8px;">'+
+      '<div><label class="fl">Mesero</label><select class="fi" id="mesa-mesero" onchange="guardarDatosMesa()"><option value="">Seleccionar...</option></select></div>'+
+      '<div><label class="fl">Comensales</label><input class="fi" id="mesa-personas" type="number" min="1" placeholder="2" value="'+pVal+'" oninput="guardarDatosMesa()"></div>'+
+      '<div><label class="fl">Nombre Cliente</label><input class="fi" id="mesa-cliente-nombre" placeholder="Nombre/Apellido" value="'+cVal+'" oninput="guardarDatosMesa()"></div>'+
       '</div>';
     d.innerHTML = html;
     actualizarDropdownMeseros();
@@ -2336,23 +2672,24 @@ function renderCanalDetail(){
       '</div>';
     cargarRepartidores();
   }
+  actualizarGuiaMesaBar();
 }
 
 /* ── MESA MODAL PICKER FOR TABLET ── */
-function abrirMesaModal(){
+function abrirMesaModal(defaultTab){
   var overlay = document.getElementById('mesa-overlay');
   if(!overlay) return;
   overlay.classList.add('open');
   
-  // Make sure list view is shown by default
-  switchMesaTab('list');
+  // Make sure correct tab is shown
+  switchMesaTab(defaultTab || (_isTablet ? 'list' : 'list'));
   
   var body = document.getElementById('mesa-view-list');
   if(!body) return;
   
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'+
     '<div class="fl" style="margin-bottom:0; font-size:13px; color:var(--text-muted);">Selecciona una mesa para la orden:</div>'+
-    '<a href="mapa-mesas.html?negocio='+negocioID+'" target="_blank" style="font-size:10px;font-weight:800;color:var(--a);text-decoration:none;display:flex;align-items:center;gap:4px"><i class="fa-solid fa-map"></i> MAPA</a>'+
+    '<a href="'+(_isTablet ? 'mapa-mesas-tablet.html' : 'mapa-mesas.html')+'?negocio='+negocioID+(_isTablet ? '&tablet=true' : '')+'" '+((window.electronAPI && window.electronAPI.isElectron) ? '' : 'target="_blank"')+' style="font-size:10px;font-weight:800;color:var(--a);text-decoration:none;display:flex;align-items:center;gap:4px"><i class="fa-solid fa-map"></i> MAPA</a>'+
     '</div><div class="mesa-grid" id="mesa-grid" style="margin-bottom:20px;">';
     
   if(Object.keys(_mesas).length === 0) {
@@ -2372,6 +2709,37 @@ function abrirMesaModal(){
     
     // Replace the mesa-grid opened in the header
     html = html.replace('<div class="mesa-grid" id="mesa-grid" style="margin-bottom:20px;">', '<div id="mesas-wrapper" style="max-height:350px; overflow-y:auto; width:100%; padding-right:4px; display:flex; flex-direction:column; gap:8px;">');
+    
+    // Inyectar sección de mis mesas atendidas al principio de la lista
+    var myTables = [];
+    if (currentMesero) {
+      Object.entries(_mesas).forEach(function(entry) {
+        var id = entry[0];
+        var m = entry[1];
+        if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase()) {
+          myTables.push([id, m]);
+        }
+      });
+    }
+    if (myTables.length > 0) {
+      myTables.sort(function(a, b) { return parseInt(a[0]) - parseInt(b[0]); });
+      html += '<div class="zona-header" style="font-size:12px;font-weight:900;color:#10b981;text-transform:uppercase;letter-spacing:0.05em;margin:8px 0 8px 0;border-bottom:1px solid rgba(16,185,129,0.3);padding-bottom:6px;width:100%"><i class="fa-solid fa-user-check"></i> MIS MESAS ATENDIDAS (' + currentMesero.toUpperCase() + ')</div>';
+      html += '<div class="mesa-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(70px, 1fr));gap:12px;padding:5px 0 15px 0;width:100%;border-bottom:1px dashed rgba(255,255,255,0.1)">';
+      myTables.forEach(function(entry) {
+        var id = entry[0];
+        var m = entry[1];
+        var st = m.estado || 'libre';
+        var sel = MESA_SEL == id ? 'seleccionada' : '';
+        var content = '<span class="mesa-num">'+id+'</span>';
+        var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
+        content += '<span style="font-size:10px;font-weight:900;color:#10b981;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+        
+        html += '<button id="pos-btn-mesa-my-'+id+'" class="mesa-btn '+st+' '+sel+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
+          content +
+          '</button>';
+      });
+      html += '</div>';
+    }
     
     var sortedZonas = Object.keys(grouped).sort();
     sortedZonas.forEach(function(zona) {
@@ -2410,9 +2778,10 @@ function abrirMesaModal(){
   }
   
   html += '</div>'+
-    '<div class="cd-row" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px; border-top:1px solid var(--border); padding-top:16px;">'+
+    '<div class="cd-row" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:16px; border-top:1px solid var(--border); padding-top:16px;">'+
     '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Mesero Asignado</label><select class="fi" id="mesa-mesero-modal" onchange="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"><option value="">Seleccionar...</option></select></div>'+
     '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Comensales</label><input class="fi" id="mesa-personas-modal" type="number" min="1" placeholder="2" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Nombre / Apellido</label><input class="fi" id="mesa-cliente-nombre-modal" type="text" placeholder="Ej: Pérez" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
     '</div>'+
     '<div style="margin-top:20px; display:flex; justify-content:flex-end;">'+
     '<button class="checkout-trigger" style="padding:12px 24px; font-size:14px; border-radius:10px;" onclick="cerrarMesaModal()">Confirmar y Cerrar</button>'+
@@ -2440,6 +2809,11 @@ function abrirMesaModal(){
   if(personasInput && MESA_SEL && _mesas[MESA_SEL]) {
     personasInput.value = _mesas[MESA_SEL].personas || '';
   }
+  
+  var clienteInput = document.getElementById('mesa-cliente-nombre-modal');
+  if(clienteInput && MESA_SEL && _mesas[MESA_SEL]) {
+    clienteInput.value = _mesas[MESA_SEL].cliente_nombre || '';
+  }
 }
 
 /* ── MESA VIEW TABS (Lista / Mapa) ── */
@@ -2465,8 +2839,8 @@ function switchMesaTab(tab) {
     if(btnMap)  btnMap.style.cssText  = accentStyle;
     // Load the map iframe only when switching to map tab
     var iframe = document.getElementById('mapa-iframe');
-    if(iframe && (!iframe.src || iframe.src === window.location.href)) {
-      iframe.src = 'mapa-mesas.html?negocio=' + negocioID + '&embed=1';
+    if(iframe) {
+      iframe.src = (_isTablet ? 'mapa-mesas-tablet.html' : 'mapa-mesas.html') + '?negocio=' + negocioID + '&embed=1' + (_isTablet ? '&tablet=true' : '') + '&t=' + Date.now();
     }
   }
 }
@@ -2479,6 +2853,35 @@ function cerrarMesaModal(){
 
 function selMesaModal(id){
   selMesa(id);
+  
+  // Actualizar clase seleccionada en la lista del modal
+  document.querySelectorAll('#mesa-view-list .mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
+  var btn = document.getElementById('pos-btn-mesa-' + id);
+  if(btn) btn.classList.add('seleccionada');
+  var btnMy = document.getElementById('pos-btn-mesa-my-' + id);
+  if(btnMy) btnMy.classList.add('seleccionada');
+  
+  // Cargar datos actuales de la mesa seleccionada en los inputs del modal
+  db.ref('negocios/'+negocioID+'/mesas/'+id).once('value', function(snap){
+    var m = snap.val() || {};
+    var selDropdown = document.getElementById('mesa-mesero-modal');
+    var personasInput = document.getElementById('mesa-personas-modal');
+    var clienteInput = document.getElementById('mesa-cliente-nombre-modal');
+    if(selDropdown) selDropdown.value = m.mesero || _loggedMesero || '';
+    if(personasInput) personasInput.value = m.personas || '';
+    if(clienteInput) clienteInput.value = m.cliente_nombre || '';
+    
+    // Sincronizar inputs ocultos en canal-detail para que procesarOrden los lea
+    var hMesero = document.getElementById('mesa-mesero');
+    var hPersonas = document.getElementById('mesa-personas');
+    var hCliente = document.getElementById('mesa-cliente-nombre');
+    if(hMesero) hMesero.value = m.mesero || _loggedMesero || '';
+    if(hPersonas) hPersonas.value = m.personas || '';
+    if(hCliente) hCliente.value = m.cliente_nombre || '';
+    
+    actualizarGuiaMesaBar();
+  });
+  
   setTimeout(function(){
     cerrarMesaModal();
   }, 150);
@@ -2488,11 +2891,41 @@ function selMesaModal(id){
 function actualizarTabletMesaLabel() {
   if (!_isTablet) return;
   var lbl = document.getElementById('tablet-mesa-label');
-  if (!lbl) return;
-  if (MESA_SEL) {
-    lbl.textContent = 'MESA #' + MESA_SEL;
+  var lblGrid = document.getElementById('tablet-grid-mesa-label');
+  var text = MESA_SEL ? 'MESA #' + MESA_SEL : 'MESAS';
+  if (lbl) lbl.textContent = text;
+  if (lblGrid) lblGrid.textContent = text;
+}
+
+function actualizarGuiaMesaBar() {
+  var bar = document.getElementById('guia-mesa-bar');
+  if(!bar) return;
+  
+  if (CANAL === 'mesa' && MESA_SEL) {
+    bar.style.display = 'flex';
+    var numEl = document.getElementById('guia-mesa-num');
+    var comEl = document.getElementById('guia-mesa-comensales');
+    var cliEl = document.getElementById('guia-mesa-cliente');
+    
+    if (numEl) numEl.textContent = 'Mesa: ' + MESA_SEL;
+    
+    var personasVal = '--';
+    var clienteVal = 'Ninguno';
+    if (_mesas && _mesas[MESA_SEL]) {
+      var m = _mesas[MESA_SEL];
+      if (m.personas) personasVal = m.personas;
+      if (m.cliente_nombre) clienteVal = m.cliente_nombre;
+    } else {
+      var inputPers = document.getElementById('mesa-personas');
+      if (inputPers && inputPers.value) personasVal = inputPers.value;
+      var inputCli = document.getElementById('mesa-cliente-nombre');
+      if (inputCli && inputCli.value) clienteVal = inputCli.value;
+    }
+    
+    if (comEl) comEl.textContent = 'Comensales: ' + personasVal;
+    if (cliEl) cliEl.textContent = 'Cliente: ' + clienteVal;
   } else {
-    lbl.textContent = 'MESAS';
+    bar.style.display = 'none';
   }
 }
 
@@ -2556,19 +2989,38 @@ function guardarDatosMesaModal(){
   if(!MESA_SEL) return;
   var mesero = document.getElementById('mesa-mesero-modal').value;
   var personas = document.getElementById('mesa-personas-modal').value;
+  var clienteNombre = document.getElementById('mesa-cliente-nombre-modal') ? document.getElementById('mesa-cliente-nombre-modal').value : '';
   
   // update hidden inputs inside #canal-detail
   var hMesero = document.getElementById('mesa-mesero');
   var hPersonas = document.getElementById('mesa-personas');
+  var hCliente = document.getElementById('mesa-cliente-nombre');
   if(hMesero) hMesero.value = mesero;
   if(hPersonas) hPersonas.value = personas;
+  if(hCliente) hCliente.value = clienteNombre;
   
   db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
     mesero: mesero,
-    personas: personas
+    personas: personas,
+    cliente_nombre: clienteNombre
   });
   
   renderCanalDetail();
+}
+
+function guardarDatosMesa(){
+  if(!MESA_SEL) return;
+  var mesero = document.getElementById('mesa-mesero') ? document.getElementById('mesa-mesero').value : '';
+  var personas = document.getElementById('mesa-personas') ? document.getElementById('mesa-personas').value : '';
+  var clienteNombre = document.getElementById('mesa-cliente-nombre') ? document.getElementById('mesa-cliente-nombre').value : '';
+  
+  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+    mesero: mesero,
+    personas: personas,
+    cliente_nombre: clienteNombre
+  });
+  
+  actualizarGuiaMesaBar();
 }
 
 
@@ -2594,7 +3046,7 @@ function cargarMesas(){
 
 function selMesa(n){
   // Admin puede acceder a todas las mesas
-  if (!_esAdmin && _loggedMesero && _mesas[n]) {
+  if (_isTablet && !_esAdmin && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
     if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()) {
       toast('🔒 Mesa de ' + m.mesero + ' — Solo el admin puede acceder a mesas de otros meseros', 'err');
@@ -2608,12 +3060,39 @@ function selMesa(n){
   if(btn) btn.classList.add('seleccionada');
   clearInterval(_timerInterval);
   db.ref('negocios/'+negocioID+'/mesas/'+n).once('value', function(snap){
-    var m = snap.val();
+    var m = snap.val() || {};
+    
+    // Sincronizar inputs (ocultos o visibles en canal-detail)
+    var hMesero = document.getElementById('mesa-mesero');
+    var hPersonas = document.getElementById('mesa-personas');
+    var hCliente = document.getElementById('mesa-cliente-nombre');
+    if (hMesero) {
+      hMesero.value = m.mesero || _loggedMesero || '';
+      if (hMesero.tagName === 'SELECT' && typeof actualizarDropdownMeseros === 'function') {
+        hMesero.value = m.mesero || _loggedMesero || '';
+      }
+    }
+    if (hPersonas) hPersonas.value = m.personas || '';
+    if (hCliente) hCliente.value = m.cliente_nombre || '';
+    
+    actualizarGuiaMesaBar();
+    
+    // Auto switch to Tab 2 (Orden/Menú) on mobile/portrait tablet view
+    setTimeout(function(){
+      var mobTabs = document.getElementById('mobile-tabs');
+      if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
+        switchMobileTab(2);
+      }
+    }, 150);
+    
     if(m && m.pedido_activo_id){
       db.ref('negocios/'+negocioID+'/pedidos/'+m.pedido_activo_id).once('value', function(ps){
         var pd = ps.val();
         if(pd && pd.items && pd.estado !== 'pagado'){
-          pedido = pd.items;
+          pedido = (pd.items || []).map(function(item) {
+            item.enviado = true;
+            return item;
+          });
           ORDEN = m.pedido_activo_id;
           document.getElementById('tb-ord').textContent = ORDEN;
           document.getElementById('ord-num').textContent = ORDEN;
@@ -2788,7 +3267,7 @@ function addItem(id){
   var p = _prods[id];
   if(!p) return;
   var precio = parseFloat(p.precio || p.precio_venta || 0);
-  var idx = pedido.findIndex(function(i){ return i.id===id && !i.nota; });
+  var idx = pedido.findIndex(function(i){ return i.id===id && !i.nota && !i.enviado; });
   if(idx >= 0){
     pedido[idx].cant++;
     pedido[idx].total = pedido[idx].cant * pedido[idx].precio;
@@ -3000,7 +3479,7 @@ function abrirCheckout(){
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
 
   // Verificar que el mesero puede cobrar esta mesa
-  if(!_esAdmin && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
+  if(_isTablet && !_esAdmin && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
     var mesaInfo = _mesas[MESA_SEL];
     if(mesaInfo.mesero && _loggedMesero && mesaInfo.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()){
       toast('🔒 Solo el admin o '+mesaInfo.mesero+' puede cobrar esta mesa','err');
@@ -3020,7 +3499,16 @@ function abrirCheckout(){
   document.getElementById('checkout-overlay').classList.add('open');
 }
 
-function cerrarCheckout(){ document.getElementById('checkout-overlay').classList.remove('open'); }
+function cerrarCheckout(esCancelacion){
+  document.getElementById('checkout-overlay').classList.remove('open');
+  if (esCancelacion && _procesandoSplit) {
+    _procesandoSplit = false;
+    pedido = JSON.parse(JSON.stringify(_originalPedido));
+    ORDEN = _originalOrdenId;
+    renderCart();
+    toast('⚠️ Cobro dividido cancelado. Orden original restaurada.', 'err');
+  }
+}
 
 function setDteModal(type){
   _dteModalActual = type;
@@ -3078,11 +3566,136 @@ function confirmarCobroFinal(){
     toast('Usa el botón "Ir al Módulo DTE" para Crédito Fiscal','err');
     return;
   }
+  
+  if (_payModalActual === 'tarjeta' && _paxHabilitado) {
+    if (!_paxAprobado) {
+      var btn = document.getElementById('btn-cobrar-final');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR';
+      }
+      iniciarPagoPAX();
+      return;
+    }
+  }
+
   var btn = document.getElementById('btn-cobrar-final');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+  }
   procesarOrden('cobrar');
 }
+
+/* ═══════════════════════════════════════
+   PAX INTEGRATION FUNCTIONS
+   ═══════════════════════════════════════ */
+function abrirPaxConfig() {
+  var overlay = document.getElementById('pax-config-overlay');
+  if (!overlay) return;
+  
+  document.getElementById('pax-habilitado').checked = _paxHabilitado;
+  document.getElementById('pax-ip').value = _paxIP;
+  document.getElementById('pax-port').value = _paxPort;
+  
+  overlay.style.display = 'flex';
+}
+
+function cerrarPaxConfig() {
+  var overlay = document.getElementById('pax-config-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function guardarPaxConfig() {
+  _paxHabilitado = document.getElementById('pax-habilitado').checked;
+  _paxIP = document.getElementById('pax-ip').value.trim();
+  _paxPort = parseInt(document.getElementById('pax-port').value) || 10009;
+  
+  localStorage.setItem('modus_pax_habilitado', _paxHabilitado);
+  localStorage.setItem('modus_pax_ip', _paxIP);
+  localStorage.setItem('modus_pax_port', _paxPort);
+  
+  toast('✓ Configuración PAX guardada', 'ok');
+  cerrarPaxConfig();
+}
+
+function iniciarPagoPAX() {
+  _paxAprobado = false;
+  _paxCancelado = false;
+  window._pagoTarjetaDetalles = null;
+
+  var tip = parseFloat(document.getElementById('ck-tip-input').value) || 0;
+  var baseConDesc = _totalBase - (_descuentoAplicado || 0);
+  if (baseConDesc < 0) baseConDesc = 0;
+  var total = baseConDesc + tip;
+
+  if (!_paxIP) {
+    toast('⚠ Configura primero la IP del PAX', 'err');
+    abrirPaxConfig();
+    return;
+  }
+
+  document.getElementById('pax-loading-amount').textContent = '$' + total.toFixed(2);
+  document.getElementById('pax-loading-overlay').style.display = 'flex';
+
+  // 1. ELECTRON / WINDOWS
+  if (window.electronAPI && typeof window.electronAPI.enviarCobroPAX === 'function') {
+    window.electronAPI.enviarCobroPAX(_paxIP, _paxPort, total, ORDEN).then(function(res) {
+      if (_paxCancelado) return;
+      if (res && res.success) {
+        onPaxPaymentSuccess(res.auth, res.brand, res.last4, res.rrn);
+      } else {
+        onPaxPaymentFailed(res ? res.error : 'Error desconocido');
+      }
+    }).catch(function(err) {
+      if (_paxCancelado) return;
+      onPaxPaymentFailed(err.message || err);
+    });
+  } 
+  // 2. ANDROID CONTAINER
+  else if (window.AndroidBridge && typeof window.AndroidBridge.enviarCobroPAX === 'function') {
+    window.AndroidBridge.enviarCobroPAX(_paxIP, _paxPort, total, ORDEN);
+  } 
+  // 3. FALLBACK MOCK FOR TESTING IN BROWSER
+  else {
+    console.warn('Puente PAX no disponible. Simulando transacción aprobada en 3s...');
+    setTimeout(function() {
+      if (_paxCancelado) return;
+      onPaxPaymentSuccess('MOCK99', 'VISA_MOCK', '9999', '123456');
+    }, 3000);
+  }
+}
+
+function cancelarPagoPax() {
+  _paxCancelado = true;
+  document.getElementById('pax-loading-overlay').style.display = 'none';
+  toast('Pago cancelado en el POS', 'err');
+  _paxAprobado = false;
+}
+
+window.onPaxPaymentSuccess = function(auth, brand, last4, rrn) {
+  if (_paxCancelado) return;
+  _paxAprobado = true;
+  document.getElementById('pax-loading-overlay').style.display = 'none';
+  toast('💳 Pago aprobado: Aut: ' + auth + ' (' + brand + ' *' + last4 + ')', 'ok');
+  
+  window._pagoTarjetaDetalles = {
+    auth: auth,
+    brand: brand,
+    last4: last4,
+    rrn: rrn
+  };
+
+  // Re-confirmar cobro final ahora que está aprobado
+  confirmarCobroFinal();
+};
+
+window.onPaxPaymentFailed = function(error) {
+  if (_paxCancelado) return;
+  _paxAprobado = false;
+  document.getElementById('pax-loading-overlay').style.display = 'none';
+  toast('❌ Pago fallido: ' + error, 'err');
+};
 
 function redirigirCCF(){
   // Guardar la orden como pendiente antes de salir
@@ -3195,9 +3808,12 @@ function procesarOrden(tipoAccion){
   var mesa_num = MESA_SEL || null;
   var mesero = (document.getElementById('mesa-mesero')||{value:''}).value;
   var personas = (document.getElementById('mesa-personas')||{value:''}).value;
+  var cliente_nombre = (document.getElementById('mesa-cliente-nombre')||{value:''}).value;
   var cliente='', telefono='', direccion='', repartidor='';
 
-  if(CANAL==='mesa'){ cliente='Mesa '+mesa_num; }
+  if(CANAL==='mesa'){ 
+    cliente='Mesa '+mesa_num + (cliente_nombre ? ' (' + cliente_nombre + ')' : ''); 
+  }
   else if(CANAL==='llevar'){
     cliente=(document.getElementById('ll-cliente')||{value:'Para llevar'}).value||'Para llevar';
     telefono=(document.getElementById('ll-tel')||{value:''}).value;
@@ -3222,6 +3838,31 @@ function procesarOrden(tipoAccion){
   });
 
   function ejecutarGuardado(ts){
+    // Determinar si hay ítems nuevos de cocina y bar
+    var tieneNuevoFood = false;
+    var tieneNuevoBar = false;
+
+    var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS'];
+    function _esBarCatLocal(cat){
+      return _BAR_CATS.indexOf((cat||'').trim().toUpperCase()) !== -1;
+    }
+
+    pedido.forEach(function(i) {
+      if (!i.enviado) {
+        if (_esBarCatLocal(i.cat)) {
+          tieneNuevoBar = true;
+        } else {
+          tieneNuevoFood = true;
+        }
+      }
+    });
+
+    // Marcar todos los ítems actuales como enviados
+    pedido = pedido.map(function(item) {
+      item.enviado = true;
+      return item;
+    });
+
     var estado = tipoAccion==='guardar' ? 'en_curso' : 'pagado';
     var v = {
       orden:ORDEN, canal:CANAL,
@@ -3239,6 +3880,10 @@ function procesarOrden(tipoAccion){
       abono:abono.toFixed(2),
       vuelto:Math.max(0,abono-total).toFixed(2),
       forma_pago:_payModalActual||'efectivo',
+      pax_auth: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.auth : null,
+      pax_brand: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.brand : null,
+      pax_last4: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.last4 : null,
+      pax_rrn: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.rrn : null,
       dte_tipo:_dteModalActual||'TIQ',
       dte_nit:nit, dte_razon:razon,
       // Campos fiscales desacoplados (DteEngine)
@@ -3254,15 +3899,31 @@ function procesarOrden(tipoAccion){
       caja_num:_cajaActual
     };
 
+    if (tieneNuevoFood) {
+      v.estado_cocina = 'pendiente';
+    }
+    if (tieneNuevoBar) {
+      v.estado_bar = 'pendiente';
+    }
+
+    var cocinaOrderUpdate = {
+      orden:ORDEN, items:pedido,
+      estado:tipoAccion==='guardar'?'pendiente':'pagado',
+      tipo:CANAL, mesa_num:mesa_num, cliente:cliente,
+      mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
+      nota_cocina:_notaCocina, timestamp:ts
+    };
+
+    if (tieneNuevoFood) {
+      cocinaOrderUpdate.estado_cocina = 'pendiente';
+    }
+    if (tieneNuevoBar) {
+      cocinaOrderUpdate.estado_bar = 'pendiente';
+    }
+
     var saves = [
       db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v),
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({
-        orden:ORDEN, items:pedido,
-        estado:tipoAccion==='guardar'?'pendiente':'pagado',
-        tipo:CANAL, mesa_num:mesa_num, cliente:cliente,
-        mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
-        nota_cocina:_notaCocina, timestamp:ts
-      })
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate)
     ];
 
     if(tipoAccion==='cobrar'){
@@ -3342,19 +4003,23 @@ function procesarOrden(tipoAccion){
         toast('✅ '+ORDEN+' enviada a cocina','ok');
         nuevaOrden();
       } else {
-        toast('✅ '+ORDEN+' cobrada — '+_dteModalActual,'ok');
-        
-        // Mostrar vista de éxito
-        document.getElementById('ck-success-total').textContent = '$' + total.toFixed(2);
-        document.getElementById('ck-success-vuelto').textContent = '$' + Math.max(0, abono - total).toFixed(2);
-        
-        var formView = document.getElementById('ck-form-view');
-        var successView = document.getElementById('ck-success-view');
-        if (formView) formView.style.display = 'none';
-        if (successView) successView.style.display = 'flex';
-        
-        // Imprimir automáticamente el tique de 80mm AON
-        imprimirTicket();
+        if (_isTablet && !_procesandoSplit) {
+          nuevaOrden();
+        } else {
+          toast('✅ '+ORDEN+' cobrada — '+_dteModalActual,'ok');
+          
+          // Mostrar vista de éxito
+          document.getElementById('ck-success-total').textContent = '$' + total.toFixed(2);
+          document.getElementById('ck-success-vuelto').textContent = '$' + Math.max(0, abono - total).toFixed(2);
+          
+          var formView = document.getElementById('ck-form-view');
+          var successView = document.getElementById('ck-success-view');
+          if (formView) formView.style.display = 'none';
+          if (successView) successView.style.display = 'flex';
+          
+          // Imprimir automáticamente el tique de 80mm AON / 57mm Bluetooth
+          imprimirTicket(true);
+        }
       }
       var btn = document.getElementById('btn-cobrar-final');
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
@@ -3372,7 +4037,13 @@ function finalizarYLimpiarVenta() {
   var formView = document.getElementById('ck-form-view');
   if (formView) formView.style.display = 'flex';
   cerrarCheckout();
-  nuevaOrden();
+  
+  if (_procesandoSplit) {
+    _ticketCobrandoIdx++;
+    cobrarSiguienteTicketSplit();
+  } else {
+    nuevaOrden();
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -3380,7 +4051,10 @@ function finalizarYLimpiarVenta() {
 ═══════════════════════════════════════ */
 function nuevaOrden(){
   pedido = []; MESA_SEL = null; _notaCocina = '';
-  // Reset FIRE
+  // Reset FIRE & PAX
+  _paxAprobado = false;
+  _paxCancelado = false;
+  window._pagoTarjetaDetalles = null;
   _fireActivo = false; _descuentoAplicado = 0; _descDUI = '';
   var fb = document.getElementById('btn-fire');
   if(fb){ fb.classList.remove('active'); fb.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora'; }
@@ -3490,8 +4164,26 @@ function acumularOrdenOffline() {
 /* ═══════════════════════════════════════
    ACCIONES EXTRA
 ═══════════════════════════════════════ */
-async function imprimirTicket(){
+async function imprimirTicket(soloImprimir){
   if(!pedido.length){ toast('Agrega productos','err'); return; }
+
+  if (_isTablet && !soloImprimir) {
+    try {
+      var ticketText = formatTicket57mm();
+      if (window.AndroidBridge && typeof window.AndroidBridge.printBluetooth === 'function') {
+        window.AndroidBridge.printBluetooth(ticketText);
+      } else {
+        console.warn("AndroidBridge.printBluetooth no disponible. Ticket:\n", ticketText);
+        toast("Bluetooth Bridge no disponible", "err");
+      }
+      // Bypassear el modal de cobro y cerrar/liberar la mesa de inmediato
+      procesarOrden('cobrar');
+    } catch(e) {
+      console.error(e);
+      toast("Error al formatear ticket", "err");
+    }
+    return;
+  }
 
   const t   = (_biz.ticket_config || {});
   const biz = _biz || {};
@@ -3563,26 +4255,38 @@ async function imprimirTicket(){
   const canalTxt={mesa:'MESA '+MESA_SEL,llevar:'PARA LLEVAR',domicilio:'DOMICILIO'}[CANAL]||CANAL.toUpperCase();
   const dteVer = (typeof DteEngine!=='undefined')?DteEngine.version:'1.0';
 
+  const isPrintElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+  const ticketWidth = isPrintElectron ? '300px' : '280px';
+  const ticketFontSize = isPrintElectron ? '14px' : '13px';
+  const ticketFontWeight = isPrintElectron ? '900' : 'bold';
+
   let html = '<html><head><meta charset="UTF-8"><style>'
     +'@import url(\'https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap\');'
     +'*{box-sizing:border-box;margin:0;padding:0}'
-    +'body{font-family:\'Inconsolata\',\'Courier New\',monospace;width:280px;max-width:280px;font-size:13px;font-weight:bold;color:#000;background:#fff;padding:6px 4px 18px;line-height:1.4}'
-    +'.c{text-align:center}.r{text-align:right}.b{font-weight:700}.sm{font-size:12px}.xs{font-size:11px}'
+    +'body{font-family:\'Inconsolata\',\'Courier New\',monospace;width:'+ticketWidth+';max-width:'+ticketWidth+';font-size:'+ticketFontSize+';font-weight:'+ticketFontWeight+';color:#000;background:#fff;padding:6px 4px 18px;line-height:1.4}'
+    +'.c{text-align:center}.r{text-align:right}.b{font-weight:900}.sm{font-size:12px}.xs{font-size:11px}'
     +'.hr{border-top:2px dashed #000;margin:5px 0}.hr2{border-top:2.5px solid #000;margin:5px 0}'
     +'.row{display:flex;justify-content:space-between;gap:2px}'
     +'.logo{max-width:90px;max-height:50px;object-fit:contain;margin-bottom:4px}'
     +'.doc-type{text-align:center;font-weight:900;font-size:14px;border:2.5px solid #000;padding:5px 2px;margin:5px 0;letter-spacing:.3px}'
-    +'table{width:100%;border-collapse:collapse;font-size:12px;font-weight:bold}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px;font-weight:'+ticketFontWeight+'}'
     +'thead tr{border-bottom:2px solid #000;border-top:2px solid #000}'
     +'th{padding:3px 1px;text-align:left;font-size:11px}td{padding:3px 1px;vertical-align:top}.td-r{text-align:right}'
     +'.tot{display:flex;justify-content:space-between;padding:2px 0;font-size:12px}'
     +'.gran{font-size:18px;font-weight:900;border-top:2.5px solid #000;border-bottom:2.5px solid #000;padding:5px 0;margin:5px 0;line-height:1.2}'
-    +'.fbox{border:1.5px solid #000;padding:5px;margin:5px 0;font-size:11px}.fttl{font-weight:700;font-size:12px;text-transform:uppercase;margin-bottom:3px}'
+    +'.fbox{border:1.5px solid #000;padding:5px;margin:5px 0;font-size:11px}.fttl{font-weight:900;font-size:12px;text-transform:uppercase;margin-bottom:3px}'
     +'#ticket-qr{display:flex;justify-content:center;margin:8px 0}'
-    +'.slbl{font-size:11px;font-weight:700;text-transform:uppercase;opacity:.8;margin-bottom:2px}'
-    +'.pwd{text-align:center;font-size:9px;opacity:.5;margin-top:10px;letter-spacing:1px}'
-    +'@media print{body{margin:0;padding:3px 3px}}'
-    +'</style>';
+    +'.slbl{font-size:11px;font-weight:900;text-transform:uppercase;opacity:.8;margin-bottom:2px}'
+    +'.pwd{text-align:center;font-size:9px;opacity:.5;margin-top:10px;letter-spacing:1px}';
+
+  if (isPrintElectron) {
+    html += '@page { size: 80mm auto; margin: 0; }'
+         + '@media print { body { width: 80mm; margin: 0; padding: 5px 10px; } }'
+         + '* { font-weight: 900 !important; }';
+  } else {
+    html += '@media print{body{margin:0;padding:3px 3px}}';
+  }
+  html += '</style>';
   if(qrLink) html += '<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"><\/script>';
   html += '</head><body>';
 
@@ -3705,9 +4409,117 @@ async function imprimirTicket(){
   html += '<\/script>';
   html += '</body></html>';
 
-  const win = window.open('', '', 'width=260,height=700');
+  const win = window.open('', '', 'width=' + (isPrintElectron ? 350 : 260) + ',height=700');
   win.document.write(html);
   win.document.close();
+}
+
+function formatTicket57mm() {
+  const biz = _biz || {};
+  const t = (biz.ticket_config || {});
+  
+  const sub       = pedido.reduce((s,it) => s + (it.cant * it.precio), 0);
+  const descMonto = _descuentoAplicado || 0;
+  const baseDesc  = Math.max(0, sub - descMonto);
+  const iva       = +(baseDesc * 0.13).toFixed(2);
+  const tip       = parseFloat(document.getElementById('ck-tip-input')?.value || 0);
+  const total     = +(baseDesc + tip).toFixed(2);
+  const abono     = parseFloat(document.getElementById('ck-cash-input')?.value || total);
+  const vuelto    = +Math.max(0, abono - total).toFixed(2);
+  
+  const dteType = _dteModalActual || 'TIQ';
+  const tipoDocLabel = {TIQ:'TIQUETE DE VENTA SIMPLIFICADA',CF:'FACTURA DE CONSUMIDOR FINAL',CCF:'COMPROBANTE DE CREDITO FISCAL'}[dteType] || 'TIQUETE DE VENTA';
+  
+  let clienteNombre = 'CONSUMIDOR FINAL';
+  if(dteType==='CF'){
+    const n=(document.getElementById('ck-cf-nombre')||{}).value||'';
+    clienteNombre = n ? n.toUpperCase() : 'CONSUMIDOR FINAL';
+  } else {
+    if(CANAL==='mesa')     clienteNombre='MESA '+MESA_SEL;
+    if(CANAL==='llevar')   clienteNombre=(document.getElementById('ll-cliente')||{}).value||'CONSUMIDOR FINAL';
+    if(CANAL==='domicilio')clienteNombre=(document.getElementById('dom-cliente')||{}).value||'CONSUMIDOR FINAL';
+  }
+  
+  const bizNombre = (biz.nombre_comercial||biz.nombre||'EL PARCHE').toUpperCase();
+  const bizDir    = biz.direccion||biz.dir||'';
+  const bizTel    = biz.tel||biz.telefono||'';
+  const bizNit    = biz.nit||'';
+  const bizNrc    = biz.nrc||'';
+  const bizMsg    = t['ticket-txt-agradecimiento']||'Gracias por su visita!';
+  
+  const mesero   = _loggedMesero||localStorage.getItem('meseroId')||'-';
+  const caja     = _cajaSesion ? _cajaSesion.id.split('_')[1] : '01';
+  const ahora    = new Date();
+  const fecha    = ahora.toLocaleDateString('es-SV',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hora     = ahora.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  const canalTxt = {mesa:'MESA '+MESA_SEL,llevar:'PARA LLEVAR',domicilio:'DOMICILIO'}[CANAL]||CANAL.toUpperCase();
+  
+  var text = "";
+  
+  // Header
+  text += "[C][B][D]" + bizNombre + "[/D][/B]\n";
+  if (bizDir) text += "[C]" + bizDir + "\n";
+  if (bizTel) text += "[C]Tel: " + bizTel + "\n";
+  if (bizNit) text += "[C]NIT: " + bizNit + "\n";
+  if (bizNrc) text += "[C]NRC: " + bizNrc + "\n";
+  text += "[HR]\n";
+  
+  // Document Type
+  text += "[C][B]" + tipoDocLabel + "[/B]\n";
+  text += "[HR]\n";
+  
+  // Operation details
+  text += "Ticket: " + ORDEN + "\n";
+  text += "Fecha:  " + fecha + " " + hora + "\n";
+  text += "Caja:   " + caja + " | " + canalTxt + "\n";
+  text += "Mesero: " + mesero + "\n";
+  text += "Cliente: " + clienteNombre + "\n";
+  text += "[HR]\n";
+  
+  // Products table
+  text += "CANT  PRODUCTO           TOTAL\n";
+  text += "[HR]\n";
+  pedido.forEach(function(it){
+    var desc = it.desc;
+    var lineTotal = (it.cant * it.precio).toFixed(2);
+    
+    text += "[B]" + desc + "[/B]\n";
+    var cantStr = "  " + it.cant + " x $" + parseFloat(it.precio).toFixed(2);
+    var totStr = "$" + lineTotal;
+    var spacesNeeded = 32 - cantStr.length - totStr.length;
+    if (spacesNeeded < 1) spacesNeeded = 1;
+    text += cantStr + " ".repeat(spacesNeeded) + totStr + "\n";
+    if (it.nota) {
+      text += "   * " + it.nota + "\n";
+    }
+  });
+  text += "[HR]\n";
+  
+  // Financial Summary
+  var subStr = "$" + sub.toFixed(2);
+  text += "Subtotal:" + " ".repeat(32 - 9 - subStr.length) + subStr + "\n";
+  if (descMonto > 0) {
+    var descStr = "-$" + descMonto.toFixed(2);
+    text += "Descuento:" + " ".repeat(32 - 10 - descStr.length) + descStr + "\n";
+  }
+  if (tip > 0) {
+    var tipStr = "$" + tip.toFixed(2);
+    text += "Propina:" + " ".repeat(32 - 8 - tipStr.length) + tipStr + "\n";
+  }
+  
+  var totStrValue = "$" + total.toFixed(2);
+  var spacesTotal = 16 - totStrValue.length;
+  if (spacesTotal < 1) spacesTotal = 1;
+  text += "[D]TOTAL:  " + " ".repeat(spacesTotal) + totStrValue + "[/D]\n";
+  text += "[HR]\n";
+  
+  // Footer Message
+  text += "[C]" + bizMsg + "\n";
+  if (t['ticket-txt-footer']) text += "[C]" + t['ticket-txt-footer'] + "\n";
+  text += "[C]Documento Informativo\n";
+  text += "[C]PARCHE SYS POS\n";
+  
+  return text;
 }
 async function generarPDF() {
   if(!pedido.length){toast('Agrega productos','err');return;}
@@ -4012,6 +4824,13 @@ var _splitTickets = [];   // [{id, nombre, items:[{...}]}]
 var _splitDragItem = null;
 var _splitDragFrom = null; // 'source' | ticket index
 
+// Variables de control para cobro dividido
+var _ticketsParaCobrar = [];
+var _ticketCobrandoIdx = 0;
+var _procesandoSplit = false;
+var _originalOrdenId = '';
+var _originalPedido = [];
+
 function abrirSplit(){
   if(!pedido || !pedido.length){ toast('No hay productos en la orden','err'); return; }
   // Reset
@@ -4132,7 +4951,14 @@ function bindDropZone(el, type, ticketIdx){
       var cant = it.cant || 1;
       for(var q=0; q<cant; q++){
         if('item_'+idx+'_'+q === key){
-          itemData = { _splitKey:key, desc:it.desc||it.nombre, price:it.precio, _cartIdx:idx };
+          // Clone the original item with all details (e.g. subprods, modifiers, cat), but set quantity to 1
+          var originalItem = JSON.parse(JSON.stringify(it));
+          originalItem.cant = 1;
+          originalItem._splitKey = key;
+          originalItem._cartIdx = idx;
+          originalItem.desc = originalItem.desc || originalItem.nombre || '';
+          originalItem.price = parseFloat(originalItem.precio || originalItem.price || 0);
+          itemData = originalItem;
         }
       }
     });
@@ -4160,19 +4986,67 @@ function cobrarTicketsSplit(){
   var totalItems = pedido.reduce(function(s,i){ return s+(i.cant||1); },0);
 
   if(totalAsignado < totalItems){
-    if(!confirm('Hay '+( totalItems - totalAsignado)+' productos sin asignar. ¿Continuar de todas formas?')) return;
+    if(!confirm('Hay '+(totalItems - totalAsignado)+' productos sin asignar. ¿Continuar de todas formas?')) return;
   }
 
-  // Generar resumen de tickets
-  var resumen = _splitTickets.filter(function(t){ return t.items.length > 0; }).map(function(t){
-    var total = t.items.reduce(function(s,i){ return s+(parseFloat(i.price)||0); },0);
-    return t.nombre+': $'+total.toFixed(2)+' ('+t.items.map(function(i){ return i.desc; }).join(', ')+')';
-  }).join('\n');
+  var activeTickets = _splitTickets.filter(function(t){ return t.items.length > 0; });
+  if(!activeTickets.length){
+    toast('No hay productos asignados a ningún ticket','err');
+    return;
+  }
+
+  // Guardar estado original
+  _originalOrdenId = ORDEN;
+  _originalPedido = JSON.parse(JSON.stringify(pedido));
+  _ticketsParaCobrar = JSON.parse(JSON.stringify(activeTickets));
+  _ticketCobrandoIdx = 0;
+  _procesandoSplit = true;
 
   cerrarSplit();
-  cerrarCheckout();
-  toast('🧾 Tickets generados — Cobrar por separado','ok');
-  alert('TICKETS A COBRAR:\n\n'+resumen);
+  cobrarSiguienteTicketSplit();
+}
+
+function cobrarSiguienteTicketSplit(){
+  if(_ticketCobrandoIdx < _ticketsParaCobrar.length){
+    var t = _ticketsParaCobrar[_ticketCobrandoIdx];
+    // Configurar el pedido para este ticket
+    pedido = t.items;
+    
+    // Suffix de orden por ticket (ej. FOOD-001-Ticket1)
+    ORDEN = _originalOrdenId + '-' + t.nombre.replace(/\s+/g, '');
+    
+    toast('🧾 Cobrando ' + t.nombre + ' (' + (_ticketCobrandoIdx + 1) + '/' + _ticketsParaCobrar.length + ')', 'ok');
+    
+    // Abrir checkout
+    abrirCheckout();
+    
+    // Mostrar etiqueta personalizada de la orden en el checkout
+    var lbl = document.getElementById('ck-orden-lbl');
+    if(lbl) lbl.textContent = ORDEN + ' (' + t.nombre + ')';
+  } else {
+    // Todo completado!
+    _procesandoSplit = false;
+    _ticketsParaCobrar = [];
+    _ticketCobrandoIdx = 0;
+    
+    // Liberar la mesa original en Firebase
+    if(CANAL === 'mesa' && MESA_SEL){
+      db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+        mesa_num:'',
+        mesero:'',
+        personas:1,
+        estado:'libre',
+        pedido_activo_id:null,
+        timestamp:Date.now()
+      }).then(function(){
+        toast('🎉 Todos los tickets cobrados. Mesa liberada.', 'ok');
+        nuevaOrden();
+      });
+    } else {
+      toast('🎉 Todos los tickets cobrados con éxito.', 'ok');
+      nuevaOrden();
+    }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -4192,6 +5066,158 @@ function guardarNota(){ _notaCocina=document.getElementById('nota-input').value;
 var _todasOrdenes = {};
 function abrirHistorial(){ document.getElementById('hist-overlay').classList.add('open'); cargarHistorial(); }
 function cerrarHistorial(){ document.getElementById('hist-overlay').classList.remove('open'); }
+
+/* ══════════════════════════════════════════════════
+   MOVIMIENTOS DE CAJA — solo cajero 5061 o admin
+══════════════════════════════════════════════════ */
+var _movcajaTipo = 'ingreso';
+
+function abrirModalMovCaja() {
+  // Verificar permiso
+  if (!_esCajero && !_esAdmin) {
+    toast('⛔ Acceso restringido al cajero autorizado', 'err');
+    return;
+  }
+  if (!_cajaSesion || _cajaSesion.estado !== 'abierta') {
+    toast('La caja debe estar abierta para registrar movimientos', 'err');
+    return;
+  }
+  // Rellenar info de caja
+  var info = document.getElementById('movcaja-caja-info');
+  if (info) {
+    info.innerHTML = '<i class="fa-solid fa-cash-register"></i> Caja: <b>' + _cajaSesion.id + '</b> &nbsp;|&nbsp; Apertura: <b>$' + (_cajaSesion.monto_inicial||0).toFixed(2) + '</b>';
+  }
+  // Reset form
+  _movcajaTipo = 'ingreso';
+  setMovCajaTipo('ingreso');
+  document.getElementById('movcaja-monto').value = '';
+  document.getElementById('movcaja-concepto').value = '';
+  document.getElementById('movcaja-pin').value = '';
+  var errDiv = document.getElementById('movcaja-err');
+  if (errDiv) errDiv.style.display = 'none';
+  var overlay = document.getElementById('movcaja-overlay');
+  if (overlay) { overlay.style.display = 'flex'; overlay.classList.add('open'); }
+}
+
+function cerrarModalMovCaja() {
+  var overlay = document.getElementById('movcaja-overlay');
+  if (overlay) { overlay.classList.remove('open'); overlay.style.display = 'none'; }
+}
+
+function setMovCajaTipo(tipo) {
+  _movcajaTipo = tipo;
+  var btnI = document.getElementById('movcaja-btn-ingreso');
+  var btnE = document.getElementById('movcaja-btn-egreso');
+  if (tipo === 'ingreso') {
+    if (btnI) { btnI.style.borderColor = '#34d399'; btnI.style.color = '#34d399'; btnI.style.background = 'rgba(52,211,153,0.15)'; }
+    if (btnE) { btnE.style.borderColor = 'var(--border)'; btnE.style.color = 'var(--text-muted)'; btnE.style.background = 'transparent'; }
+  } else {
+    if (btnE) { btnE.style.borderColor = '#f87171'; btnE.style.color = '#f87171'; btnE.style.background = 'rgba(248,113,113,0.15)'; }
+    if (btnI) { btnI.style.borderColor = 'var(--border)'; btnI.style.color = 'var(--text-muted)'; btnI.style.background = 'transparent'; }
+  }
+}
+
+function confirmarMovCaja() {
+  var errDiv = document.getElementById('movcaja-err');
+  errDiv.style.display = 'none';
+
+  var monto = parseFloat(document.getElementById('movcaja-monto').value) || 0;
+  var concepto = (document.getElementById('movcaja-concepto').value || '').trim();
+  var pin = (document.getElementById('movcaja-pin').value || '').trim();
+
+  if (monto <= 0) { errDiv.textContent = '⚠ Ingresa un monto válido mayor a 0'; errDiv.style.display = 'block'; return; }
+  if (!concepto) { errDiv.textContent = '⚠ Escribe un concepto para el movimiento'; errDiv.style.display = 'block'; return; }
+  if (!pin) { errDiv.textContent = '⚠ Ingresa tu PIN para autorizar'; errDiv.style.display = 'block'; return; }
+
+  var btn = document.getElementById('movcaja-confirm-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+
+  // Validar PIN en Firebase — debe corresponder al cajero 5061 o admin
+  db.ref('negocios/' + negocioID + '/empleados').once('value').then(function(snap) {
+    var foundEmp = null;
+    snap.forEach(function(c) {
+      var emp = c.val();
+      var empPin = String(emp.pin || emp.pin_app || '').trim();
+      var empCod = String(emp.codigo || emp.code || emp.id_empleado || '').trim();
+      // Acepta PIN del cajero 5061 o de un admin
+      var puesto = (emp.puesto || emp.rol || '').toLowerCase();
+      var esAdminEmp = puesto.includes('admin') || puesto.includes('gerente') || emp.admin === true;
+      if (empPin === pin && (empCod === _CAJERO_CODE || esAdminEmp) && !foundEmp) {
+        foundEmp = emp;
+      }
+    });
+
+    if (!foundEmp) {
+      errDiv.textContent = '⛔ PIN no autorizado. Solo cajero o admin pueden registrar movimientos.';
+      errDiv.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Registrar Movimiento';
+      return;
+    }
+
+    var ts = Date.now();
+    var movKey = 'mov_' + ts;
+    var movData = {
+      tipo: _movcajaTipo,                // 'ingreso' | 'egreso'
+      monto: monto,
+      concepto: concepto,
+      fecha: new Date().toISOString(),
+      timestamp: ts,
+      cajero: foundEmp.nombre || _loggedMesero || 'cajero',
+      cajero_codigo: String(foundEmp.codigo || foundEmp.code || foundEmp.id_empleado || ''),
+      caja_id: _cajaSesion ? _cajaSesion.id : 'sin-caja',
+      negocio: negocioID
+    };
+
+    var saves = [];
+
+    // 1. Guardar en finanzas_food (nodo dedicado para flujo de caja)
+    saves.push(db.ref('negocios/' + negocioID + '/finanzas_food/movimientos_caja/' + movKey).set(movData));
+
+    // 2. Actualizar caja sesión activa: acumular ingresos/egresos
+    if (_cajaSesion) {
+      if (_movcajaTipo === 'ingreso') {
+        var ingresos = _cajaSesion.ingresos_efectivo || [];
+        ingresos.push({ monto: monto, concepto: concepto, ts: ts });
+        _cajaSesion.ingresos_efectivo = ingresos;
+      } else {
+        var egresos = _cajaSesion.egresos_efectivo || [];
+        egresos.push({ monto: monto, concepto: concepto, ts: ts });
+        _cajaSesion.egresos_efectivo = egresos;
+      }
+      // Recalcular monto esperado
+      var ingresosSum = (_cajaSesion.ingresos_efectivo || []).reduce(function(a,i){return a+(i.monto||0);},0);
+      var egresosSum  = (_cajaSesion.egresos_efectivo  || []).reduce(function(a,e){return a+(e.monto||0);},0);
+      _cajaSesion.monto_esperado = (_cajaSesion.monto_inicial||0) + (_cajaSesion.ventas_efectivo||0) + ingresosSum - egresosSum;
+      saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').update({
+        ingresos_efectivo: _cajaSesion.ingresos_efectivo,
+        egresos_efectivo: _cajaSesion.egresos_efectivo,
+        monto_esperado: _cajaSesion.monto_esperado
+      }));
+      saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).update({
+        ingresos_efectivo: _cajaSesion.ingresos_efectivo,
+        egresos_efectivo: _cajaSesion.egresos_efectivo,
+        monto_esperado: _cajaSesion.monto_esperado
+      }));
+      localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
+    }
+
+    Promise.all(saves).then(function() {
+      var icon = _movcajaTipo === 'ingreso' ? '⬇️' : '⬆️';
+      toast(icon + ' ' + (concepto) + ': $' + monto.toFixed(2) + ' registrado', 'ok');
+      cerrarModalMovCaja();
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Registrar Movimiento';
+    }).catch(function(err) {
+      errDiv.textContent = '⚠ Error al guardar: ' + err.message;
+      errDiv.style.display = 'block';
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Registrar Movimiento';
+    });
+  });
+}
+
 
 function cargarHistorial(){
   db.ref('negocios/'+negocioID+'/pedidos').orderByChild('timestamp').limitToLast(60).once('value', function(snap){
@@ -4272,7 +5298,10 @@ function cargarOrdenParaEditar(id){
   if(!v) return;
   if(!confirm('¿Cargar orden #'+(v.orden||id)+' para editar? La orden actual se perderá.')) return;
   ORDEN = v.orden;
-  pedido = JSON.parse(JSON.stringify(v.items || []));
+  pedido = JSON.parse(JSON.stringify(v.items || [])).map(function(item) {
+    item.enviado = true;
+    return item;
+  });
   CANAL = v.canal || 'mesa';
   MESA_SEL = v.mesa_num || null;
   _notaCocina = v.nota_cocina || '';
@@ -4320,6 +5349,9 @@ var _kaAudioCtx = null;
 function _kaBeep(isBar){
   try {
     if(!_kaAudioCtx) _kaAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if(_kaAudioCtx.state === 'suspended') {
+      _kaAudioCtx.resume();
+    }
     var t = _kaAudioCtx.currentTime;
     if(isBar) {
       [[1300, 0, 0.15], [1600, 0.1, 0.15], [1950, 0.2, 0.25]].forEach(function(cfg){
@@ -4363,13 +5395,9 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     }
     if(bellEl) bellEl.textContent = "🍹";
     overlay.style.display = 'flex';
-    _kaBeep(true);
-    if(_kaInterval) clearInterval(_kaInterval);
-    _kaInterval = setInterval(function() { _kaBeep(true); }, 1600);
     
-    setTimeout(function() {
-      alert("🍹 ¡BEBIDA LISTA EN BAR! 🍹\n\n" + mensaje);
-    }, 200);
+    // Bar no lleva sonido, solo vibración (si estuviera disponible)
+    if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
   } else {
     overlay.classList.add('ka-flash-red');
     if(titleEl) {
@@ -4382,10 +5410,6 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     _kaBeep(false);
     if(_kaInterval) clearInterval(_kaInterval);
     _kaInterval = setInterval(function() { _kaBeep(false); }, 1600);
-    
-    setTimeout(function() {
-      alert("🚨 ¡PEDIDO LISTO EN COCINA! 🚨\n\n" + mensaje);
-    }, 200);
   }
 }
 
@@ -4393,6 +5417,11 @@ function cerrarAlarmaKitchen(){
   var overlay = document.getElementById('kitchen-alarm-overlay');
   if(overlay){ overlay.style.display = 'none'; overlay.classList.remove('ka-flash-red', 'ka-flash-blue'); }
   if(_kaInterval){ clearInterval(_kaInterval); _kaInterval = null; }
+  
+  // ✅ Suspender AudioContext para silenciar inmediatamente los osciladores activos
+  if (_kaAudioCtx && _kaAudioCtx.state === 'running') {
+    _kaAudioCtx.suspend().catch(function(err){});
+  }
 }
 
 /* ═══════════════════════════════════════

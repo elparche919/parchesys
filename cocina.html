@@ -207,38 +207,7 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
 /* TOAST */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--sur);border:1px solid var(--bd);padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;z-index:10000;transition:.4s cubic-bezier(.17,1.3,.3,1);opacity:0;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px}
 
-/* Optimizaciones para Pantallas Grandes / TV LED de 40" */
-@media (min-width: 1400px) {
-  .board.cols-3 {
-    grid-template-columns: repeat(auto-fill, minmax(345px, 1fr)) !important;
-    gap: 16px !important;
-  }
-  .ord-card {
-    min-height: 320px !important;
-  }
-  .ord-id, .ord-timer {
-    font-size: 24px !important;
-  }
-  .card-info {
-    font-size: 14.5px !important;
-    padding: 8px 14px !important;
-  }
-  .item-line {
-    font-size: 18px !important;
-    padding: 6px 0 !important;
-  }
-  .item-cant {
-    min-width: 28px !important;
-  }
-  .item-note {
-    font-size: 15px !important;
-    margin-left: 38px !important;
-  }
-  .state-btn {
-    padding: 14px 8px !important;
-    font-size: 14px !important;
-  }
-}
+/* Optimizaciones para Pantallas Grandes / TV LED de 40" eliminadas para mantener tamaño compacto de tarjeta */
 
 /* Scrollbars para KDS Cocina (Pantalla de 40") */
 ::-webkit-scrollbar {
@@ -256,6 +225,57 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
 ::-webkit-scrollbar-thumb:active {
   background: var(--mid);
 }
+
+/* Modo TV de 40 Pulgadas (Visibilidad desde lejos para cocina) */
+body.tv-mode-active {
+  background: #000000 !important;
+}
+body.tv-mode-active .tb {
+  padding: 12px 24px !important;
+}
+body.tv-mode-active .tb-title {
+  font-size: 22px !important;
+}
+body.tv-mode-active .tb-sub {
+  font-size: 14px !important;
+}
+body.tv-mode-active #tb-clock {
+  font-size: 34px !important;
+}
+body.tv-mode-active #tb-date {
+  font-size: 14px !important;
+}
+body.tv-mode-active .stat-pill {
+  min-width: 90px !important;
+  padding: 8px 16px !important;
+  border-radius: 12px !important;
+}
+body.tv-mode-active .stat-pill .sn {
+  font-size: 26px !important;
+}
+body.tv-mode-active .stat-pill .sl {
+  font-size: 10px !important;
+  margin-top: 4px !important;
+}
+body.tv-mode-active .filter-bar {
+  padding: 10px 24px !important;
+  gap: 12px !important;
+}
+body.tv-mode-active .filter-btn {
+  font-size: 16px !important;
+  padding: 8px 20px !important;
+  border-radius: 30px !important;
+}
+body.tv-mode-active .filter-btn .fb-count {
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+}
+body.tv-mode-active .board {
+  padding: 16px !important;
+  gap: 16px !important;
+  grid-template-columns: repeat(5, 1fr) !important;
+}
+/* Sobreescritura de estilos de tarjeta en modo TV eliminada para mantener tamaño compacto de tarjeta */
 </style>
 <div id="toast"></div>
 </head>
@@ -459,6 +479,14 @@ function activarSonido(){
 
 /* ─── INICIAR ─── */
 function iniciar(){
+  // Detectar si corre en Electron KDS
+  var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+  if (isElectron) {
+    document.body.classList.add('tv-mode-active');
+    var linkPortal = document.getElementById('link-portal');
+    if (linkPortal) linkPortal.style.display = 'none';
+  }
+
   db.ref('negocios/'+negocioID+'/info').once('value',s=>{
     document.getElementById('tb-neg-name').textContent = (s.val()||{}).nombre||'PARCHE SYS';
   });
@@ -482,7 +510,10 @@ function iniciar(){
     _orders={};
     snap.forEach(c=>{
       var v=c.val();
-      if(v && v.estado!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+      if(v) {
+        var estCocina = v.estado_cocina || 'pendiente';
+        if(estCocina!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+      }
     });
     var newCount=Object.keys(_orders).length;
 
@@ -604,6 +635,11 @@ function ignorarOrdenWeb(id){
   });
 }
 
+var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS'];
+function _esBarCat(cat){
+  return _BAR_CATS.indexOf((cat||'').trim().toUpperCase()) !== -1;
+}
+
 /* ─── BOARD KDS ─── */
 function renderBoard(){
   var board=document.getElementById('board');
@@ -614,8 +650,14 @@ function renderBoard(){
   entries = entries.filter(function(e) {
     var items = e[1].items || [];
     return items.some(function(it) {
-      return (it.cat || '').trim().toUpperCase() !== 'BEBIDAS';
+      return !_esBarCat(it.cat);
     });
+  });
+
+  // Filtrar órdenes ya entregadas en cocina
+  entries = entries.filter(function(e) {
+    var estCocina = e[1].estado_cocina || 'pendiente';
+    return estCocina !== 'entregado';
   });
 
   if(!entries.length){ board.innerHTML='<div class="empty-board"><div class="empty-icon">🍳</div><div class="empty-txt">Sin pedidos activos en cocina</div></div>'; return; }
@@ -628,7 +670,8 @@ function renderBoard(){
     var fireTag=o.fire?'<span class="fire-badge"><i class="fa-solid fa-fire"></i> FIRE</span>':'';
     // Override card border if fire active
     var cardStyle=o.fire?'border:2px solid #ff4500;box-shadow:0 0 16px rgba(255,69,0,.4)':'';
-    return `<div class="ord-card state-${o.estado}" style="${cardStyle}">
+    var estCocina = o.estado_cocina || 'pendiente';
+    return `<div class="ord-card state-${estCocina}" style="${cardStyle}">
       <div class="card-head ${tc}">
         <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}${fireTag}</div>
         <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
@@ -640,7 +683,7 @@ function renderBoard(){
       </div>
       <div class="card-body">
         ${(o.items||[]).map((it,idx)=>{
-          var isDrink = (it.cat || '').trim().toUpperCase() === 'BEBIDAS';
+          var isDrink = _esBarCat(it.cat);
           if(isDrink) return ''; // Ocultar bebidas en KDS Cocina
           
           var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
@@ -651,9 +694,9 @@ function renderBoard(){
         ${o.nota_cliente?'<div style="background:#333;padding:6px;font-size:12px;color:#facc15;margin-top:3px;">💬 '+o.nota_cliente+'</div>':''}
       </div>
       <div class="card-foot">
-        ${(o.estado==='pendiente'||o.estado==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
-        ${o.estado==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
-        ${o.estado==='listo'?'<button class="state-btn btn-entregado" style="background:#38bdf8;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Entregado</button>':''}
+        ${(estCocina==='pendiente'||estCocina==='pagado')?'<button class="state-btn btn-prep" onclick="cambiarEstado(\''+id+'\',\'en_prep\')">Preparar</button>':''}
+        ${estCocina==='en_prep'?'<button class="state-btn btn-listo" onclick="cambiarEstado(\''+id+'\',\'listo\')">Terminar</button>':''}
+        ${estCocina==='listo'?'<button class="state-btn btn-entregado" style="background:#38bdf8;color:#000" onclick="cambiarEstado(\''+id+'\',\'entregado\')">Entregado</button>':''}
         <button class="state-btn" style="background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.4);color:#ef4444;flex:0 0 auto;width:36px;padding:0;display:flex;align-items:center;justify-content:center;" onclick="eliminarDeCocina(\''+id+'\')" title="Eliminar"><i class="fa-solid fa-trash"></i></button>
       </div>
     </div>`;
@@ -692,32 +735,44 @@ function toggleCheck(orderId,itemIdx){
 }
 
 function cambiarEstado(id,nestado){
+  var o=_orders[id];
+  if(!o) return;
+
   if(nestado==='entregado'){
-    // Guardar en historial antes de eliminar
-    var o=_orders[id];
-    if(o){
-      var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
-      var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+    var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+    
+    // Verificamos si tiene artículos de bar y si el bar ya los entregó
+    var tieneBar = (o.items || []).some(function(it) { return _esBarCat(it.cat); });
+    var barEntregado = !tieneBar || o.estado_bar === 'entregado';
+
+    if (barEntregado) {
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
         estado:'entregado',
+        estado_cocina:'entregado',
         hora_entrega:hora,
         fecha_entrega:fecha,
         ts_entrega:Date.now()
       }));
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:'entregado'});
+      toast('Pedido entregado y limpiado de KDS','ok');
+    } else {
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({
+        estado_cocina: 'entregado'
+      });
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_cocina:'entregado'});
+      toast('Parte de cocina entregada. Esperando al KDS Bar.','ok');
     }
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-    db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
-    toast('Pedido entregado y limpiado de KDS','ok');
   } else {
     // Update state for other transitions
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado:nestado});
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado_cocina:nestado});
     if(nestado==='listo'){
-      var o=_orders[id];
-      var meseroTarget = o ? (o.mesero || o.tomada_por) : null;
-      if(o && meseroTarget){
+      var meseroTarget = o.mesero || o.tomada_por;
+      if(meseroTarget){
         var channel = o.tipo || o.canal || 'mesa';
         var mesaLabel = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
-        var foodItems = (o.items||[]).filter(function(i){ return (i.cat||'').trim().toUpperCase() !== 'BEBIDAS'; });
+        var foodItems = (o.items||[]).filter(function(i){ return !_esBarCat(i.cat); });
         var itemList = foodItems.map(function(i){ return i.cant+'x '+i.desc; }).join(', ');
         // Usar push para no sobrescribir si hay múltiples notificaciones
         db.ref('negocios/'+negocioID+'/notificaciones/'+meseroTarget.toLowerCase().trim()).push({
@@ -726,7 +781,9 @@ function cambiarEstado(id,nestado){
           timestamp: Date.now()
         });
       }
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:nestado});
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_cocina:nestado});
+    } else {
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_cocina:nestado});
     }
   }
 }
@@ -745,13 +802,13 @@ function eliminarDeCocina(id){
 function updateStats(){
   var o=Object.values(_orders).filter(function(e) {
     return (e.items || []).some(function(it) {
-      return (it.cat || '').trim().toUpperCase() !== 'BEBIDAS';
+      return !_esBarCat(it.cat);
     });
   });
   var setT=(id,v)=>{ var el=document.getElementById(id); if(el) el.textContent=v; };
-  setT('cnt-pendiente', o.filter(x=>x.estado==='pendiente').length);
-  setT('cnt-prep',      o.filter(x=>x.estado==='en_prep').length);
-  setT('cnt-listo',     o.filter(x=>x.estado==='listo').length);
+  setT('cnt-pendiente', o.filter(x=>(x.estado_cocina || 'pendiente')==='pendiente').length);
+  setT('cnt-prep',      o.filter(x=>(x.estado_cocina || 'pendiente')==='en_prep').length);
+  setT('cnt-listo',     o.filter(x=>(x.estado_cocina || 'pendiente')==='listo').length);
   setT('cnt-web',       Object.keys(_webOrders).length);
   setT('fc-all',   o.length);
   setT('fc-mesa',  o.filter(x=>x.tipo==='mesa').length);
