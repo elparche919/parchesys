@@ -473,7 +473,7 @@ textarea.fi{resize:vertical;min-height:72px}
   <div class="bar">
     <div style="font-size:13px;font-weight:800;color:var(--dark)">📅 <span id="fecha-hoy-asist"></span></div>
     <div style="flex:1"></div>
-    <button class="btn btn-primary btn-sm" onclick="marcarTodosEntrada()"><i class="fa-solid fa-play"></i> Marcar Entrada Masiva</button>
+    <span style="font-size:11px;color:var(--m-muted);font-weight:700;background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:8px"><i class="fa-solid fa-mobile-screen-button"></i> Registro exclusivo desde App Empleados</span>
     <button class="btn btn-ghost btn-sm" onclick="exportarAsistenciaXLSX()"><i class="fa-solid fa-download"></i> Exportar</button>
   </div>
 
@@ -519,19 +519,18 @@ textarea.fi{resize:vertical;min-height:72px}
 
 <!-- ══════════ PLANILLA ══════════ -->
 <div class="page" id="page-planilla">
-  <div class="bar">
-    <select class="filter-select" id="planilla-periodo" onchange="calcularPlanilla()">
-      <option value="quincenal">Quincenal</option>
-      <option value="mensual" selected>Mensual</option>
-    </select>
-    <select class="filter-select" id="planilla-mes" onchange="calcularPlanilla()">
-      <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-      <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-      <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-      <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-    </select>
+  <div class="bar" style="background:var(--m-surface);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;display:flex;align-items:center;flex-wrap:wrap;gap:16px;">
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <div style="font-size:10px;font-weight:700;color:var(--m-muted);text-transform:uppercase;letter-spacing:.05em">Inicio Período Activo</div>
+      <div style="font-size:13px;font-weight:800;color:var(--a)" id="planilla-fecha-inicio-lbl">—</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:3px">
+      <label class="fl" style="margin-bottom:0;font-size:10px;color:var(--m-muted);">Fecha de Corte Final</label>
+      <input type="date" class="fi" id="planilla-fecha-corte" style="width:140px;padding:5px 8px;font-size:12px" onchange="calcularPlanilla()">
+    </div>
     <div style="flex:1"></div>
-    <button class="btn btn-green btn-sm" onclick="exportarPlanillaXLSX()"><i class="fa-solid fa-file-excel"></i> Exportar a Excel / Banco</button>
+    <button class="btn btn-primary btn-sm" onclick="abrirConfirmarCorte()"><i class="fa-solid fa-cut"></i> Generar Corte de Pago</button>
+    <button class="btn btn-green btn-sm" onclick="exportarPlanillaXLSX()"><i class="fa-solid fa-file-excel"></i> Exportar</button>
   </div>
 
   <div class="planilla-total">
@@ -627,6 +626,31 @@ textarea.fi{resize:vertical;min-height:72px}
 
 <!-- ══════════ MODALES ══════════ -->
 
+<!-- Modal Confirmar Corte -->
+<div class="overlay" id="modal-confirmar-corte">
+  <div class="modal" style="max-width:480px">
+    <button class="modal-close" onclick="cerrar('modal-confirmar-corte')">✕</button>
+    <div class="modal-title">✂️ Confirmar Corte de Planilla</div>
+    <div style="font-size:13px;margin-bottom:16px;color:var(--m-muted);">
+      Se generará un registro histórico con el cálculo actual y se actualizará el inicio del próximo período al día siguiente de la fecha de corte seleccionada.
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;color:#64748b">Período:</span>
+        <strong id="mc-periodo" style="font-size:12px;color:#0f172a"></strong>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:12px;color:#64748b">Costo Total:</span>
+        <strong id="mc-total" style="font-size:16px;color:#059669"></strong>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-confirmar-corte')">Cancelar</button>
+      <button class="btn btn-primary" style="flex:1" onclick="ejecutarCortePlanilla()" id="btn-ejecutar-corte"><i class="fa-solid fa-check"></i> Confirmar y Cortar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Empleado -->
 <div class="overlay" id="modal-emp">
   <div class="modal" style="max-width:580px">
@@ -688,14 +712,19 @@ textarea.fi{resize:vertical;min-height:72px}
         </select>
       </div>
       <div class="fg"><label class="fl">Tipo</label>
-        <select class="fi" id="emp-tipo">
+        <select class="fi" id="emp-tipo" onchange="onTipoChange(this.value)">
           <option>Tiempo completo</option><option>Tiempo parcial</option><option>Por hora</option>
         </select>
       </div>
     </div>
-    <div class="g2">
+    <div class="g2" id="sec-salario-mensual-wrap">
       <div class="fg"><label class="fl">Salario Mensual ($) *</label><input class="fi" id="emp-salario" type="number" placeholder="365.00" step="0.01" oninput="calcPreviewDeducciones()"></div>
       <div class="fg"><label class="fl">Fecha Ingreso</label><input class="fi" id="emp-fecha" type="date"></div>
+    </div>
+    <div class="g3" id="sec-pago-por-hora" style="display:none">
+      <div class="fg"><label class="fl">Valor Hora ($) *</label><input class="fi" id="emp-valor-hora" type="number" placeholder="2.50" step="0.01"></div>
+      <div class="fg"><label class="fl">Valor Hora Extra ($) *</label><input class="fi" id="emp-valor-hora-extra" type="number" placeholder="5.00" step="0.01"></div>
+      <div class="fg"><label class="fl">Fecha Ingreso</label><input class="fi" id="emp-fecha-por-hora" type="date"></div>
     </div>
     <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:14px;margin-bottom:12px" id="sec-social-prevision">
       <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px">Seguridad Social y Previsión</div>
@@ -1102,12 +1131,39 @@ let asistenciaHoy={};
 let turnos={};
 let permisos={};
 let notificaciones_emp=[];
+let ultimoCorteFecha='';
 
 // ── INIT ──
 function init(){
-  document.getElementById('fecha-hoy-asist').textContent=new Date().toLocaleDateString('es-SV',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const fhaEl = document.getElementById('fecha-hoy-asist');
+  if(fhaEl) fhaEl.textContent=new Date().toLocaleDateString('es-SV',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  
   const mesActual=new Date().getMonth()+1;
-  document.getElementById('planilla-mes').value=mesActual;
+  const pmEl = document.getElementById('planilla-mes');
+  if(pmEl) pmEl.value=mesActual;
+  
+  const todayIso = new Date().toISOString().split('T')[0];
+  const fcEl = document.getElementById('planilla-fecha-corte');
+  if (fcEl) fcEl.value = todayIso;
+
+  db.ref(`negocios/${negocioID}/planilla_config/ultimo_corte`).on('value', s => {
+    ultimoCorteFecha = s.val() || '';
+    if (!ultimoCorteFecha) {
+      // Por defecto, primer día del mes actual
+      const now = new Date();
+      ultimoCorteFecha = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-01';
+    }
+    const lbl = document.getElementById('planilla-fecha-inicio-lbl');
+    if (lbl) {
+      // El período de pago actual empieza el día siguiente al último corte
+      const dStart = new Date(ultimoCorteFecha + 'T12:00:00');
+      dStart.setDate(dStart.getDate() + 1);
+      const startIso = dStart.toISOString().split('T')[0];
+      lbl.textContent = dStart.toLocaleDateString('es-SV');
+      lbl.dataset.startIso = startIso;
+    }
+    renderPlanilla();
+  });
 
   var _bizNombreEmp='MODUS', _adminEmailEmp='';
   db.ref(`negocios/${negocioID}/info`).once('value',s=>{
@@ -1318,6 +1374,9 @@ function renderEmpleados(){
     const stLbl=a.estado==='presente'?'Presente':a.estado==='tardanza'?'Tardanza':a.estado==='ausente'?'Ausente':'Sin registro';
     const rolBadge=e.rol==='propietario'?'<span style="font-size:9px;font-weight:800;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;border:1px solid #fde68a">👑 Propietario</span>':e.rol==='admin'?'<span style="font-size:9px;font-weight:800;background:#EBF2FB;color:#1B4E8B;padding:2px 7px;border-radius:20px">🛡️ Admin</span>':e.rol==='supervisor'?'<span style="font-size:9px;font-weight:800;background:#f0fdf4;color:#166534;padding:2px 7px;border-radius:20px">👔 Supervisor</span>':'';
     const cardBorder=e.rol==='propietario'?'border:2px solid #fbbf24':'';
+    const salVal = e.tipo === 'Por hora' 
+      ? `$${(parseFloat(e.valor_hora)||0).toFixed(2)}/h (Extra: $${(parseFloat(e.valor_hora_extra)||0).toFixed(2)}/h)` 
+      : `$${(parseFloat(e.salario)||0).toFixed(2)}`;
     return `<div class="emp-card" style="${cardBorder}" onclick="verDetalleEmp('${id}')">
       <div class="emp-card-top">
         <div class="emp-avatar" style="background:${e.color||'#1B4E8B'}">${e.foto_url?'<img src="'+e.foto_url+'">':e.nombre.charAt(0)}</div>
@@ -1329,7 +1388,7 @@ function renderEmpleados(){
       </div>
       <div class="emp-card-body">
         <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-building" style="color:#94a3b8"></i> Dept.</span><span class="emp-row-val">${e.dept||'—'}</span></div>
-        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-dollar-sign" style="color:#94a3b8"></i> Salario</span><span class="emp-row-val">$${(parseFloat(e.salario)||0).toFixed(2)}</span></div>
+        <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-dollar-sign" style="color:#94a3b8"></i> Salario</span><span class="emp-row-val">${salVal}</span></div>
         <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-clock" style="color:#94a3b8"></i> Horario</span><span class="emp-row-val">${e.hora_in||'—'} - ${e.hora_out||'—'}</span></div>
         <div class="emp-row"><span class="emp-row-lbl"><i class="fa-solid fa-id-badge" style="color:#94a3b8"></i> Tipo</span><span class="emp-row-val" style="font-size:10px">${e.tipo||'—'}</span></div>
         <div class="emp-row"><span class="emp-row-lbl">Biometría</span><span class="emp-row-val">${a.foto_url?'✅':'❌'}</span></div>
@@ -1338,14 +1397,27 @@ function renderEmpleados(){
       </div>
       <div class="emp-card-foot">
         <button class="emp-foot-btn" style="background:var(--al);color:#1B4E8B" onclick="event.stopPropagation();editarEmp('${id}')">✏️ Editar</button>
-        <button class="emp-foot-btn" style="background:#dcfce7;color:#166534" onclick="event.stopPropagation();marcarAsistencia('${id}','presente')">✅ Entrada</button>
-        <button class="emp-foot-btn" style="background:#fee2e2;color:#991b1b" onclick="event.stopPropagation();if(confirm('¿Eliminar empleado?'))eliminarEmp('${id}')">🗑️</button>
+        <button class="emp-foot-btn" style="background:#fee2e2;color:#991b1b;flex:none;width:40px" onclick="event.stopPropagation();if(confirm('¿Eliminar empleado?'))eliminarEmp('${id}')">🗑️</button>
       </div>
     </div>`;
   }).join('');
 }
 
 function filtrarEmpleados(){renderEmpleados();}
+
+function abrirFotoModal(src, nombre) {
+  document.getElementById('detalle-content').innerHTML = `
+    <div style="text-align:center;margin-bottom:12px">
+      <div style="font-size:14px;font-weight:900;color:var(--m-text)">Verificación de Identidad</div>
+      <div style="font-size:11px;color:#94a3b8;margin-top:2px">${nombre}</div>
+    </div>
+    <div style="width:100%;text-align:center;background:#000;border-radius:12px;overflow:hidden;border:1.5px solid var(--bd);padding:10px;display:flex;align-items:center;justify-content:center;">
+      <img src="${src}" style="max-width:100%;max-height:380px;object-fit:contain;border-radius:8px;">
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:14px" onclick="cerrar('modal-detalle')">Cerrar</button>
+  `;
+  document.getElementById('modal-detalle').classList.add('open');
+}
 
 // ── RENDER ASISTENCIA ──
 function renderAsistencia(){
@@ -1375,18 +1447,45 @@ function renderAsistencia(){
     const a=asistenciaHoy[id]||{};
     const col=a.estado==='presente'?'#10b981':a.estado==='tardanza'?'#f59e0b':a.estado==='ausente'?'#ef4444':'#94a3b8';
     const stLbl=a.estado==='presente'?'✅ Presente':a.estado==='tardanza'?'⚠️ Tardanza':a.estado==='ausente'?'❌ Ausente':'⬜ Sin registro';
-    return `<div class="asist-card">
+    
+    let verifInfo = '';
+    if(a.hora_entrada) {
+      let metodo = 'Manual/Otros';
+      if(a.real_bio) metodo = '🧬 Huella Nativa';
+      else if(a.foto_entrada) metodo = '📸 Selfie Facial';
+      else if(a.demo) metodo = '📱 App Empleado (Demo)';
+      else if(a.bio_entrada) metodo = '🧬 Huella';
+      
+      verifInfo += `<div style="font-size:10.5px;color:var(--m-muted);margin-top:4px">Entrada: <strong style="color:var(--m-text)">${a.hora_entrada}</strong> (${metodo})</div>`;
+      if(a.foto_entrada) {
+        verifInfo += `<div style="margin-top:6px"><img src="${a.foto_entrada}" onclick="abrirFotoModal('${a.foto_entrada}', '${e.nombre}')" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1.5px solid var(--m-border);cursor:pointer;transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Ver foto de verificación"></div>`;
+      }
+    }
+    
+    if(a.hora_salida) {
+      let metodoSal = 'Manual/Otros';
+      if(a.real_bio) metodoSal = '🧬 Huella Nativa';
+      else if(a.foto_salida) metodoSal = '📸 Selfie Facial';
+      else if(a.demo) metodoSal = '📱 App Empleado (Demo)';
+      else if(a.bio_salida) metodoSal = '🧬 Huella';
+      
+      verifInfo += `<div style="font-size:10.5px;color:var(--m-muted);margin-top:4px">Salida: <strong style="color:var(--m-text)">${a.hora_salida}</strong> (${metodoSal})</div>`;
+      if(a.foto_salida) {
+        verifInfo += `<div style="margin-top:6px"><img src="${a.foto_salida}" onclick="abrirFotoModal('${a.foto_salida}', '${e.nombre}')" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1.5px solid var(--m-border);cursor:pointer;transition:transform 0.1s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" title="Ver foto de verificación"></div>`;
+      }
+    }
+
+    return `<div class="asist-card" style="align-items: flex-start;">
       <div class="asist-avatar" style="background:${e.color||'#1B4E8B'}">${e.foto_url?'<img src="'+e.foto_url+'">':e.nombre.charAt(0)}</div>
-      <div class="asist-info">
+      <div class="asist-info" style="min-width:0">
         <div class="asist-name">${e.nombre}</div>
         <div class="asist-time">${e.puesto||''} · Turno: ${e.hora_in||'8:00'}-${e.hora_out||'17:00'}</div>
-        <div style="font-size:11px;font-weight:700;color:${col};margin-top:4px">${stLbl}${a.hora_entrada?' · Entró: '+a.hora_entrada:''}</div>
-        ${a.tardanza?`<div style="font-size:10px;color:#f59e0b">⏱️ ${a.minutos_tarde||0} min tarde</div>`:''}
+        <div style="font-size:11px;font-weight:700;color:${col};margin-top:4px">${stLbl}</div>
+        ${a.tardanza?`<div style="font-size:10px;color:#f59e0b;margin-top:2px">⏱️ ${a.minutos_tarde||0} min tarde</div>`:''}
+        ${verifInfo}
       </div>
-      <div class="asist-actions">
-        <button class="asist-btn" style="background:#dcfce7;color:#166534" onclick="abrirBiometrico('presente','${id}')">✅ Entrada</button>
-        <button class="asist-btn" style="background:#fee2e2;color:#991b1b" onclick="abrirBiometrico('ausente','${id}')">❌ Ausente</button>
-        ${a.hora_entrada&&!a.hora_salida?`<button class="asist-btn" style="background:#fef9c3;color:#92400e" onclick="abrirBiometrico('salida','${id}')">🚪 Salida</button>`:''}
+      <div class="asist-actions" style="font-size:10px;color:var(--m-muted);text-align:right;flex:none;align-self:stretch;display:flex;flex-direction:column;justify-content:space-between;">
+        <span style="background:rgba(255,255,255,0.04);padding:4px 8px;border-radius:6px;display:inline-block;font-weight:700">App Empleado</span>
       </div>
     </div>`;
   }).join('');
@@ -1636,14 +1735,91 @@ function formatHorasAMPM(hi,ho){
 
 // ── RENDER PLANILLA ──
 function calcularPlanilla(){renderPlanilla();}
-function renderPlanilla(){
+async function renderPlanilla(){
   const tb=document.getElementById('tb-planilla');
   const emps=Object.entries(empleados);
   if(!emps.length){tb.innerHTML='<tr><td colspan="10" style="text-align:center;padding:20px;color:#94a3b8;font-size:11px">Sin empleados</td></tr>';document.getElementById('planilla-total-val').textContent='$0.00';return;}
-  let totalPlanilla=0,totalHex=0,totalDed=0;
-  const rows=emps.map(([id,e])=>{
-    const sal=parseFloat(e.salario)||0;
-    const hex=0; // horas extras (futuro: calcular desde asistencia)
+
+  const startIso = document.getElementById('planilla-fecha-inicio-lbl')?.dataset.startIso;
+  const endIso = document.getElementById('planilla-fecha-corte')?.value;
+  if (!startIso || !endIso) {
+    // Si no hay rango válido, no hacer nada o limpiar
+    return;
+  }
+
+  // Iterar fechas
+  const dStart = new Date(startIso+'T12:00:00');
+  const dEnd = new Date(endIso+'T12:00:00');
+  const fechas = [];
+  while(dStart <= dEnd) {
+    fechas.push(dStart.toISOString().split('T')[0]);
+    dStart.setDate(dStart.getDate()+1);
+  }
+
+  // Fetch asistencia_gps for these dates
+  const asistPromises = fechas.map(f => db.ref(`negocios/${negocioID}/asistencia_gps/${f}`).once('value'));
+  const snaps = await Promise.all(asistPromises);
+  const asistDatos = {};
+  snaps.forEach((snap, idx) => {
+    asistDatos[fechas[idx]] = snap.val() || {};
+  });
+
+  // Fetch horas_extra_emp from global horasExtra
+  const horasExtraAprobadas = {};
+  Object.values(horasExtra).forEach(h => {
+    if (h.estado === 'aprobado' && h.fecha >= startIso && h.fecha <= endIso) {
+      if (!horasExtraAprobadas[h.emp_id]) horasExtraAprobadas[h.emp_id] = 0;
+      horasExtraAprobadas[h.emp_id] += Number(h.horas || 0);
+    }
+  });
+
+  let totalPlanilla=0,totalHex=0,totalDed=0,totalBase=0;
+  
+  const rows = emps.map(([id,e]) => {
+    let sal = 0;
+    let hex = 0; // valor en $ de horas extra
+
+    if (e.tipo === 'Por hora') {
+      const vHora = parseFloat(e.valor_hora) || 0;
+      const vHoraExtra = parseFloat(e.valor_hora_extra) || 0;
+      
+      let horasRegularesTrabajadas = 0;
+      let horasExtraTrabajadas = 0;
+      
+      // Calcular desde marcajes diarios
+      fechas.forEach(f => {
+        const marca = asistDatos[f][id];
+        if (marca && marca.hora_entrada && marca.hora_salida) {
+          const [h1, m1] = marca.hora_entrada.split(':').map(Number);
+          const [h2, m2] = marca.hora_salida.split(':').map(Number);
+          let diffMin = (h2*60+m2) - (h1*60+m1);
+          if (diffMin > 0) {
+            const hrs = diffMin / 60;
+            if (hrs > 8) {
+              horasRegularesTrabajadas += 8;
+              horasExtraTrabajadas += (hrs - 8);
+            } else {
+              horasRegularesTrabajadas += hrs;
+            }
+          }
+        }
+      });
+      
+      // Sumar horas extras aprobadas
+      const extrasAprob = horasExtraAprobadas[id] || 0;
+      horasExtraTrabajadas += extrasAprob;
+      
+      sal = horasRegularesTrabajadas * vHora;
+      hex = horasExtraTrabajadas * vHoraExtra;
+    } else {
+      sal = parseFloat(e.salario) || 0;
+      // Para mensuales, hex es el valor de las horas extras aprobadas
+      const vHoraExtra = (sal / 30 / 8) * 1.5; // Aproximación si no tiene tarifa explícita
+      const vH = parseFloat(e.valor_hora_extra) || vHoraExtra;
+      const extrasAprob = horasExtraAprobadas[id] || 0;
+      hex = extrasAprob * vH;
+    }
+
     const bono=0;
     const aplIsss = e.aplica_isss!==false;
     const aplAfp = e.aplica_afp!==false;
@@ -1651,7 +1827,8 @@ function renderPlanilla(){
     const isss = aplIsss ? Math.min(sal*0.03,30) : 0;
     const deduccion=afp+isss;
     const neto=sal+hex+bono-deduccion;
-    totalPlanilla+=neto;totalHex+=hex;totalDed+=deduccion;
+    totalPlanilla+=neto;totalHex+=hex;totalDed+=deduccion;totalBase+=sal;
+    
     return `<tr>
       <td><div style="font-weight:700">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.tipo||''}</div></td>
       <td style="font-size:11px">${e.puesto||'—'}</td>
@@ -1665,9 +1842,10 @@ function renderPlanilla(){
       <td><button class="btn btn-ghost btn-sm" onclick="verComprobante('${id}','${e.nombre}','${sal}','${neto}')">🧾 Comprobante</button></td>
     </tr>`;
   }).join('');
+  
   tb.innerHTML=rows+`<tr style="background:#f8fafc;font-weight:900">
     <td colspan="2" style="text-align:right;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.06em">TOTALES →</td>
-    <td style="font-weight:900">$${Object.values(empleados).reduce((s,e)=>s+(parseFloat(e.salario)||0),0).toFixed(2)}</td>
+    <td style="font-weight:900">$${totalBase.toFixed(2)}</td>
     <td>$${totalHex.toFixed(2)}</td><td>$0.00</td><td style="color:#ef4444">-$${totalDed.toFixed(2)}</td>
     <td></td><td></td>
     <td style="font-weight:900;font-size:15px;color:#059669">$${totalPlanilla.toFixed(2)}</td>
@@ -1675,8 +1853,57 @@ function renderPlanilla(){
   </tr>`;
   document.getElementById('planilla-total-val').textContent='$'+totalPlanilla.toFixed(2);
   document.getElementById('p-empleados-n').textContent=emps.length;
-  document.getElementById('p-horas-n').textContent=totalHex;
+  document.getElementById('p-horas-n').textContent='$'+totalHex.toFixed(2);
   document.getElementById('p-deduc-n').textContent='$'+totalDed.toFixed(2);
+}
+
+function abrirConfirmarCorte(){
+  const startIso = document.getElementById('planilla-fecha-inicio-lbl')?.dataset.startIso;
+  const endIso = document.getElementById('planilla-fecha-corte')?.value;
+  if (!startIso || !endIso) { toast('Fechas de período inválidas','err'); return; }
+  
+  if (new Date(startIso+'T12:00:00') > new Date(endIso+'T12:00:00')) {
+    toast('La fecha de corte no puede ser anterior al inicio del período','err');
+    return;
+  }
+  
+  const tot = document.getElementById('planilla-total-val').textContent;
+  
+  document.getElementById('mc-periodo').textContent = startIso + ' al ' + endIso;
+  document.getElementById('mc-total').textContent = tot;
+  
+  document.getElementById('modal-confirmar-corte').classList.add('open');
+}
+
+function ejecutarCortePlanilla() {
+  const startIso = document.getElementById('planilla-fecha-inicio-lbl')?.dataset.startIso;
+  const endIso = document.getElementById('planilla-fecha-corte')?.value;
+  
+  const btn = document.getElementById('btn-ejecutar-corte');
+  btn.textContent = 'Procesando...';
+  btn.disabled = true;
+  
+  // Guardar en historico
+  const corteData = {
+    fecha_inicio: startIso,
+    fecha_corte: endIso,
+    fecha_generacion: new Date().toISOString(),
+    total_neto: document.getElementById('planilla-total-val').textContent,
+    empleados_count: document.getElementById('p-empleados-n').textContent
+  };
+  
+  db.ref(`negocios/${negocioID}/historico_planillas`).push(corteData).then(() => {
+    // Actualizar ultimo_corte
+    return db.ref(`negocios/${negocioID}/planilla_config/ultimo_corte`).set(endIso);
+  }).then(() => {
+    toast('✅ Corte de planilla generado correctamente','ok');
+    cerrar('modal-confirmar-corte');
+  }).catch(e => {
+    toast('Error: ' + e.message, 'err');
+  }).finally(() => {
+    btn.innerHTML = '<i class="fa-solid fa-check"></i> Confirmar y Cortar';
+    btn.disabled = false;
+  });
 }
 
 // ── RENDER PERMISOS ──
@@ -1914,13 +2141,31 @@ function onPuestoChange(puesto) {
   }
 }
 
+function onTipoChange(tipo) {
+  const secHora = document.getElementById('sec-pago-por-hora');
+  const secSalario = document.getElementById('sec-salario-mensual-wrap');
+  const secPrevision = document.getElementById('sec-social-prevision');
+  
+  if (tipo === 'Por hora') {
+    if (secHora) secHora.style.display = 'grid';
+    if (secSalario) secSalario.style.display = 'none';
+    if (secPrevision) secPrevision.style.display = 'none';
+  } else {
+    if (secHora) secHora.style.display = 'none';
+    if (secSalario) secSalario.style.display = 'grid';
+    if (secPrevision) secPrevision.style.display = 'block';
+  }
+}
+
 // ── GUARDAR EMPLEADO ──
 function abrirModalEmp(id){
   document.getElementById('emp-id-edit').value='';
   document.getElementById('modal-emp-title').textContent = '👤 Nuevo Empleado';
-  ['emp-nombre','emp-dui','emp-tel','emp-email','emp-salario'].forEach(i=>document.getElementById(i).value='');
+  ['emp-nombre','emp-dui','emp-tel','emp-email','emp-salario','emp-valor-hora','emp-valor-hora-extra'].forEach(i=>document.getElementById(i).value='');
   document.getElementById('emp-puesto').value='Mesero';
+  document.getElementById('emp-tipo').value='Tiempo completo';
   document.getElementById('emp-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('emp-fecha-por-hora').value=new Date().toISOString().split('T')[0];
   document.getElementById('emp-hora-in').value='08:00';
   document.getElementById('emp-hora-out').value='17:00';
   document.getElementById('emp-pin').value='';
@@ -1929,6 +2174,7 @@ function abrirModalEmp(id){
   document.getElementById('emp-acceso-campo').value='false';
   onRolChange('mesero');
   onPuestoChange('Mesero');
+  onTipoChange('Tiempo completo');
   document.getElementById('modal-emp').classList.add('open');
 }
 
@@ -1945,8 +2191,12 @@ function editarEmp(id){
   document.getElementById('emp-tipo').value=e.tipo||'Tiempo completo';
   document.getElementById('emp-salario').value=e.salario||'';
   document.getElementById('emp-fecha').value=e.fecha||'';
+  document.getElementById('emp-fecha-por-hora').value=e.fecha||'';
+  document.getElementById('emp-valor-hora').value=e.valor_hora||'';
+  document.getElementById('emp-valor-hora-extra').value=e.valor_hora_extra||'';
   document.getElementById('emp-hora-in').value=e.hora_in||'08:00';
   document.getElementById('emp-hora-out').value=e.hora_out||'17:00';
+  onTipoChange(e.tipo||'Tiempo completo');
   var rolActual=e.rol||'empleado';
   // Si el rol guardado no existe en el nuevo selector, usar 'empleado' como fallback
   var rolesValidos=['empleado','mesero','cajero','cocinero','delivery','supervisor','admin','propietario'];
@@ -2020,9 +2270,17 @@ function calcPreviewDeducciones(){
 }
 
 function guardarEmpleado(){
+  const tipo=document.getElementById('emp-tipo').value;
   const nombre=document.getElementById('emp-nombre').value.trim();
-  const salario=parseFloat(document.getElementById('emp-salario').value);
-  if(!nombre||!salario){toast('Nombre y salario son requeridos','err');return;}
+  const salario=tipo==='Por hora'?0:(parseFloat(document.getElementById('emp-salario').value)||0);
+  const valor_hora=tipo==='Por hora'?(parseFloat(document.getElementById('emp-valor-hora').value)||0):0;
+  const valor_hora_extra=tipo==='Por hora'?(parseFloat(document.getElementById('emp-valor-hora-extra').value)||0):0;
+  const fecha=tipo==='Por hora'?document.getElementById('emp-fecha-por-hora').value:document.getElementById('emp-fecha').value;
+
+  if(!nombre){toast('Nombre es requerido','err');return;}
+  if(tipo!=='Por hora'&&!salario){toast('Salario es requerido','err');return;}
+  if(tipo==='Por hora'&&(!valor_hora||!valor_hora_extra)){toast('Valor hora y valor hora extra son requeridos','err');return;}
+
   const editId=document.getElementById('emp-id-edit').value;
   const colors=['#1B4E8B','#10b981','#f59e0b','#ec4899','#1B4E8B','#06b6d4','#f97316','#14b8a6'];
   const color=(editId&&empleados[editId]?.color)||colors[Math.floor(Math.random()*colors.length)];
@@ -2030,7 +2288,8 @@ function guardarEmpleado(){
     nombre,dui:document.getElementById('emp-dui').value,
     tel:document.getElementById('emp-tel').value,email:document.getElementById('emp-email').value,
     puesto:document.getElementById('emp-puesto').value,dept:document.getElementById('emp-dept').value,
-    tipo:document.getElementById('emp-tipo').value,salario,fecha:document.getElementById('emp-fecha').value,
+    tipo,salario,fecha,
+    valor_hora,valor_hora_extra,
     hora_in:document.getElementById('emp-hora-in').value,hora_out:document.getElementById('emp-hora-out').value,
     rol:document.getElementById('emp-rol').value,color,
     pin_app:document.getElementById('emp-pin').value||(document.getElementById('emp-rol').value==='propietario'||document.getElementById('emp-rol').value==='admin'?'0123456789':'1234'),
@@ -2305,7 +2564,7 @@ function verDetalleEmp(id){
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:12px;margin-bottom:14px">
-      ${[['DUI',e.dui],['Teléfono',e.tel],['Email',e.email],['Tipo',e.tipo],['Salario','$'+(parseFloat(e.salario)||0).toFixed(2)],['Ingreso',e.fecha],['Horario',(e.hora_in||'8:00')+' - '+(e.hora_out||'17:00')],['Hoy',a.hora_entrada?'Entró '+a.hora_entrada:a.estado||'Sin registro']].map(([l,v])=>`<div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:2px">${l}</div><div style="font-weight:700">${v||'—'}</div></div>`).join('')}
+      ${[['DUI',e.dui],['Teléfono',e.tel],['Email',e.email],['Tipo',e.tipo],['Salario',e.tipo==='Por hora'?`$${(parseFloat(e.valor_hora)||0).toFixed(2)}/h (Extra: $${(parseFloat(e.valor_hora_extra)||0).toFixed(2)}/h)`:'$'+(parseFloat(e.salario)||0).toFixed(2)],['Ingreso',e.fecha],['Horario',(e.hora_in||'8:00')+' - '+(e.hora_out||'17:00')],['Hoy',a.hora_entrada?'Entró '+a.hora_entrada:a.estado||'Sin registro']].map(([l,v])=>`<div><div style="font-size:9px;color:#94a3b8;font-weight:700;text-transform:uppercase;margin-bottom:2px">${l}</div><div style="font-weight:700">${v||'—'}</div></div>`).join('')}
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-detalle')">Cerrar</button>
