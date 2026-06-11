@@ -1234,6 +1234,9 @@ body {
       <div style="font-size:12px;color:var(--text-sub)"><i class="fa-solid fa-hand-pointer"></i> Arrastra productos hacia cada ticket</div>
       <div style="display:flex;gap:10px">
         <button class="btn-sec" onclick="cerrarSplit()" style="padding:10px 18px">Cancelar</button>
+        <button class="btn-sec" onclick="imprimirPreticketsSplit()" style="padding:10px 18px; border: 1.5px dashed var(--accent); color: var(--accent); background: transparent;">
+          <i class="fa-solid fa-print"></i> Pre-tickets
+        </button>
         <button class="checkout-trigger" style="padding:10px 22px;font-size:13px" onclick="cobrarTicketsSplit()">
           <i class="fa-solid fa-cash-register"></i> Cobrar Tickets
         </button>
@@ -3831,13 +3834,20 @@ function procesarOrden(tipoAccion){
     razon=(document.getElementById('ck-razon')||{value:''}).value;
   }
 
-  // Get or create timestamp
-  db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/timestamp').once('value', function(snap){
-    var ts = snap.exists() ? snap.val() : Date.now();
-    ejecutarGuardado(ts);
+  // Get or create timestamp and check if it exists in cocina_orders
+  var refPed = db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/timestamp');
+  var refCoc = db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN);
+  
+  Promise.all([refPed.once('value'), refCoc.once('value')]).then(function(results){
+    var ts = results[0].exists() ? results[0].val() : Date.now();
+    var existeEnCocina = results[1].exists();
+    ejecutarGuardado(ts, existeEnCocina);
+  }).catch(function(err){
+    console.error(err);
+    ejecutarGuardado(Date.now(), true);
   });
 
-  function ejecutarGuardado(ts){
+  function ejecutarGuardado(ts, existeEnCocina){
     // Determinar si hay ítems nuevos de cocina y bar
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
@@ -3922,9 +3932,12 @@ function procesarOrden(tipoAccion){
     }
 
     var saves = [
-      db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v),
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate)
+      db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v)
     ];
+
+    if (existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+      saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate));
+    }
 
     if(tipoAccion==='cobrar'){
       saves.push(db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(v));
@@ -5047,6 +5060,95 @@ function cobrarSiguienteTicketSplit(){
       nuevaOrden();
     }
   }
+}
+
+function imprimirPreticketsSplit(){
+  var activeTickets = _splitTickets.filter(function(t){ return t.items.length > 0; });
+  if(!activeTickets.length){
+    toast('No hay productos asignados a ningún ticket','err');
+    return;
+  }
+  
+  activeTickets.forEach(function(t){
+    imprimirSolicitudCuentaDeItems(t.items, t.nombre);
+  });
+}
+
+function imprimirSolicitudCuentaDeItems(items, nombreTicket){
+  const biz    = _biz || {};
+  const bizN   = biz.nombre_comercial || biz.nombre || 'PARCHE SYS';
+  const mesero = _loggedMesero || localStorage.getItem('meseroId') || '-';
+  const caja   = _cajaSesion ? _cajaSesion.id.split('_')[1] : '01';
+  const ahora  = new Date();
+  const fecha  = ahora.toLocaleDateString('es-SV',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const hora   = ahora.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+  const canalTxt = {mesa:'Mesa '+(MESA_SEL||''),llevar:'Para Llevar',domicilio:'Domicilio'}[CANAL] || CANAL;
+
+  const sub       = items.reduce((s,it) => s + (it.cant * it.price), 0);
+  const descMonto = 0;
+  const totalPrev = sub;
+
+  /* ---------- ESTILOS GRANDES 80mm ---------- */
+  let html = '<html><head><meta charset="UTF-8"><style>'
+    +'@import url(\'https://fonts.googleapis.com/css2?family=Inconsolata:wght@400;700&display=swap\');'
+    +'*{box-sizing:border-box;margin:0;padding:0}'
+    +'body{font-family:\'Inconsolata\',\'Courier New\',monospace;width:280px;max-width:280px;'
+    +'font-size:13px;font-weight:bold;color:#000;background:#fff;padding:6px 4px 14px;line-height:1.4}'
+    +'.c{text-align:center}.b{font-weight:700}.sm{font-size:12px}.xs{font-size:11px}'
+    +'.hr{border-top:2px dashed #000;margin:6px 0}'
+    +'.row{display:flex;justify-content:space-between;gap:2px}'
+    +'.title{text-align:center;font-weight:700;font-size:16px;border:2.5px solid #000;padding:6px 2px;margin:6px 0;letter-spacing:.5px}'
+    +'table{width:100%;border-collapse:collapse;font-size:12px;font-weight:bold}'
+    +'th{padding:3px 1px;text-align:left;font-size:11px;border-bottom:2px solid #000}'
+    +'td{padding:4px 1px;vertical-align:top}.r{text-align:right}'
+    +'.gran{font-size:18px;font-weight:900;text-align:center;border-top:2.5px solid #000;'
+    +'border-bottom:2.5px solid #000;padding:6px 0;margin:6px 0;line-height:1.2}'
+    +'.aviso{text-align:center;font-size:11px;font-style:italic;margin-top:6px;opacity:.9;line-height:1.3;font-weight:normal}'
+    +'@media print{body{margin:0;padding:2px 2px}}'
+    +'</style></head><body>';
+
+  /* --- TITULO --- */
+  html += '<div class="title">SOLICITAR CUENTA<br>(' + nombreTicket.toUpperCase() + ')</div>';
+
+  /* --- DATOS OPERACION (compacto) --- */
+  if(CANAL==='mesa' && MESA_SEL) html += '<div class="row"><span>Mesa:</span><span class="b">'+MESA_SEL+'</span></div>';
+  html += '<div class="row"><span>Orden Orig:</span><span class="b">'+ORDEN+'</span></div>';
+  html += '<div class="row sm"><span>'+fecha+'</span><span>'+hora+'</span></div>';
+  if(mesero && mesero!=='-') html += '<div class="row sm"><span>Mesero:</span><span>'+mesero+'</span></div>';
+  html += '<div class="row sm"><span>Caja:</span><span>'+caja+'</span></div>';
+  html += '<div class="hr"></div>';
+
+  /* --- DETALLE PRODUCTOS --- */
+  html += '<table><thead><tr>'
+    +'<th style="width:35px">Cant</th><th>Producto</th>'
+    +'<th class="r" style="width:65px">Total</th>'
+    +'</tr></thead><tbody>';
+  items.forEach(function(it){
+    html += '<tr><td>'+it.cant+'</td><td>'+it.desc+'</td>'
+      +'<td class="r">$'+(it.cant*it.price).toFixed(2)+'</td></tr>';
+    if(it.nota){
+      html += '<tr><td></td><td class="xs" style="font-style:italic;font-weight:normal">'+String.fromCharCode(8627)+' '+it.nota+'</td></tr>';
+    }
+  });
+  html += '</tbody></table>';
+
+  /* --- RESUMEN --- */
+  html += '<div class="hr"></div>';
+  html += '<div class="gran">TOTAL A PAGAR<br>$'+totalPrev.toFixed(2)+'</div>';
+
+  /* --- AVISO NO FISCAL --- */
+  html += '<div class="aviso">NO ES COMPROBANTE FISCAL<br>'
+    +'Cuenta informativa dividida sujeta a<br>modificaciones antes del cobro.</div>';
+
+  /* --- PIE --- */
+  html += '<div class="c xs" style="margin-top:8px;opacity:.5;letter-spacing:.5px">'+bizN+'</div>';
+
+  html += '</body></html>';
+
+  const win = window.open('', '', 'width=300,height=600');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(function(){ win.print(); win.close(); }, 600);
 }
 
 /* ═══════════════════════════════════════

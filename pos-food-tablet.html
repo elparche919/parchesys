@@ -402,15 +402,7 @@
   </style>
 </head>
 <body>
-  <!-- START OVERLAY FOR FULLSCREEN -->
-  <div id="fullscreen-start-overlay" style="position:fixed; inset:0; background:#0f1923; z-index:110000; display:flex; flex-direction:column; align-items:center; justify-content:center; color:white; font-family:'DM Sans', sans-serif;">
-    <div style="text-align:center; padding:30px; max-width:450px;">
-      <div style="font-size:64px; color:#10b981; margin-bottom:24px;"><i class="fa-solid fa-expand"></i></div>
-      <h1 style="font-family:'DM Serif Display', serif; font-size:28px; margin-bottom:12px; font-weight:700; color:#fff; letter-spacing: -0.5px;">PARCHE SYS · TABLET</h1>
-      <p style="color:#94a3b8; font-size:14px; line-height:1.6; margin-bottom:32px;">Optimizado para pantallas de 8.7". Se requiere iniciar en modo pantalla completa para una navegación exclusiva y sin distracciones.</p>
-      <button onclick="iniciarPantallaCompleta()" style="width:100%; padding:18px; font-size:16px; font-weight:700; background:#10b981; border:none; border-radius:14px; color:white; cursor:pointer; box-shadow:0 8px 24px rgba(16,185,129,0.3); transition:transform 0.1s;">INICIAR EN PANTALLA COMPLETA</button>
-    </div>
-  </div>
+
 
   <iframe id="pos-iframe" src="" allow="autoplay" importance="high"></iframe>
 
@@ -467,9 +459,9 @@
     </div>
   </div>
 
-  <!-- Toggle Fullscreen FAB -->
-  <button id="fullscreen-fab" title="Pantalla completa" aria-label="Pantalla completa" onclick="toggleFullscreen()" style="position:fixed; bottom:116px; right:39px; width:54px; height:54px; border-radius:50%; background:rgba(15,23,42,0.85); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border:1.5px solid rgba(255,255,255,0.15); color:#fff; font-size:20px; cursor:pointer; z-index:99996; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(0,0,0,0.35); transition:transform 0.1s;">
-    <i class="fa-solid fa-expand"></i>
+  <!-- Botón de Cerrar Sesión (Logout FAB) -->
+  <button id="logout-fab" title="Cerrar Sesión" onclick="cerrarSesionTablet()" style="position:fixed; bottom:30px; left:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border:2px solid rgba(255,255,255,0.18); color:#fff; font-size:22px; cursor:pointer; z-index:99996; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(239,68,68,0.35); transition:transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent;">
+    <i class="fa-solid fa-right-from-bracket"></i>
   </button>
 
   <!-- Toast for kitchen alerts -->
@@ -486,8 +478,8 @@
     <button class="btn-dismiss" id="alarm-dismiss">Entendido</button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
   <script>
     // ─── Firebase ────────────────────────────────────────────────────
@@ -510,7 +502,8 @@
       localStorage.setItem('negocioID', negocioID);
 
       const iframe = document.getElementById('pos-iframe');
-      iframe.src = 'pos-food.html?negocio=' + encodeURIComponent(negocioID) + '&tablet=true&t=' + Date.now();
+      var mesaParam = params.get('mesa') ? '&mesa=' + encodeURIComponent(params.get('mesa')) : '';
+      iframe.src = 'pos-food.html?negocio=' + encodeURIComponent(negocioID) + '&tablet=true' + mesaParam + '&t=' + Date.now();
 
       iframe.addEventListener('load', () => {
         try {
@@ -710,6 +703,9 @@
     function playAlarmSound(isBar) {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
         const t = audioCtx.currentTime;
         
         if (isBar) {
@@ -784,12 +780,9 @@
         if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-glass-water" style="color:#3b82f6"></i>';
         overlay.style.display = 'flex';
         
-        playAlarmSound(true);
+        // Bar no lleva sonido, solo vibración
         startVibration(true);  // 🔵 BAR: vibración suave 2 pulsos
-        if (alarmInterval) clearInterval(alarmInterval);
-        alarmInterval = setInterval(function() { playAlarmSound(true); }, 1500);
-        
-        // Se removió el alert() nativo bloqueante para evitar congelamiento de la interfaz y sonido
+        if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
       } else {
         overlay.classList.add('flash-red');
         if (titleEl) {
@@ -803,8 +796,6 @@
         startVibration(false);  // 🔴 COCINA: vibración fuerte 3 pulsos
         if (alarmInterval) clearInterval(alarmInterval);
         alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
-        
-        // Se removió el alert() nativo bloqueante para evitar congelamiento de la interfaz y sonido
       }
     }
 
@@ -814,6 +805,11 @@
       overlay.classList.remove('flash-red', 'flash-blue');
       if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
       stopVibration(); // ✅ Detener vibración al cerrar la alarma
+      
+      // ✅ Suspender AudioContext para silenciar inmediatamente los osciladores activos
+      if (audioCtx && audioCtx.state === 'running') {
+        audioCtx.suspend().catch(function(err) { console.warn("Error suspendiendo audioCtx:", err); });
+      }
     }
 
     document.getElementById('alarm-dismiss').addEventListener('click', stopAlarm);
@@ -830,83 +826,21 @@
       });
     }
 
-    // ─── Fullscreen Handlers ─────────────────────────────────────────
-    function iniciarPantallaCompleta() {
-      // 1. Intentar activar pantalla completa con try-catch y catch de Promesa
-      try {
-        const el = document.documentElement;
-        if (el.requestFullscreen) {
-          el.requestFullscreen().catch(err => {
-            console.warn("Fullscreen request rejected:", err);
-          });
-        } else if (el.webkitRequestFullscreen) {
-          el.webkitRequestFullscreen();
-        } else if (el.msRequestFullscreen) {
-          el.msRequestFullscreen();
-        }
-      } catch (err) {
-        console.warn("Fullscreen request failed:", err);
-      }
-      
-      // 2. Desbloquear AudioContext en respuesta al gesto del usuario
-      try {
-        if (!audioCtx) {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx && audioCtx.state === 'suspended') {
-          audioCtx.resume().then(() => {
-            console.log("AudioContext desbloqueado mediante interacción.");
-          }).catch(err => {
-            console.warn("Error al desbloquear AudioContext:", err);
-          });
-        }
-      } catch (e) {
-        console.warn("Fallo al inicializar AudioContext:", e);
-      }
-      
-      // 3. Ocultar el overlay de inicio
-      const overlay = document.getElementById('fullscreen-start-overlay');
-      if (overlay) overlay.style.display = 'none';
-    }
-
-    window.iniciarPantallaCompleta = iniciarPantallaCompleta;
-
-    function toggleFullscreen() {
-      try {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-          const el = document.documentElement;
-          if (el.requestFullscreen) {
-            el.requestFullscreen().catch(err => {
-              console.warn("Fullscreen toggle rejected:", err);
-            });
-          } else if (el.webkitRequestFullscreen) {
-            el.webkitRequestFullscreen();
-          }
-        } else {
-          if (document.exitFullscreen) {
-            document.exitFullscreen().catch(err => {
-              console.warn("Exit fullscreen rejected:", err);
-            });
-          } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen();
-          }
-        }
-      } catch (err) {
-        console.warn("Fullscreen toggle failed:", err);
+    // ─── Sesión Handler (Logout) ─────────────────────────────────────
+    function cerrarSesionTablet() {
+      if (confirm('¿Está seguro de que desea cerrar la sesión en esta Tablet?')) {
+        localStorage.removeItem('food_session_elparche');
+        localStorage.removeItem('food_operador_elparche');
+        localStorage.removeItem('meseroId');
+        localStorage.removeItem('mesero');
+        localStorage.removeItem('modus_emp');
+        
+        // Redirigir a login.html
+        window.location.href = 'login.html';
       }
     }
 
-    window.toggleFullscreen = toggleFullscreen;
-
-    document.addEventListener('fullscreenchange', actualizarIconoFullscreen);
-    document.addEventListener('webkitfullscreenchange', actualizarIconoFullscreen);
-
-    function actualizarIconoFullscreen() {
-      const btn = document.getElementById('fullscreen-fab');
-      if (!btn) return;
-      const isFull = document.fullscreenElement || document.webkitFullscreenElement;
-      btn.innerHTML = isFull ? '<i class="fa-solid fa-compress"></i>' : '<i class="fa-solid fa-expand"></i>';
-    }
+    window.cerrarSesionTablet = cerrarSesionTablet;
 
     // ─── Service Worker registration ────────────────────────────────
     if ('serviceWorker' in navigator) {
