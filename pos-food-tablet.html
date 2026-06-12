@@ -762,6 +762,16 @@
       if ('vibrate' in navigator) navigator.vibrate(0); // cancel any active vibration
     }
 
+    var _configSonidos = { cocina: true, bar: false };
+
+    function cargarConfigSonidos() {
+      db.ref(`negocios/${negocioID}/config/sonidos`).on('value', snap => {
+        if (snap.exists()) {
+          _configSonidos = snap.val();
+        }
+      });
+    }
+
     function startAlarm(msg, tipo) {
       document.getElementById('alarm-message').textContent = msg;
       const overlay = document.getElementById('alarm-overlay');
@@ -780,9 +790,17 @@
         if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-glass-water" style="color:#3b82f6"></i>';
         overlay.style.display = 'flex';
         
-        // Bar no lleva sonido, solo vibración
+        // Vibrar siempre
         startVibration(true);  // 🔵 BAR: vibración suave 2 pulsos
-        if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+        
+        // Sonar solo si está configurado en Firebase (por defecto false)
+        if (_configSonidos && _configSonidos.bar === true) {
+          playAlarmSound(true);
+          if (alarmInterval) clearInterval(alarmInterval);
+          alarmInterval = setInterval(function() { playAlarmSound(true); }, 1500);
+        } else {
+          if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+        }
       } else {
         overlay.classList.add('flash-red');
         if (titleEl) {
@@ -792,10 +810,16 @@
         if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-bell"></i>';
         overlay.style.display = 'flex';
         
-        playAlarmSound(false);
         startVibration(false);  // 🔴 COCINA: vibración fuerte 3 pulsos
-        if (alarmInterval) clearInterval(alarmInterval);
-        alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
+        
+        // Sonar solo si cocina está activado (por defecto true)
+        if (!_configSonidos || _configSonidos.cocina !== false) {
+          playAlarmSound(false);
+          if (alarmInterval) clearInterval(alarmInterval);
+          alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
+        } else {
+          if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
+        }
       }
     }
 
@@ -804,7 +828,7 @@
       overlay.style.display = 'none';
       overlay.classList.remove('flash-red', 'flash-blue');
       if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-      stopVibration(); // ✅ Detener vibración al cerrar la alarma
+      stopVibration();
       
       // ✅ Suspender AudioContext para silenciar inmediatamente los osciladores activos
       if (audioCtx && audioCtx.state === 'running') {
@@ -816,6 +840,7 @@
 
     function startNotificationListener() {
       if (!meseroId) return;
+      cargarConfigSonidos();
       const path = `negocios/${negocioID}/notificaciones/${meseroId.toLowerCase().trim()}`;
       db.ref(path).on('child_added', snap => {
         const noti = snap.val();

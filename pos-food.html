@@ -6,14 +6,15 @@
 <title>PARCHE SYS · POS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-app-compat.js"></script>
+<script src="firebase-database-compat.js"></script>
 <script src="dte-engine.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+<script src="jspdf.plugin.autotable.min.js"></script>
 <script>
   // Cargar estilos de tablet de forma segura (evita bloqueos CORS locales 'file://' y caché)
-  if (window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true') {
+  var _isTablet = window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true' || !!window.AndroidBridge;
+  if (_isTablet) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'pos-food-tablet.css?v=' + Date.now();
@@ -960,10 +961,10 @@ body {
 @media (max-width: 1023px) {
   .layout { 
     grid-template-columns: 1fr; 
-    margin-bottom: 64px; /* padding for the bottom bar */
+    margin-bottom: 94px; /* padding for the bottom bar */
   }
   .pnl-l, .pnl-c, .pnl-r { 
-    display: none; border: none; height: calc(100% - 64px); 
+    display: none; border: none; height: calc(100% - 94px); 
   }
   .pnl-l.active-tab, 
   .pnl-c.active-tab, 
@@ -972,6 +973,14 @@ body {
   }
   .mobile-tabs { 
     display: flex; 
+    height: 94px;
+  }
+  .mtab {
+    font-size: 15px;
+    gap: 8px;
+  }
+  .mtab i {
+    font-size: 28px;
   }
 }
 
@@ -1268,7 +1277,7 @@ body {
     <button class="tbb" id="btn-pax-config" onclick="abrirPaxConfig()" style="display:none; border-color:#a78bfa; color:#a78bfa; background:rgba(167,139,250,0.1)" title="Configurar Terminal PAX">
       <i class="fa-solid fa-credit-card"></i> Config PAX
     </button>
-    <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
+    <button class="tbb" id="btn-historial" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
     <a class="tbb" id="link-menu" href="menu.html" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
@@ -1448,6 +1457,40 @@ body {
     <!-- MAP VIEW -->
     <div id="mesa-view-map" style="display:none;height:520px;position:relative;">
       <iframe id="mapa-iframe" src="" style="width:100%;height:100%;border:none;border-radius:0 0 var(--radius-lg) var(--radius-lg);"></iframe>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING DATA CAPTURE FOR SELECTED TABLE -->
+<div class="overlay" id="datos-mesa-overlay" onclick="if(event.target===this)cerrarDatosMesaModal()" style="display:none; z-index: 100000;">
+  <div class="ck-modal" style="max-width: 450px; width: 92%; padding: 24px; border-radius: 16px; background: #1e1b4b; border: 2px solid rgba(99,102,241,0.4); box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+    <div class="modal-head" style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="color: #fff; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0;">
+        <i class="fa-solid fa-chair" style="color: var(--accent);"></i>
+        Datos de Mesa <span id="datos-mesa-titulo-num" style="color: var(--accent); font-weight: 900;">#--</span>
+      </h3>
+      <button class="modal-close" onclick="cerrarDatosMesaModal()" style="color: rgba(255,255,255,0.6); background: transparent; border: none; font-size: 20px; cursor: pointer;">✕</button>
+    </div>
+    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px; padding: 0;">
+      <div>
+        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Mesero Asignado</label>
+        <select class="fi" id="mesa-mesero-modal-floating" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;">
+          <option value="">Seleccionar...</option>
+        </select>
+      </div>
+      <div>
+        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Número de Comensales</label>
+        <input class="fi" id="mesa-personas-modal-floating" type="number" min="1" placeholder="Ej: 2" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;" inputmode="numeric">
+      </div>
+      <div>
+        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Nombre / Apellido del Cliente</label>
+        <input class="fi" id="mesa-cliente-nombre-modal-floating" type="text" placeholder="Ej: Pérez" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;">
+      </div>
+      <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+        <button class="checkout-trigger" id="btn-confirmar-datos-mesa" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 12px; background: var(--accent); color: white; border: none; cursor: pointer;" onclick="guardarDatosMesaFloating()">
+          Confirmar e Ir al Menú
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1774,7 +1817,7 @@ body {
 /* Auth logic seamlessly absorbed by firebase-config.js */
 var CANAL = 'mesa';
 var MESA_SEL = null;
-var _isTablet = new URLSearchParams(window.location.search).get('tablet') === 'true';
+_isTablet = window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true' || !!window.AndroidBridge;
 var pedido = [];
 var ORDEN = 'FOOD-001';
 var _prods = {};
@@ -1889,11 +1932,13 @@ document.addEventListener('DOMContentLoaded', function(){
       // Restricciones de Electron (Parche)
       var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
       if (isElectron) {
-        // Ocultar links restringidos (Cocina y Portal)
+        // Ocultar links restringidos (Cocina)
         var lCocina = document.getElementById('link-cocina');
         if (lCocina) lCocina.style.display = 'none';
+        
+        // El portal se mantiene visible para el acceso solicitado
         var lPortal = document.getElementById('link-portal');
-        if (lPortal) lPortal.style.display = 'none';
+        if (lPortal) lPortal.style.display = 'inline-flex';
 
         // Redireccionar menú al editor de menú del portal y remover target
         if (lm) {
@@ -2780,43 +2825,9 @@ function abrirMesaModal(defaultTab){
     html += '</div>'; // close #mesas-wrapper
   }
   
-  html += '</div>'+
-    '<div class="cd-row" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:16px; border-top:1px solid var(--border); padding-top:16px;">'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Mesero Asignado</label><select class="fi" id="mesa-mesero-modal" onchange="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"><option value="">Seleccionar...</option></select></div>'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Comensales</label><input class="fi" id="mesa-personas-modal" type="number" min="1" placeholder="2" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Nombre / Apellido</label><input class="fi" id="mesa-cliente-nombre-modal" type="text" placeholder="Ej: Pérez" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
-    '</div>'+
-    '<div style="margin-top:20px; display:flex; justify-content:flex-end;">'+
-    '<button class="checkout-trigger" style="padding:12px 24px; font-size:14px; border-radius:10px;" onclick="cerrarMesaModal()">Confirmar y Cerrar</button>'+
-    '</div>';
-    
+  html += '</div>';
   body.innerHTML = html;
-  
-  // Fill meseros dropdown inside modal
-  var selDropdown = document.getElementById('mesa-mesero-modal');
-  if(selDropdown) {
-    selDropdown.innerHTML = '<option value="">Seleccionar...</option>';
-    _empleados.forEach(function(e){
-      var opt = document.createElement('option');
-      opt.value = e.nombre;
-      opt.textContent = e.nombre;
-      selDropdown.appendChild(opt);
-    });
-    
-    if (MESA_SEL && _mesas[MESA_SEL]) {
-      selDropdown.value = _mesas[MESA_SEL].mesero || _loggedMesero || '';
-    }
-  }
-  
-  var personasInput = document.getElementById('mesa-personas-modal');
-  if(personasInput && MESA_SEL && _mesas[MESA_SEL]) {
-    personasInput.value = _mesas[MESA_SEL].personas || '';
-  }
-  
-  var clienteInput = document.getElementById('mesa-cliente-nombre-modal');
-  if(clienteInput && MESA_SEL && _mesas[MESA_SEL]) {
-    clienteInput.value = _mesas[MESA_SEL].cliente_nombre || '';
-  }
+}
 }
 
 /* ── MESA VIEW TABS (Lista / Mapa) ── */
@@ -3030,7 +3041,15 @@ function guardarDatosMesa(){
 /* ═══════════════════════════════════════
    MESAS / REPARTIDORES
 ═══════════════════════════════════════ */
+var _configSonidos = { cocina: true, bar: false };
+
 function cargarBiz(){
+  db.ref('negocios/'+negocioID+'/config/sonidos').on('value', function(snap) {
+    if (snap.exists()) {
+      _configSonidos = snap.val();
+    }
+  });
+
   db.ref('negocios/'+negocioID+'/info').on('value', function(snap){
     _biz = snap.val() || {};
     document.getElementById('tb-neg').textContent = _biz.nombre || 'Restaurante';
@@ -3047,22 +3066,124 @@ function cargarMesas(){
   });
 }
 
+function iniciarNuevaOrdenMesa(n) {
+  pedido = [];
+  _notaCocina = '';
+  _paxAprobado = false;
+  _paxCancelado = false;
+  window._pagoTarjetaDetalles = null;
+  _fireActivo = false;
+  _descuentoAplicado = 0;
+  _descDUI = '';
+  var fb = document.getElementById('btn-fire');
+  if(fb){ fb.classList.remove('active'); fb.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora'; }
+  var db2 = document.getElementById('ck-desc-badge');
+  if(db2) db2.style.display = 'none';
+  
+  var clk = document.getElementById('tb-clock');
+  if (clk) clk.textContent = '--:--';
+
+  generarOrden();
+  renderCart();
+  renderCanalDetail();
+}
+
+function abrirDatosMesaModal(id){
+  cerrarMesaModal();
+  var overlay = document.getElementById('datos-mesa-overlay');
+  if(overlay) overlay.style.display = 'flex';
+
+  var tituloNum = document.getElementById('datos-mesa-titulo-num');
+  if(tituloNum) tituloNum.textContent = '#' + id;
+
+  var selDropdown = document.getElementById('mesa-mesero-modal-floating');
+  if(selDropdown) {
+    selDropdown.innerHTML = '<option value="">Seleccionar...</option>';
+    _empleados.forEach(function(e){
+      var opt = document.createElement('option');
+      opt.value = e.nombre;
+      opt.textContent = e.nombre;
+      selDropdown.appendChild(opt);
+    });
+    selDropdown.value = _loggedMesero || '';
+  }
+
+  db.ref('negocios/'+negocioID+'/mesas/'+id).once('value', function(snap){
+    var m = snap.val() || {};
+    var personasInput = document.getElementById('mesa-personas-modal-floating');
+    var clienteInput = document.getElementById('mesa-cliente-nombre-modal-floating');
+    if(selDropdown && m.mesero) selDropdown.value = m.mesero;
+    if(personasInput) personasInput.value = m.personas || '';
+    if(clienteInput) clienteInput.value = m.cliente_nombre || '';
+  });
+}
+
+function cerrarDatosMesaModal(){
+  var overlay = document.getElementById('datos-mesa-overlay');
+  if(overlay) overlay.style.display = 'none';
+}
+
+function guardarDatosMesaFloating(){
+  if(!MESA_SEL) return;
+  var mesero = document.getElementById('mesa-mesero-modal-floating').value;
+  var personas = document.getElementById('mesa-personas-modal-floating').value;
+  var clienteNombre = document.getElementById('mesa-cliente-nombre-modal-floating').value;
+  
+  var hMesero = document.getElementById('mesa-mesero');
+  var hPersonas = document.getElementById('mesa-personas');
+  var hCliente = document.getElementById('mesa-cliente-nombre');
+  if(hMesero) hMesero.value = mesero;
+  if(hPersonas) hPersonas.value = personas;
+  if(hCliente) hCliente.value = clienteNombre;
+  
+  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+    mesero: mesero,
+    personas: personas,
+    cliente_nombre: clienteNombre
+  });
+  
+  cerrarDatosMesaModal();
+  renderCanalDetail();
+  
+  // Cambiar a Tab 2 (Orden/Menú) si estamos en vista móvil/tablet vertical
+  setTimeout(function(){
+    var mobTabs = document.getElementById('mobile-tabs');
+    if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
+      switchMobileTab(2);
+    }
+  }, 100);
+}
+
 function selMesa(n){
+  if (CANAL !== 'mesa') {
+    setCanal('mesa');
+  }
+
   // Admin puede acceder a todas las mesas
   if (_isTablet && !_esAdmin && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
     if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()) {
-      toast('🔒 Mesa de ' + m.mesero + ' — Solo el admin puede acceder a mesas de otros meseros', 'err');
+      toast('⚠️ Mesa de ' + m.mesero + ' - Solo el admin puede acceder a mesas de otros meseros', 'err');
       return;
     }
   }
 
   MESA_SEL = n;
+  
+  // Limpiar el carrito inmediatamente para evitar que se mezclen productos de la mesa anterior
+  pedido = [];
+  renderCart();
+  var cartContainer = document.getElementById('cart-items');
+  if (cartContainer) {
+    cartContainer.innerHTML = '<div class="empty-cart"><div class="ei"><i class="fa-solid fa-spinner fa-spin"></i></div><p>Cargando mesa ' + n + '...</p></div>';
+  }
+
   document.querySelectorAll('.mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
   var btn = document.getElementById('pos-btn-mesa-' + n);
   if(btn) btn.classList.add('seleccionada');
   clearInterval(_timerInterval);
   db.ref('negocios/'+negocioID+'/mesas/'+n).once('value', function(snap){
+    if (MESA_SEL !== n) return;
     var m = snap.val() || {};
     
     // Sincronizar inputs (ocultos o visibles en canal-detail)
@@ -3080,16 +3201,19 @@ function selMesa(n){
     
     actualizarGuiaMesaBar();
     
-    // Auto switch to Tab 2 (Orden/Menú) on mobile/portrait tablet view
+    // Auto switch to Tab 2 (Orden/Menú) on mobile/portrait tablet view (solamente si NO es tablet)
     setTimeout(function(){
       var mobTabs = document.getElementById('mobile-tabs');
       if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
-        switchMobileTab(2);
+        if (!_isTablet) {
+          switchMobileTab(2);
+        }
       }
     }, 150);
     
     if(m && m.pedido_activo_id){
       db.ref('negocios/'+negocioID+'/pedidos/'+m.pedido_activo_id).once('value', function(ps){
+        if (MESA_SEL !== n) return;
         var pd = ps.val();
         if(pd && pd.items && pd.estado !== 'pagado'){
           pedido = (pd.items || []).map(function(item) {
@@ -3108,8 +3232,27 @@ function selMesa(n){
               document.getElementById('tb-clock').textContent = String(m2).padStart(2,'0')+':'+String(s).padStart(2,'0');
             },1000);
           }
+        } else {
+          iniciarNuevaOrdenMesa(n);
+        }
+        
+        // ABRIR EL MODAL FLOTANTE DE DATOS DE MESA EN TABLET
+        if (_isTablet) {
+          abrirDatosMesaModal(n);
+        }
+      }, function(err) {
+        if (MESA_SEL !== n) return;
+        iniciarNuevaOrdenMesa(n);
+        if (_isTablet) {
+          abrirDatosMesaModal(n);
         }
       });
+    } else {
+      if (MESA_SEL !== n) return;
+      iniciarNuevaOrdenMesa(n);
+      if (_isTablet) {
+        abrirDatosMesaModal(n);
+      }
     }
   });
 }
@@ -3745,6 +3888,13 @@ function imprimirSolicitudCuenta(){
     +'@media print{body{margin:0;padding:2px 2px}}'
     +'</style></head><body>';
 
+  /* --- ENCABEZADO --- */
+  html += '<div class="c" style="margin-bottom:10px;text-align:center;">';
+  html += '<div class="b" style="font-size:16px;">EL PARCHE</div>';
+  html += '<div class="xs" style="font-size:11px;">EREGUAYQUIN , USULUTAN</div>';
+  html += '<div class="xs" style="font-size:11px;">TEL. 7854-7797 NRC 384588-5</div>';
+  html += '</div>';
+
   /* --- TITULO --- */
   html += '<div class="title">SOLICITAR CUENTA</div>';
 
@@ -4052,8 +4202,88 @@ function finalizarYLimpiarVenta() {
   cerrarCheckout();
   
   if (_procesandoSplit) {
-    _ticketCobrandoIdx++;
-    cobrarSiguienteTicketSplit();
+    // Restar el ticket cobrado del pedido original
+    var itemsCobrados = pedido; // porque 'pedido' contiene los items del ticket actual
+    var remainingUnpaidItems = actualizarPedidoOriginalRestandoTicket(itemsCobrados);
+    
+    if (remainingUnpaidItems.length > 0) {
+      // Quedan artículos sin pagar
+      var sub = remainingUnpaidItems.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
+      
+      // Actualizar orden principal en Firebase
+      var saves = [
+        db.ref('negocios/'+negocioID+'/pedidos/'+_originalOrdenId).update({
+          items: remainingUnpaidItems,
+          subtotal: sub.toFixed(2),
+          total: sub.toFixed(2)
+        })
+      ];
+      
+      // Mantener mesa ocupada con los artículos restantes
+      if (CANAL === 'mesa' && MESA_SEL) {
+        saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+          pedido_activo_id: _originalOrdenId,
+          estado: 'ocupada'
+        }));
+      }
+      
+      Promise.all(saves).then(function() {
+        _originalPedido = remainingUnpaidItems;
+        pedido = JSON.parse(JSON.stringify(remainingUnpaidItems));
+        ORDEN = _originalOrdenId;
+        
+        // 1. Obtener el ID del ticket cobrado
+        var ticketCobradoId = _splitTickets[_ticketCobrandoIdx] ? _splitTickets[_ticketCobrandoIdx].id : null;
+        
+        // 2. Eliminar el ticket cobrado de _splitTickets
+        if (ticketCobradoId !== null) {
+          _splitTickets = _splitTickets.filter(function(t) {
+            return t.id !== ticketCobradoId;
+          });
+        }
+        
+        // 3. Reajustar keys e indices de los tickets restantes
+        reconstruirKeysYIndicesTicketsRestantes(_splitTickets, remainingUnpaidItems);
+        
+        toast('✅ Ticket cobrado. Artículos pendientes actualizados.', 'ok');
+        
+        // 4. Continuar secuencia de cobro o reabrir el modal con los restantes
+        if (_cobroSecuencial && _splitTickets.length > 0) {
+          // Lógica secuencial: cobrar el siguiente ticket automáticamente
+          cobrarTicketEspecifico(0);
+        } else {
+          // Lógica individual: mantener en split y reabrir modal para seguir cobrando manualmente
+          _procesandoSplit = false;
+          _cobroSecuencial = false;
+          renderCart();
+          renderSplit();
+          document.getElementById('split-overlay').classList.add('open');
+        }
+      }).catch(function(err) {
+        console.error(err);
+        toast('Error al actualizar la orden principal.', 'err');
+      });
+    } else {
+      // Todo pagado! Liberar la mesa
+      var saves = [];
+      if (CANAL === 'mesa' && MESA_SEL) {
+        saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+          mesa_num: '',
+          mesero: '',
+          personas: 1,
+          estado: 'libre',
+          pedido_activo_id: null,
+          timestamp: Date.now()
+        }));
+      }
+      
+      Promise.all(saves).then(function() {
+        _procesandoSplit = false;
+        _cobroSecuencial = false;
+        toast('🎉 Mesa completamente pagada y liberada.', 'ok');
+        nuevaOrden();
+      });
+    }
   } else {
     nuevaOrden();
   }
@@ -4304,18 +4534,11 @@ async function imprimirTicket(soloImprimir){
   html += '</head><body>';
 
   /* 1. ENCABEZADO */
-  html += '<div class="c">';
+  html += '<div class="c" style="text-align:center;">';
   if(logoUrl) html += '<img src="'+logoUrl+'" class="logo"><br>';
-  html += '<div class="b" style="font-size:18px">'+bizNombre+'</div>';
-  if(bizRazon && bizRazon!==bizNombre) html += '<div class="sm">'+bizRazon+'</div>';
-  if(bizEslog) html += '<div class="xs" style="font-style:italic">'+bizEslog+'</div>';
-  html += '<div class="xs" style="margin-top:3px">';
-  if(bizNit) html += 'NIT: '+bizNit+'&nbsp;&nbsp;';
-  if(bizNrc) html += 'NRC: '+bizNrc;
-  html += '</div>';
-  if(bizDir)   html += '<div class="xs">'+bizDir+'</div>';
-  if(bizTel)   html += '<div class="xs">Tel: '+bizTel+'</div>';
-  if(bizEmail) html += '<div class="xs">'+bizEmail+'</div>';
+  html += '<div class="b" style="font-size:18px">EL PARCHE</div>';
+  html += '<div class="xs" style="font-size:11px;">EREGUAYQUIN , USULUTAN</div>';
+  html += '<div class="xs" style="font-size:11px;">TEL. 7854-7797 NRC 384588-5</div>';
   html += '</div>';
 
   /* 2. TIPO DOCUMENTO */
@@ -4470,11 +4693,9 @@ function formatTicket57mm() {
   var text = "";
   
   // Header
-  text += "[C][B][D]" + bizNombre + "[/D][/B]\n";
-  if (bizDir) text += "[C]" + bizDir + "\n";
-  if (bizTel) text += "[C]Tel: " + bizTel + "\n";
-  if (bizNit) text += "[C]NIT: " + bizNit + "\n";
-  if (bizNrc) text += "[C]NRC: " + bizNrc + "\n";
+  text += "[C][B][D]EL PARCHE[/D][/B]\n";
+  text += "[C]EREGUAYQUIN , USULUTAN\n";
+  text += "[C]TEL. 7854-7797 NRC 384588-5\n";
   text += "[HR]\n";
   
   // Document Type
@@ -4841,6 +5062,7 @@ var _splitDragFrom = null; // 'source' | ticket index
 var _ticketsParaCobrar = [];
 var _ticketCobrandoIdx = 0;
 var _procesandoSplit = false;
+var _cobroSecuencial = false;
 var _originalOrdenId = '';
 var _originalPedido = [];
 
@@ -4900,7 +5122,14 @@ function renderSplit(){
     return '<div class="split-ticket" id="split-t-'+t.id+'" data-ticket="'+ti+'">'
       +'<div class="split-ticket-head">'
       +'<div class="split-ticket-name"><i class="fa-solid fa-receipt" style="font-size:10px"></i>'+t.nombre+'</div>'
-      +'<div class="split-ticket-total">$'+tTotal.toFixed(2)+'</div>'
+      +'<div style="display:flex; align-items:center; gap:6px;">'
+      +'<div class="split-ticket-total" style="margin-right:6px;">$'+tTotal.toFixed(2)+'</div>'
+      +(t.items.length
+        ? '<button onclick="imprimirSolicitudCuentaDeItems(_splitTickets['+ti+'].items, \''+t.nombre+'\')" style="background:var(--accent-light); border:1px solid var(--accent); color:var(--accent); border-radius:4px; padding:3px 6px; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;" title="Imprimir Pre-ticket"><i class="fa-solid fa-print"></i></button>'
+         +'<button onclick="cobrarTicketEspecifico('+ti+')" style="background:var(--accent); border:none; color:white; border-radius:4px; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:3px;" title="Cobrar este ticket"><i class="fa-solid fa-cash-register"></i> Cobrar</button>'
+        : ''
+      )
+      +'</div>'
       +'</div>'
       +'<div class="split-ticket-items" id="split-ti-'+t.id+'">'
       +(t.items.length
@@ -5011,12 +5240,15 @@ function cobrarTicketsSplit(){
   // Guardar estado original
   _originalOrdenId = ORDEN;
   _originalPedido = JSON.parse(JSON.stringify(pedido));
-  _ticketsParaCobrar = JSON.parse(JSON.stringify(activeTickets));
-  _ticketCobrandoIdx = 0;
+  
+  // Guardar solo los tickets que tienen productos
+  _splitTickets = JSON.parse(JSON.stringify(activeTickets));
+  
+  _cobroSecuencial = true;
   _procesandoSplit = true;
 
   cerrarSplit();
-  cobrarSiguienteTicketSplit();
+  cobrarTicketEspecifico(0);
 }
 
 function cobrarSiguienteTicketSplit(){
@@ -5071,6 +5303,94 @@ function imprimirPreticketsSplit(){
   
   activeTickets.forEach(function(t){
     imprimirSolicitudCuentaDeItems(t.items, t.nombre);
+  });
+}
+
+function cobrarTicketEspecifico(ti) {
+  var t = _splitTickets[ti];
+  if (!t || !t.items.length) {
+    toast('El ticket está vacío', 'err');
+    return;
+  }
+  
+  // Guardar estado original de la orden si no se ha guardado ya
+  if (!_originalOrdenId) {
+    _originalOrdenId = ORDEN;
+    _originalPedido = JSON.parse(JSON.stringify(pedido));
+  }
+  
+  // Configurar el pedido para este ticket
+  pedido = t.items;
+  
+  // ID de la orden para este ticket
+  ORDEN = _originalOrdenId + '-' + t.nombre.replace(/\s+/g, '');
+  
+  _ticketCobrandoIdx = ti;
+  _procesandoSplit = true;
+  
+  // Si no es cobro secuencial, se asume cobro individual
+  if (typeof _cobroSecuencial === 'undefined' || !_cobroSecuencial) {
+    _cobroSecuencial = false;
+  }
+  
+  cerrarSplit();
+  abrirCheckout();
+  
+  // Mostrar etiqueta en el checkout
+  var lbl = document.getElementById('ck-orden-lbl');
+  if (lbl) lbl.textContent = ORDEN + ' (' + t.nombre + ')';
+}
+
+function actualizarPedidoOriginalRestandoTicket(itemsCobrados) {
+  var nuevoPedido = JSON.parse(JSON.stringify(_originalPedido));
+  itemsCobrados.forEach(function(itemCobrado) {
+    var idx = itemCobrado._cartIdx;
+    if (nuevoPedido[idx]) {
+      nuevoPedido[idx].cant = (nuevoPedido[idx].cant || 0) - 1;
+    }
+  });
+  
+  // Filtrar los que tengan cant > 0
+  nuevoPedido = nuevoPedido.filter(function(it) {
+    return it.cant > 0;
+  });
+  
+  return nuevoPedido;
+}
+
+function reconstruirKeysYIndicesTicketsRestantes(remainingTickets, remainingUnpaidItems) {
+  var slotsPorProducto = {};
+  
+  remainingUnpaidItems.forEach(function(it, idx) {
+    var desc = (it.desc || it.nombre || '').trim().toUpperCase();
+    var price = parseFloat(it.precio || 0).toFixed(2);
+    var key = desc + '_' + price;
+    
+    if (!slotsPorProducto[key]) {
+      slotsPorProducto[key] = [];
+    }
+    var cant = it.cant || 1;
+    for (var q = 0; q < cant; q++) {
+      slotsPorProducto[key].push({ idx: idx, q: q });
+    }
+  });
+
+  remainingTickets.forEach(function(ticket) {
+    ticket.items.forEach(function(item) {
+      var desc = (item.desc || item.nombre || '').trim().toUpperCase();
+      var price = parseFloat(item.price || item.precio || 0).toFixed(2);
+      var key = desc + '_' + price;
+      
+      var slots = slotsPorProducto[key];
+      if (slots && slots.length > 0) {
+        var slot = slots.shift();
+        item._cartIdx = slot.idx;
+        item._splitKey = 'item_' + slot.idx + '_' + slot.q;
+      } else {
+        item._cartIdx = -1;
+        item._splitKey = 'item_unknown_' + Math.random();
+      }
+    });
   });
 }
 
@@ -5336,6 +5656,16 @@ function filtrarHistorial(){
   
   var filtradas = entries.filter(function(e){
     var v = e[1];
+    
+    // Filtrar para mostrar solo el historial del mesero/usuario activo
+    if (_loggedMesero) {
+      var mDb = (v.mesero || '').trim().toLowerCase();
+      var mLog = _loggedMesero.trim().toLowerCase();
+      if (mDb !== mLog) {
+        return false;
+      }
+    }
+    
     return !q || (v.orden||'').toLowerCase().includes(q) || (v.cliente||'').toLowerCase().includes(q) || (v.mesa_num||'').toString().includes(q);
   });
 
@@ -5498,8 +5828,14 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     if(bellEl) bellEl.textContent = "🍹";
     overlay.style.display = 'flex';
     
-    // Bar no lleva sonido, solo vibración (si estuviera disponible)
-    if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
+    // Sonar solo si está configurado en Firebase (por defecto false)
+    if (_configSonidos && _configSonidos.bar === true) {
+      _kaBeep(true);
+      if(_kaInterval) clearInterval(_kaInterval);
+      _kaInterval = setInterval(function() { _kaBeep(true); }, 1600);
+    } else {
+      if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
+    }
   } else {
     overlay.classList.add('ka-flash-red');
     if(titleEl) {
@@ -5509,9 +5845,15 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     }
     if(bellEl) bellEl.textContent = "🔔";
     overlay.style.display = 'flex';
-    _kaBeep(false);
-    if(_kaInterval) clearInterval(_kaInterval);
-    _kaInterval = setInterval(function() { _kaBeep(false); }, 1600);
+    
+    // Sonar solo si cocina está activado (por defecto true)
+    if (!_configSonidos || _configSonidos.cocina !== false) {
+      _kaBeep(false);
+      if(_kaInterval) clearInterval(_kaInterval);
+      _kaInterval = setInterval(function() { _kaBeep(false); }, 1600);
+    } else {
+      if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
+    }
   }
 }
 
@@ -5539,5 +5881,23 @@ function switchMobileTab(t){
   if(t===3) document.querySelector('.pnl-r').classList.add('active-tab');
 }
 </script>
+
+  <!-- Botón de Cerrar Sesión (Logout FAB) -->
+  <button id="logout-fab" title="Cerrar Sesión" onclick="cerrarSesionTablet()" style="position:fixed; bottom:30px; left:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border:2px solid rgba(255,255,255,0.18); color:#fff; font-size:22px; cursor:pointer; z-index:99996; display:none; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(239,68,68,0.35); transition:transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent;">
+    <i class="fa-solid fa-right-from-bracket"></i>
+  </button>
+  
+  <script>
+    function cerrarSesionTablet() {
+      if (confirm('¿Está seguro de que desea cerrar la sesión en esta Tablet?')) {
+        localStorage.removeItem('food_session_elparche');
+        localStorage.removeItem('food_operador_elparche');
+        localStorage.removeItem('meseroId');
+        localStorage.removeItem('mesero');
+        window.location.href = 'login.html';
+      }
+    }
+    window.cerrarSesionTablet = cerrarSesionTablet;
+  </script>
 </body>
 </html>
