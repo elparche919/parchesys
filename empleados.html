@@ -1122,8 +1122,27 @@ textarea.fi{resize:vertical;min-height:72px}
 // negocioID and db are already inherited from firebase-config.js
 if(!negocioID){ window.location.href='index.html'; }
 // ── MODUS RETURN: registrar sesión activa y cablear botón volver ──
-if(typeof ModusReturn!=='undefined'){ModusReturn.init(negocioID);ModusReturn.wireButton('tb-back-portal');}
-else{var _tbk=document.getElementById('tb-back-portal');if(_tbk){_tbk.href='portal-food.html?negocio='+negocioID+'#resumen';_tbk.onclick=null;}}
+if(typeof ModusReturn!=='undefined'){
+  ModusReturn.init(negocioID);
+  var _tbk = document.getElementById('tb-back-portal');
+  if(_tbk) {
+    var destPortal = 'portal-food.html';
+    try {
+      if (document.referrer && document.referrer.indexOf('portal-food-movil.html') > -1) {
+        destPortal = 'portal-food-movil.html';
+      }
+    } catch(e) {}
+    _tbk.href = destPortal + '?negocio=' + negocioID + '#resumen';
+    _tbk.onclick = function(e) {
+      e.preventDefault();
+      try { sessionStorage.setItem('modus_return_from_external', '1'); } catch(err) {}
+      window.location.href = destPortal + '?negocio=' + negocioID + '#resumen';
+    };
+  }
+} else {
+  var _tbk=document.getElementById('tb-back-portal');
+  if(_tbk){_tbk.href='portal-food.html?negocio='+negocioID+'#resumen';_tbk.onclick=null;}
+}
 
 // ── STATE ──
 let empleados={};
@@ -2012,10 +2031,10 @@ const ROLES_CONFIG={
 // Mapa ROLES_CONFIG → IDs de checkboxes de permisos FOOD
 const ROL_PERM_MAP={
   propietario:{pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':true,empleados:true,dte:true,contabilidad:true,ajustes:true,'mi-empresa':true,'mi-perfil':true},
-  admin:      {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':true,empleados:true,dte:true,contabilidad:true,ajustes:true,'mi-empresa':true,'mi-perfil':true},
+  admin:      {pos:false,pronostico:false,auditoria:false,menu:false,inventario:true,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:true,ajustes:false,'mi-empresa':false,'mi-perfil':true},
   supervisor: {pos:true,pronostico:true,auditoria:false,menu:true,inventario:true,cocina:true,'mapa-mesas':true,delivery:true,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
-  cajero:     {pos:true,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:true,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
-  mesero:     {pos:true,pronostico:false,auditoria:false,menu:true,inventario:false,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  cajero:     {pos:true,pronostico:false,auditoria:false,menu:false,inventario:true,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
+  mesero:     {pos:true,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':true,delivery:false,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
   cocinero:   {pos:false,pronostico:false,auditoria:false,menu:true,inventario:true,cocina:true,'mapa-mesas':false,delivery:false,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
   delivery:   {pos:false,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':false,delivery:true,'pos-movil':false,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
   empleado:   {pos:true,pronostico:false,auditoria:false,menu:false,inventario:false,cocina:false,'mapa-mesas':false,delivery:false,'pos-movil':true,'app-cliente':false,empleados:false,dte:false,contabilidad:false,ajustes:false,'mi-empresa':false,'mi-perfil':true},
@@ -2030,8 +2049,10 @@ function onRolChange(rol){
     var chk=document.getElementById('perm-'+mod);
     if(chk) chk.checked=perms[mod];
   });
-  // Admin/propietario: todos los módulos ON y deshabilitados (no se pueden quitar)
-  var isPropAdmin=rol==='propietario'||rol==='admin';
+  // Propietario o Modus Admin: todos los módulos ON y deshabilitados
+  var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
+  var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
+  var isPropAdmin = rol === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
   grid.querySelectorAll('input[type="checkbox"]').forEach(function(chk){
     chk.disabled=isPropAdmin;
     if(isPropAdmin)chk.checked=true;
@@ -2222,7 +2243,8 @@ function editarEmp(id){
   onRolChange(rolActual);
   onPuestoChange(e.puesto||'Mesero');
   // Re-aplicar permisos personalizados del empleado (solo roles editables)
-  if(rolActual!=='propietario'&&rolActual!=='admin'&&(e.modulos_custom||e.modulos_permitidos)){
+  var isPropAdmin = rolActual === 'propietario' || (e.nombre||'').toLowerCase().includes('modus') || (e.email||'').toLowerCase().includes('modus');
+  if(!isPropAdmin && (e.modulos_custom||e.modulos_permitidos)){
     // Módulos FOOD principales
     var foodKeys=['pos','pronostico','auditoria','menu','inventario','cocina','mapa-mesas','delivery','pos-movil','app-cliente'];
     foodKeys.forEach(function(k){
@@ -2301,7 +2323,10 @@ function guardarEmpleado(){
     aplica_afp:document.getElementById('emp-aplica-afp').checked,
     modulos_permitidos:(function(){
       var r=document.getElementById('emp-rol').value;
-      if(r==='propietario'||r==='admin')
+      var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
+      var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
+      var isPropAdmin = r === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
+      if(isPropAdmin)
         return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
       return {
         pos:!!document.getElementById('perm-pos')?.checked,
@@ -2325,7 +2350,10 @@ function guardarEmpleado(){
     // modulos_custom: campo canónico leído por portal-food.html
     modulos_custom:(function(){
       var r=document.getElementById('emp-rol').value;
-      if(r==='propietario'||r==='admin')
+      var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
+      var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
+      var isPropAdmin = r === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
+      if(isPropAdmin)
         return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
       return {
         pos:!!document.getElementById('perm-pos')?.checked,
