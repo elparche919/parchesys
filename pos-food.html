@@ -6,15 +6,14 @@
 <title>PARCHE SYS · POS</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="firebase-app-compat.js"></script>
-<script src="firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script src="dte-engine.js"></script>
-<script src="jspdf.umd.min.js"></script>
-<script src="jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
 <script>
   // Cargar estilos de tablet de forma segura (evita bloqueos CORS locales 'file://' y caché)
-  var _isTablet = window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true' || !!window.AndroidBridge;
-  if (_isTablet) {
+  if (window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true') {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = 'pos-food-tablet.css?v=' + Date.now();
@@ -961,10 +960,10 @@ body {
 @media (max-width: 1023px) {
   .layout { 
     grid-template-columns: 1fr; 
-    margin-bottom: 94px; /* padding for the bottom bar */
+    margin-bottom: 64px; /* padding for the bottom bar */
   }
   .pnl-l, .pnl-c, .pnl-r { 
-    display: none; border: none; height: calc(100% - 94px); 
+    display: none; border: none; height: calc(100% - 64px); 
   }
   .pnl-l.active-tab, 
   .pnl-c.active-tab, 
@@ -973,14 +972,6 @@ body {
   }
   .mobile-tabs { 
     display: flex; 
-    height: 94px;
-  }
-  .mtab {
-    font-size: 15px;
-    gap: 8px;
-  }
-  .mtab i {
-    font-size: 28px;
   }
 }
 
@@ -1025,6 +1016,44 @@ body {
 }
 #guia-mesa-cliente {
   color: #34d399;
+}
+
+/* ── SUBCATEGORIES ── */
+.subcat-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 0 8px 0;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  border-top: 1px solid var(--border);
+  margin-top: 6px;
+}
+.subcat-scroll::-webkit-scrollbar {
+  display: none;
+}
+.subcat-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.subcat-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
+.subcat-btn.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--accent);
+  border-color: var(--accent);
 }
 </style>
 </head>
@@ -1277,7 +1306,7 @@ body {
     <button class="tbb" id="btn-pax-config" onclick="abrirPaxConfig()" style="display:none; border-color:#a78bfa; color:#a78bfa; background:rgba(167,139,250,0.1)" title="Configurar Terminal PAX">
       <i class="fa-solid fa-credit-card"></i> Config PAX
     </button>
-    <button class="tbb" id="btn-historial" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
+    <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
     <a class="tbb" id="link-menu" href="menu.html" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
@@ -1338,6 +1367,7 @@ body {
       <div class="cat-scroll" id="cat-scroll">
         <button class="cat-btn active" onclick="filtrarCat('Todos',this)">Todos</button>
       </div>
+      <div class="subcat-scroll" id="subcat-scroll" style="display:none;"></div>
     </div>
     <div class="search-wrap">
       <i class="fa-solid fa-search search-icon"></i>
@@ -1461,35 +1491,31 @@ body {
   </div>
 </div>
 
-<!-- FLOATING DATA CAPTURE FOR SELECTED TABLE -->
-<div class="overlay" id="datos-mesa-overlay" onclick="if(event.target===this)cerrarDatosMesaModal()" style="display:none; z-index: 100000;">
-  <div class="ck-modal" style="max-width: 450px; width: 92%; padding: 24px; border-radius: 16px; background: #1e1b4b; border: 2px solid rgba(99,102,241,0.4); box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
-    <div class="modal-head" style="margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
-      <h3 style="color: #fff; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 8px; margin: 0;">
-        <i class="fa-solid fa-chair" style="color: var(--accent);"></i>
-        Datos de Mesa <span id="datos-mesa-titulo-num" style="color: var(--accent); font-weight: 900;">#--</span>
-      </h3>
-      <button class="modal-close" onclick="cerrarDatosMesaModal()" style="color: rgba(255,255,255,0.6); background: transparent; border: none; font-size: 20px; cursor: pointer;">✕</button>
+<!-- MODAL COMENSALES -->
+<div class="overlay" id="comensales-overlay" onclick="if(event.target===this)cerrarModalComensales()">
+  <div class="ck-modal" style="max-width: 450px; width: 95%;">
+    <div class="modal-head">
+      <h3 id="comensales-title">Mesa # --</h3>
+      <button class="modal-close" onclick="cerrarModalComensales()">✕</button>
     </div>
-    <div class="modal-body" style="display: flex; flex-direction: column; gap: 16px; padding: 0;">
-      <div>
-        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Mesero Asignado</label>
-        <select class="fi" id="mesa-mesero-modal-floating" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;">
+    <div class="modal-body" style="padding: 20px;">
+      <div style="margin-bottom:16px;">
+        <label class="fl" style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:6px;">Mesero Asignado</label>
+        <select class="fi" id="comensales-mesero" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px; box-sizing:border-box;">
           <option value="">Seleccionar...</option>
         </select>
       </div>
-      <div>
-        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Número de Comensales</label>
-        <input class="fi" id="mesa-personas-modal-floating" type="number" min="1" placeholder="Ej: 2" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;" inputmode="numeric">
+      <div style="margin-bottom:16px;">
+        <label class="fl" style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:6px;">Número de Comensales</label>
+        <input class="fi" id="comensales-personas" type="number" min="1" placeholder="2" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px; box-sizing:border-box;">
       </div>
-      <div>
-        <label class="fl" style="font-size: 12px; color: rgba(255,255,255,0.7); display: block; margin-bottom: 6px; font-weight: 600;">Nombre / Apellido del Cliente</label>
-        <input class="fi" id="mesa-cliente-nombre-modal-floating" type="text" placeholder="Ej: Pérez" style="height:48px; font-size:15px; background:#0f172a; border:1px solid rgba(255,255,255,0.15); color:white; border-radius:10px; width:100%; padding:0 12px; outline: none;">
+      <div style="margin-bottom:20px;">
+        <label class="fl" style="font-size:12px; color:var(--text-sub); display:block; margin-bottom:6px;">Nombre / Referencia Cliente</label>
+        <input class="fi" id="comensales-cliente" type="text" placeholder="Ej: Pérez / Familia" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px; box-sizing:border-box;">
       </div>
-      <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
-        <button class="checkout-trigger" id="btn-confirmar-datos-mesa" style="width: 100%; padding: 14px; font-size: 16px; font-weight: 700; border-radius: 12px; background: var(--accent); color: white; border: none; cursor: pointer;" onclick="guardarDatosMesaFloating()">
-          Confirmar e Ir al Menú
-        </button>
+      <div style="display:flex; justify-content:flex-end; gap:12px;">
+        <button class="btn-sec" style="padding:12px 24px; font-size:14px; border-radius:10px; border:1px solid var(--border); background:transparent; color:white; cursor:pointer;" onclick="cerrarModalComensales()">Cancelar</button>
+        <button class="checkout-trigger" style="padding:12px 24px; font-size:14px; border-radius:10px;" onclick="confirmarModalComensales()">Aceptar e Ir al Menú</button>
       </div>
     </div>
   </div>
@@ -1817,7 +1843,7 @@ body {
 /* Auth logic seamlessly absorbed by firebase-config.js */
 var CANAL = 'mesa';
 var MESA_SEL = null;
-_isTablet = window.self !== window.top || new URLSearchParams(window.location.search).get('tablet') === 'true' || !!window.AndroidBridge;
+var _isTablet = new URLSearchParams(window.location.search).get('tablet') === 'true';
 var pedido = [];
 var ORDEN = 'FOOD-001';
 var _prods = {};
@@ -1932,13 +1958,11 @@ document.addEventListener('DOMContentLoaded', function(){
       // Restricciones de Electron (Parche)
       var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
       if (isElectron) {
-        // Ocultar links restringidos (Cocina)
+        // Ocultar links restringidos (Cocina y Portal)
         var lCocina = document.getElementById('link-cocina');
         if (lCocina) lCocina.style.display = 'none';
-        
-        // El portal se mantiene visible para el acceso solicitado
         var lPortal = document.getElementById('link-portal');
-        if (lPortal) lPortal.style.display = 'inline-flex';
+        if (lPortal) lPortal.style.display = 'none';
 
         // Redireccionar menú al editor de menú del portal y remover target
         if (lm) {
@@ -2825,9 +2849,43 @@ function abrirMesaModal(defaultTab){
     html += '</div>'; // close #mesas-wrapper
   }
   
-  html += '</div>';
+  html += '</div>'+
+    '<div class="cd-row" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:16px; border-top:1px solid var(--border); padding-top:16px;">'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Mesero Asignado</label><select class="fi" id="mesa-mesero-modal" onchange="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"><option value="">Seleccionar...</option></select></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Comensales</label><input class="fi" id="mesa-personas-modal" type="number" min="1" placeholder="2" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Nombre / Apellido</label><input class="fi" id="mesa-cliente-nombre-modal" type="text" placeholder="Ej: Pérez" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
+    '</div>'+
+    '<div style="margin-top:20px; display:flex; justify-content:flex-end;">'+
+    '<button class="checkout-trigger" style="padding:12px 24px; font-size:14px; border-radius:10px;" onclick="cerrarMesaModal()">Confirmar y Cerrar</button>'+
+    '</div>';
+    
   body.innerHTML = html;
-}
+  
+  // Fill meseros dropdown inside modal
+  var selDropdown = document.getElementById('mesa-mesero-modal');
+  if(selDropdown) {
+    selDropdown.innerHTML = '<option value="">Seleccionar...</option>';
+    _empleados.forEach(function(e){
+      var opt = document.createElement('option');
+      opt.value = e.nombre;
+      opt.textContent = e.nombre;
+      selDropdown.appendChild(opt);
+    });
+    
+    if (MESA_SEL && _mesas[MESA_SEL]) {
+      selDropdown.value = _mesas[MESA_SEL].mesero || _loggedMesero || '';
+    }
+  }
+  
+  var personasInput = document.getElementById('mesa-personas-modal');
+  if(personasInput && MESA_SEL && _mesas[MESA_SEL]) {
+    personasInput.value = _mesas[MESA_SEL].personas || '';
+  }
+  
+  var clienteInput = document.getElementById('mesa-cliente-nombre-modal');
+  if(clienteInput && MESA_SEL && _mesas[MESA_SEL]) {
+    clienteInput.value = _mesas[MESA_SEL].cliente_nombre || '';
+  }
 }
 
 /* ── MESA VIEW TABS (Lista / Mapa) ── */
@@ -2865,40 +2923,112 @@ function cerrarMesaModal(){
   actualizarTabletMesaLabel(); // Update quick-action button label
 }
 
-function selMesaModal(id){
-  selMesa(id);
+var comensalesMesaId = null;
+
+function abrirModalComensales(id){
+  comensalesMesaId = id;
+  var overlay = document.getElementById('comensales-overlay');
+  if(!overlay) return;
   
-  // Actualizar clase seleccionada en la lista del modal
-  document.querySelectorAll('#mesa-view-list .mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
-  var btn = document.getElementById('pos-btn-mesa-' + id);
-  if(btn) btn.classList.add('seleccionada');
-  var btnMy = document.getElementById('pos-btn-mesa-my-' + id);
-  if(btnMy) btnMy.classList.add('seleccionada');
+  document.getElementById('comensales-title').textContent = 'Mesa #' + id;
   
-  // Cargar datos actuales de la mesa seleccionada en los inputs del modal
-  db.ref('negocios/'+negocioID+'/mesas/'+id).once('value', function(snap){
-    var m = snap.val() || {};
-    var selDropdown = document.getElementById('mesa-mesero-modal');
-    var personasInput = document.getElementById('mesa-personas-modal');
-    var clienteInput = document.getElementById('mesa-cliente-nombre-modal');
-    if(selDropdown) selDropdown.value = m.mesero || _loggedMesero || '';
-    if(personasInput) personasInput.value = m.personas || '';
-    if(clienteInput) clienteInput.value = m.cliente_nombre || '';
-    
-    // Sincronizar inputs ocultos en canal-detail para que procesarOrden los lea
-    var hMesero = document.getElementById('mesa-mesero');
-    var hPersonas = document.getElementById('mesa-personas');
-    var hCliente = document.getElementById('mesa-cliente-nombre');
-    if(hMesero) hMesero.value = m.mesero || _loggedMesero || '';
-    if(hPersonas) hPersonas.value = m.personas || '';
-    if(hCliente) hCliente.value = m.cliente_nombre || '';
-    
-    actualizarGuiaMesaBar();
+  var selDropdown = document.getElementById('comensales-mesero');
+  if(selDropdown) {
+    selDropdown.innerHTML = '<option value="">Seleccionar...</option>';
+    _empleados.forEach(function(e){
+      var opt = document.createElement('option');
+      opt.value = e.nombre;
+      opt.textContent = e.nombre;
+      selDropdown.appendChild(opt);
+    });
+    var m = _mesas[id] || {};
+    selDropdown.value = m.mesero || _loggedMesero || '';
+  }
+  
+  var personasInput = document.getElementById('comensales-personas');
+  if(personasInput) {
+    var m = _mesas[id] || {};
+    personasInput.value = m.personas || '2';
+  }
+  
+  var clienteInput = document.getElementById('comensales-cliente');
+  if(clienteInput) {
+    var m = _mesas[id] || {};
+    clienteInput.value = m.cliente_nombre || '';
+  }
+  
+  overlay.classList.add('open');
+}
+
+function cerrarModalComensales(){
+  var overlay = document.getElementById('comensales-overlay');
+  if(overlay) overlay.classList.remove('open');
+  comensalesMesaId = null;
+}
+
+function confirmarModalComensales(){
+  if(!comensalesMesaId) return;
+  var id = comensalesMesaId;
+  
+  var meseroVal = document.getElementById('comensales-mesero') ? document.getElementById('comensales-mesero').value : '';
+  var personasVal = document.getElementById('comensales-personas') ? document.getElementById('comensales-personas').value : '';
+  var clienteVal = document.getElementById('comensales-cliente') ? document.getElementById('comensales-cliente').value : '';
+  
+  // Guardar datos en la mesa en Firebase
+  db.ref('negocios/'+negocioID+'/mesas/'+id).update({
+    mesero: meseroVal,
+    personas: personasVal,
+    cliente_nombre: clienteVal
   });
   
+  // Sincronizar inputs ocultos/visibles en canal-detail
+  var hMesero = document.getElementById('mesa-mesero');
+  var hPersonas = document.getElementById('mesa-personas');
+  var hCliente = document.getElementById('mesa-cliente-nombre');
+  if(hMesero) hMesero.value = meseroVal;
+  if(hPersonas) hPersonas.value = personasVal;
+  if(hCliente) hCliente.value = clienteVal;
+  
+  // Ejecutar selección de mesa (limpia el carrito, inicia nueva orden)
+  selMesa(id);
+  
+  // Cerrar modal de comensales y el de selección de mesas
+  cerrarModalComensales();
+  cerrarMesaModal();
+  
+  // Cambiar a la pestaña de menú en móvil/tablet
   setTimeout(function(){
-    cerrarMesaModal();
+    var mobTabs = document.getElementById('mobile-tabs');
+    if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
+      switchMobileTab(2);
+    }
   }, 150);
+}
+
+function selMesaModal(id){
+  var m = _mesas[id] || {};
+  var estaOcupada = m.estado && m.estado !== 'libre';
+  
+  if (estaOcupada) {
+    selMesa(id);
+    
+    // Actualizar clase seleccionada en la lista del modal
+    document.querySelectorAll('#mesa-view-list .mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
+    var btn = document.getElementById('pos-btn-mesa-' + id);
+    if(btn) btn.classList.add('seleccionada');
+    var btnMy = document.getElementById('pos-btn-mesa-my-' + id);
+    if(btnMy) btnMy.classList.add('seleccionada');
+    
+    setTimeout(function(){
+      cerrarMesaModal();
+      var mobTabs = document.getElementById('mobile-tabs');
+      if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
+        switchMobileTab(2);
+      }
+    }, 150);
+  } else {
+    abrirModalComensales(id);
+  }
 }
 
 /* Update the quick-action Mesa button label to show selected table */
@@ -3019,6 +3149,14 @@ function guardarDatosMesaModal(){
     cliente_nombre: clienteNombre
   });
   
+  if (ORDEN) {
+    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update({
+      mesero: mesero,
+      personas: personas,
+      cliente: 'Mesa ' + MESA_SEL + (clienteNombre ? ' (' + clienteNombre + ')' : '')
+    });
+  }
+  
   renderCanalDetail();
 }
 
@@ -3034,6 +3172,14 @@ function guardarDatosMesa(){
     cliente_nombre: clienteNombre
   });
   
+  if (ORDEN) {
+    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update({
+      mesero: mesero,
+      personas: personas,
+      cliente: 'Mesa ' + MESA_SEL + (clienteNombre ? ' (' + clienteNombre + ')' : '')
+    });
+  }
+  
   actualizarGuiaMesaBar();
 }
 
@@ -3041,15 +3187,7 @@ function guardarDatosMesa(){
 /* ═══════════════════════════════════════
    MESAS / REPARTIDORES
 ═══════════════════════════════════════ */
-var _configSonidos = { cocina: true, bar: false };
-
 function cargarBiz(){
-  db.ref('negocios/'+negocioID+'/config/sonidos').on('value', function(snap) {
-    if (snap.exists()) {
-      _configSonidos = snap.val();
-    }
-  });
-
   db.ref('negocios/'+negocioID+'/info').on('value', function(snap){
     _biz = snap.val() || {};
     document.getElementById('tb-neg').textContent = _biz.nombre || 'Restaurante';
@@ -3066,125 +3204,29 @@ function cargarMesas(){
   });
 }
 
-function iniciarNuevaOrdenMesa(n) {
-  pedido = [];
-  _notaCocina = '';
-  _paxAprobado = false;
-  _paxCancelado = false;
-  window._pagoTarjetaDetalles = null;
-  _fireActivo = false;
-  _descuentoAplicado = 0;
-  _descDUI = '';
-  var fb = document.getElementById('btn-fire');
-  if(fb){ fb.classList.remove('active'); fb.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora'; }
-  var db2 = document.getElementById('ck-desc-badge');
-  if(db2) db2.style.display = 'none';
-  
-  var clk = document.getElementById('tb-clock');
-  if (clk) clk.textContent = '--:--';
-
-  generarOrden();
-  renderCart();
-  renderCanalDetail();
-}
-
-function abrirDatosMesaModal(id){
-  cerrarMesaModal();
-  var overlay = document.getElementById('datos-mesa-overlay');
-  if(overlay) overlay.style.display = 'flex';
-
-  var tituloNum = document.getElementById('datos-mesa-titulo-num');
-  if(tituloNum) tituloNum.textContent = '#' + id;
-
-  var selDropdown = document.getElementById('mesa-mesero-modal-floating');
-  if(selDropdown) {
-    selDropdown.innerHTML = '<option value="">Seleccionar...</option>';
-    _empleados.forEach(function(e){
-      var opt = document.createElement('option');
-      opt.value = e.nombre;
-      opt.textContent = e.nombre;
-      selDropdown.appendChild(opt);
-    });
-    selDropdown.value = _loggedMesero || '';
-  }
-
-  db.ref('negocios/'+negocioID+'/mesas/'+id).once('value', function(snap){
-    var m = snap.val() || {};
-    var personasInput = document.getElementById('mesa-personas-modal-floating');
-    var clienteInput = document.getElementById('mesa-cliente-nombre-modal-floating');
-    if(selDropdown && m.mesero) selDropdown.value = m.mesero;
-    if(personasInput) personasInput.value = m.personas || '';
-    if(clienteInput) clienteInput.value = m.cliente_nombre || '';
-  });
-}
-
-function cerrarDatosMesaModal(){
-  var overlay = document.getElementById('datos-mesa-overlay');
-  if(overlay) overlay.style.display = 'none';
-}
-
-function guardarDatosMesaFloating(){
-  if(!MESA_SEL) return;
-  var mesero = document.getElementById('mesa-mesero-modal-floating').value;
-  var personas = document.getElementById('mesa-personas-modal-floating').value;
-  var clienteNombre = document.getElementById('mesa-cliente-nombre-modal-floating').value;
-  
-  var hMesero = document.getElementById('mesa-mesero');
-  var hPersonas = document.getElementById('mesa-personas');
-  var hCliente = document.getElementById('mesa-cliente-nombre');
-  if(hMesero) hMesero.value = mesero;
-  if(hPersonas) hPersonas.value = personas;
-  if(hCliente) hCliente.value = clienteNombre;
-  
-  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-    mesero: mesero,
-    personas: personas,
-    cliente_nombre: clienteNombre
-  });
-  
-  cerrarDatosMesaModal();
-  renderCanalDetail();
-  
-  // Cambiar a Tab 2 (Orden/Menú) si estamos en vista móvil/tablet vertical
-  setTimeout(function(){
-    var mobTabs = document.getElementById('mobile-tabs');
-    if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
-      switchMobileTab(2);
-    }
-  }, 100);
-}
-
 function selMesa(n){
-  if (CANAL !== 'mesa') {
-    setCanal('mesa');
-  }
-
   // Admin puede acceder a todas las mesas
   if (_isTablet && !_esAdmin && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
     if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()) {
-      toast('⚠️ Mesa de ' + m.mesero + ' - Solo el admin puede acceder a mesas de otros meseros', 'err');
+      toast('🔒 Mesa de ' + m.mesero + ' — Solo el admin puede acceder a mesas de otros meseros', 'err');
       return;
     }
   }
 
   MESA_SEL = n;
-  
-  // Limpiar el carrito inmediatamente para evitar que se mezclen productos de la mesa anterior
-  pedido = [];
-  renderCart();
-  var cartContainer = document.getElementById('cart-items');
-  if (cartContainer) {
-    cartContainer.innerHTML = '<div class="empty-cart"><div class="ei"><i class="fa-solid fa-spinner fa-spin"></i></div><p>Cargando mesa ' + n + '...</p></div>';
-  }
-
   document.querySelectorAll('.mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
   var btn = document.getElementById('pos-btn-mesa-' + n);
   if(btn) btn.classList.add('seleccionada');
+  var btnMy = document.getElementById('pos-btn-mesa-my-' + n);
+  if(btnMy) btnMy.classList.add('seleccionada');
   clearInterval(_timerInterval);
+  
   db.ref('negocios/'+negocioID+'/mesas/'+n).once('value', function(snap){
-    if (MESA_SEL !== n) return;
     var m = snap.val() || {};
+    
+    // Guard against fast switching
+    if (MESA_SEL !== n || CANAL !== 'mesa') return;
     
     // Sincronizar inputs (ocultos o visibles en canal-detail)
     var hMesero = document.getElementById('mesa-mesero');
@@ -3192,29 +3234,28 @@ function selMesa(n){
     var hCliente = document.getElementById('mesa-cliente-nombre');
     if (hMesero) {
       hMesero.value = m.mesero || _loggedMesero || '';
-      if (hMesero.tagName === 'SELECT' && typeof actualizarDropdownMeseros === 'function') {
-        hMesero.value = m.mesero || _loggedMesero || '';
-      }
     }
     if (hPersonas) hPersonas.value = m.personas || '';
     if (hCliente) hCliente.value = m.cliente_nombre || '';
     
     actualizarGuiaMesaBar();
     
-    // Auto switch to Tab 2 (Orden/Menú) on mobile/portrait tablet view (solamente si NO es tablet)
+    // Auto switch to Tab 2 (Orden/Menú) on mobile/portrait tablet view
     setTimeout(function(){
+      if (MESA_SEL !== n || CANAL !== 'mesa') return;
       var mobTabs = document.getElementById('mobile-tabs');
       if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
-        if (!_isTablet) {
-          switchMobileTab(2);
-        }
+        switchMobileTab(2);
       }
     }, 150);
     
     if(m && m.pedido_activo_id){
       db.ref('negocios/'+negocioID+'/pedidos/'+m.pedido_activo_id).once('value', function(ps){
-        if (MESA_SEL !== n) return;
         var pd = ps.val();
+        
+        // Guard against fast switching
+        if (MESA_SEL !== n || CANAL !== 'mesa' || _mesas[n].pedido_activo_id !== m.pedido_activo_id) return;
+        
         if(pd && pd.items && pd.estado !== 'pagado'){
           pedido = (pd.items || []).map(function(item) {
             item.enviado = true;
@@ -3227,32 +3268,30 @@ function selMesa(n){
           toast('📋 Orden abierta — Mesa '+n,'ok');
           if(pd.timestamp){
             _timerInterval = setInterval(function(){
+              if (MESA_SEL !== n || CANAL !== 'mesa' || ORDEN !== m.pedido_activo_id) {
+                clearInterval(_timerInterval);
+                return;
+              }
               var diff = Math.floor((Date.now()-pd.timestamp)/1000);
               var m2=Math.floor(diff/60), s=diff%60;
               document.getElementById('tb-clock').textContent = String(m2).padStart(2,'0')+':'+String(s).padStart(2,'0');
             },1000);
           }
-        } else {
-          iniciarNuevaOrdenMesa(n);
-        }
-        
-        // ABRIR EL MODAL FLOTANTE DE DATOS DE MESA EN TABLET
-        if (_isTablet) {
-          abrirDatosMesaModal(n);
-        }
-      }, function(err) {
-        if (MESA_SEL !== n) return;
-        iniciarNuevaOrdenMesa(n);
-        if (_isTablet) {
-          abrirDatosMesaModal(n);
         }
       });
     } else {
-      if (MESA_SEL !== n) return;
-      iniciarNuevaOrdenMesa(n);
-      if (_isTablet) {
-        abrirDatosMesaModal(n);
-      }
+      // Mesa libre: limpiar el carrito y generar una nueva orden
+      pedido = [];
+      _notaCocina = '';
+      _descuentoAplicado = 0;
+      _descDUI = '';
+      var fb = document.getElementById('btn-fire');
+      if(fb){ fb.classList.remove('active'); fb.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora'; }
+      var db2 = document.getElementById('ck-desc-badge');
+      if(db2) db2.style.display = 'none';
+      
+      generarOrden(n, 'mesa');
+      renderCart();
     }
   });
 }
@@ -3277,10 +3316,16 @@ function cargarRepartidores(){
 /* ═══════════════════════════════════════
    PRODUCTOS / MENÚ
 ═══════════════════════════════════════ */
+// State for subcategories
+var _selectedMainCat = 'Todos';
+var _selectedSubCat = 'Todos';
+var _subCatsMap = {};
+
 function cargarProductos(){
   db.ref('negocios/'+negocioID+'/productos').on('value', function(snap){
     _prods = {};
     var cats = new Set(['Todos']);
+    _subCatsMap = {};
 
     // Try flat structure first
     snap.forEach(function(c){
@@ -3319,8 +3364,22 @@ function cargarProductos(){
           var catsCached = new Set(['Todos']);
           Object.values(_prods).forEach(function(p){ catsCached.add(p._cat || 'General'); });
           window._menuData = _prods;
-          renderCats(Array.from(catsCached));
-          renderProds(Object.values(_prods));
+          
+          var mainCatsCached = new Set(['Todos']);
+          catsCached.forEach(function(c) {
+            if (c === 'Todos') return;
+            var parts = c.split('-');
+            var main = parts[0].trim();
+            var sub = parts[1] ? parts[1].trim() : null;
+            mainCatsCached.add(main);
+            if (sub) {
+              if (!_subCatsMap[main]) _subCatsMap[main] = new Set(['Todos']);
+              _subCatsMap[main].add(sub);
+            }
+          });
+          
+          renderCats(Array.from(mainCatsCached));
+          filtrarCat(_selectedMainCat);
           toast('📦 Menú cargado desde caché offline','ok');
           return;
         } catch(e) { /* fallback to demo */ }
@@ -3329,9 +3388,25 @@ function cargarProductos(){
       return;
     }
 
+    // Process categories and subcategories
+    var mainCats = new Set(['Todos']);
+    cats.forEach(function(c) {
+      if (c === 'Todos') return;
+      var parts = c.split('-');
+      var main = parts[0].trim();
+      var sub = parts[1] ? parts[1].trim() : null;
+      mainCats.add(main);
+      if (sub) {
+        if (!_subCatsMap[main]) _subCatsMap[main] = new Set(['Todos']);
+        _subCatsMap[main].add(sub);
+      }
+    });
+
     window._menuData = _prods; // Save reference for offline caching
-    renderCats(Array.from(cats));
-    renderProds(Object.values(_prods));
+    localStorage.setItem('offline_menu_' + negocioID, JSON.stringify(_prods));
+    
+    renderCats(Array.from(mainCats));
+    filtrarCat(_selectedMainCat);
   });
 }
 
@@ -3360,49 +3435,148 @@ function renderCats(cats){
   s.innerHTML = '';
   cats.forEach(function(c){
     var btn = document.createElement('button');
-    btn.className = 'cat-btn' + (c==='Todos'?' active':'');
+    btn.className = 'cat-btn' + (c===_selectedMainCat?' active':'');
     btn.textContent = c;
     btn.onclick = function(){ filtrarCat(c,btn); };
     s.appendChild(btn);
   });
 }
 
+function filtrarCat(mainCat, btn){
+  _selectedMainCat = mainCat;
+  _selectedSubCat = 'Todos'; // Reset subcategory when main category changes
+  
+  if (btn) {
+    document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  } else {
+    document.querySelectorAll('.cat-btn').forEach(function(b){
+      if (b.textContent === mainCat) {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+  }
 
-function filtrarCat(cat, btn){
-  document.querySelectorAll('.cat-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  var prods = cat==='Todos' ? Object.values(_prods) : Object.values(_prods).filter(function(p){ return p._cat===cat; });
+  // Render subcategories if they exist for this main category
+  var subScroll = document.getElementById('subcat-scroll');
+  if (subScroll) {
+    if (_subCatsMap[mainCat] && _subCatsMap[mainCat].size > 1) {
+      subScroll.style.display = 'flex';
+      subScroll.innerHTML = '';
+      Array.from(_subCatsMap[mainCat]).forEach(function(sub) {
+        var subBtn = document.createElement('button');
+        subBtn.className = 'subcat-btn' + (sub === _selectedSubCat ? ' active' : '');
+        subBtn.textContent = sub;
+        subBtn.onclick = function() { filtrarSubCat(sub, subBtn); };
+        subScroll.appendChild(subBtn);
+      });
+    } else {
+      subScroll.style.display = 'none';
+      subScroll.innerHTML = '';
+    }
+  }
+
+  aplicarFiltros();
+}
+
+function filtrarSubCat(subCat, btn) {
+  _selectedSubCat = subCat;
+  if (btn) {
+    document.querySelectorAll('.subcat-btn').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+  }
+  aplicarFiltros();
+}
+
+function aplicarFiltros() {
+  var prods = Object.values(_prods);
+  
+  // Filter by search query if any
+  var searchVal = document.getElementById('prod-search').value.trim().toLowerCase();
+  if (searchVal) {
+    prods = prods.filter(function(p){
+      return p.nombre.toLowerCase().includes(searchVal);
+    });
+  } else {
+    // Filter by main category
+    if (_selectedMainCat !== 'Todos') {
+      prods = prods.filter(function(p) {
+        var parts = p._cat.split('-');
+        var main = parts[0].trim();
+        return main === _selectedMainCat;
+      });
+      
+      // Filter by subcategory if any specific selected
+      if (_selectedSubCat !== 'Todos') {
+        prods = prods.filter(function(p) {
+          var parts = p._cat.split('-');
+          var sub = parts[1] ? parts[1].trim() : null;
+          return sub === _selectedSubCat;
+        });
+      }
+    }
+  }
+  
   renderProds(prods);
 }
 
 function buscarProducto(q){
-  var prods = Object.values(_prods).filter(function(p){
-    return p.nombre.toLowerCase().includes(q.toLowerCase());
-  });
-  renderProds(prods);
+  aplicarFiltros();
 }
 
 function renderProds(prods){
   var g = document.getElementById('prod-grid');
   if(!prods.length){ g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin resultados</div>'; return; }
   g.innerHTML = prods.map(function(p){
-    var agotado = p.disponible===false || p.activo===false || p.oculto===true ? 'agotado' : '';
+    var stockVal = parseFloat(p.stockFijo || 0);
+    var descStock = !!p.descuenta;
+    var isAgotado = p.disponible===false || p.activo===false || p.oculto===true || (descStock && stockVal <= 0);
+    var agotado = isAgotado ? 'agotado' : '';
     var precio = parseFloat(p.precio || p.precio_venta || 0);
     var emoji = p.emoji || p.icono || '🍽️';
+    
+    // Stock badge
+    var stockBadge = '';
+    if (descStock && !isAgotado) {
+      if (stockVal <= 5) {
+        stockBadge = '<span class="prod-tag-inline" style="background:#ea580c;color:white;border-color:rgba(255,255,255,0.25);font-size:10px;font-weight:900;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:3px;margin-left:6px;"><i class="fa-solid fa-triangle-exclamation" style="font-size:8px"></i> ' + stockVal + '</span>';
+      } else {
+        stockBadge = '<span class="prod-tag-inline" style="background:rgba(16,185,129,0.85);color:white;border-color:rgba(255,255,255,0.25);font-size:10px;font-weight:900;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:3px;margin-left:6px;"><i class="fa-solid fa-box" style="font-size:8px"></i> ' + stockVal + '</span>';
+      }
+    }
+    
+    // Time badge (explicitly positioned relative to the card now)
+    var timeBadge = (p.tiempo_prep_min && !isAgotado)
+      ? '<span class="prod-tag-inline" style="background:rgba(0,0,0,0.6);color:white;font-size:10px;font-weight:900;padding:2px 8px;border-radius:10px;border:1px solid rgba(255,255,255,0.1);backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:3px;margin-left:6px;"><i class="fa-regular fa-clock" style="font-size:8px"></i> '+p.tiempo_prep_min+'m</span>'
+      : '';
+      
+    // Agotado badge overlays the entire card
+    var agotadoBadge = isAgotado 
+      ? '<div style="position:absolute;inset:0;background:rgba(15,23,42,0.8);display:flex;align-items:center;justify-content:center;z-index:2;border-radius:20px;backdrop-filter:blur(2px);">'
+        +'<span style="background:#ef4444;color:white;font-size:10px;font-weight:800;padding:6px 12px;border-radius:20px;box-shadow:0 4px 12px rgba(239,68,68,0.4)">AGOTADO</span>'
+        +'</div>' 
+      : '';
+      
     var imgContent = p.img
       ? '<img src="'+p.img+'" alt="'+p.nombre+'" loading="lazy" style="width:100%;height:100%;object-fit:cover">'
         +'<div class="prod-img-fallback" style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:48px">'+emoji+'</div>'
       : '<div style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:48px">'+emoji+'</div>';
-    var timeBadge = p.tiempo_prep_min ? '<div class="prod-tag"><i class="fa-regular fa-clock"></i> '+p.tiempo_prep_min+'m</div>' : '';
-    var agotadoBadge = agotado ? '<div style="position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:2"><span style="background:var(--red);color:white;font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px">AGOTADO</span></div>' : '';
+
     return '<div class="prod-card '+agotado+'" onclick="addItem(\''+p._id+'\')" title="'+p.nombre+'">'
-      +'<div class="prod-img">'+imgContent+timeBadge+agotadoBadge+'</div>'
-      +'<div class="prod-info-bar">'
-        +'<div class="prod-name">'+p.nombre+'</div>'
-        +'<div class="prod-price">$'+precio.toFixed(2)+'</div>'
-      +'</div>'
-      +'<button class="prod-add" onclick="addItem(\''+p._id+'\');event.stopPropagation()">+</button>'
-      +'</div>';
+      + agotadoBadge
+      + '<div class="prod-img" style="display:none;">'+imgContent+'</div>'
+      + '<div class="prod-info-bar">'
+        + '<div class="prod-name">'+p.nombre+'</div>'
+        + '<div style="display:flex;align-items:center;margin-top:auto;flex-wrap:wrap;gap:2px;">'
+          + '<div class="prod-price" style="margin-top:0;">$'+precio.toFixed(2)+'</div>'
+          + stockBadge
+          + timeBadge
+        + '</div>'
+      + '</div>'
+      + '<button class="prod-add" onclick="addItem(\''+p._id+'\');event.stopPropagation()">+</button>'
+      + '</div>';
   }).join('');
 }
 
@@ -3412,9 +3586,21 @@ function renderProds(prods){
 function addItem(id){
   var p = _prods[id];
   if(!p) return;
+  
+  var stockMax = p.descuenta ? parseFloat(p.stockFijo || 0) : Infinity;
+  var agotado = p.disponible===false || p.activo===false || p.oculto===true || (p.descuenta && stockMax <= 0);
+  if(agotado){
+    toast('⚠ Producto agotado / no disponible','warn');
+    return;
+  }
+
   var precio = parseFloat(p.precio || p.precio_venta || 0);
   var idx = pedido.findIndex(function(i){ return i.id===id && !i.nota && !i.enviado; });
   if(idx >= 0){
+    if(p.descuenta && pedido[idx].cant >= stockMax){
+      toast('⚠ Solo hay ' + stockMax + ' unidades en stock','warn');
+      return;
+    }
     pedido[idx].cant++;
     pedido[idx].total = pedido[idx].cant * pedido[idx].precio;
   } else {
@@ -3434,6 +3620,16 @@ function updateCant(idx, val){
   var n = parseInt(val) || 1;
   if(n <= 0){ removeItem(idx); return; }
   if(idx < 0 || idx >= pedido.length) return;
+  var item = pedido[idx];
+  var p = _prods[item.id];
+  if(p && p.descuenta){
+    var stockMax = parseFloat(p.stockFijo || 0);
+    if(n > stockMax){
+      toast('⚠ Solo hay ' + stockMax + ' unidades en stock','warn');
+      n = stockMax;
+      if (n <= 0) { removeItem(idx); return; }
+    }
+  }
   pedido[idx].cant = n;
   pedido[idx].total = n * pedido[idx].precio;
   calcTotales();
@@ -3601,10 +3797,18 @@ function calcTotales(){
 /* ═══════════════════════════════════════
    ORDEN ID
 ═══════════════════════════════════════ */
-function generarOrden(){
+function generarOrden(targetMesa, targetCanal){
+  var startMesa = targetMesa !== undefined ? targetMesa : (CANAL === 'mesa' ? MESA_SEL : null);
+  var startCanal = targetCanal !== undefined ? targetCanal : CANAL;
+
   db.ref('negocios/'+negocioID+'/contador_food_orders').transaction(function(v){ return (v||0)+1; }, function(e, ok, snap){
     if(ok){
-      var prefix = {mesa:'MESA',llevar:'LLEV',domicilio:'DOM'}[CANAL] || 'FOOD';
+      var currentMesa = CANAL === 'mesa' ? MESA_SEL : null;
+      if (CANAL !== startCanal || currentMesa !== startMesa) {
+        console.warn("generarOrden: Cambio de mesa/canal detectado, ignorando ID de orden generado.");
+        return;
+      }
+      var prefix = {mesa:'MESA',llevar:'LLEV',domicilio:'DOM'}[startCanal] || 'FOOD';
       ORDEN = prefix+'-'+String(snap.val()).padStart(4,'0');
       document.getElementById('tb-ord').textContent = ORDEN;
       document.getElementById('ord-num').textContent = ORDEN;
@@ -3889,11 +4093,16 @@ function imprimirSolicitudCuenta(){
     +'</style></head><body>';
 
   /* --- ENCABEZADO --- */
-  html += '<div class="c" style="margin-bottom:10px;text-align:center;">';
-  html += '<div class="b" style="font-size:16px;">EL PARCHE</div>';
-  html += '<div class="xs" style="font-size:11px;">EREGUAYQUIN , USULUTAN</div>';
-  html += '<div class="xs" style="font-size:11px;">TEL. 7854-7797 NRC 384588-5</div>';
-  html += '</div>';
+  if (bizN.toUpperCase().includes("EL PARCHE") || bizN.toUpperCase().includes("PARCHE")) {
+    html += '<div class="c" style="margin-bottom:8px;">'
+      + '<div class="b" style="font-size:16px;">EL PARCHE</div>'
+      + '<div class="xs">EREGUAYQUIN , USULUTAN</div>'
+      + '<div class="xs">TEL. 7854-7797</div>'
+      + '<div class="xs">NRC 384588-5</div>'
+      + '</div>';
+  } else {
+    html += '<div class="c" style="margin-bottom:8px;"><div class="b" style="font-size:16px;">'+bizN+'</div></div>';
+  }
 
   /* --- TITULO --- */
   html += '<div class="title">SOLICITAR CUENTA</div>';
@@ -3944,11 +4153,78 @@ function imprimirSolicitudCuenta(){
 }
 
 /* ═══════════════════════════════════════
+   AJUSTE DE STOCK POR DIFERENCIA
+═══════════════════════════════════════ */
+function ajustarStockPorDiferencia(prevItems, newItems) {
+  if (_procesandoSplit) {
+    // Si estamos procesando un split, omitir el ajuste de stock
+    // ya que los productos ya fueron descontados en la orden original.
+    return;
+  }
+  
+  var diffs = {};
+  
+  // Analizar items previos (si existían, restamos de la diferencia porque se consideraron consumidos)
+  if (Array.isArray(prevItems)) {
+    prevItems.forEach(function(i) {
+      if (i && i.id) {
+        diffs[i.id] = (diffs[i.id] || 0) - (parseFloat(i.cant) || 0);
+      }
+    });
+  }
+  
+  // Analizar items nuevos (sumamos a la diferencia)
+  if (Array.isArray(newItems)) {
+    newItems.forEach(function(i) {
+      if (i && i.id) {
+        diffs[i.id] = (diffs[i.id] || 0) + (parseFloat(i.cant) || 0);
+      }
+    });
+  }
+  
+  // Aplicar ajustes en la base de datos
+  Object.keys(diffs).forEach(function(productId) {
+    var netQty = diffs[productId];
+    if (netQty === 0) return; // Sin cambios para este producto
+    
+    var p = _prods[productId];
+    if (!p || !p.descuenta) return; // Si el producto no existe o no descuenta stock, ignorar
+    
+    var category = p._cat || '';
+    
+    // Construir la ruta correcta en Firebase
+    var path = 'negocios/' + negocioID + '/productos/';
+    if (category && category !== 'General' && category !== 'Todos') {
+      path += category + '/' + productId + '/stockFijo';
+    } else {
+      path += productId + '/stockFijo';
+    }
+    
+    // Realizar la transacción atómica para sumar/restar el stock
+    db.ref(path).transaction(function(currentStock) {
+      var current = (currentStock === null) ? 0 : parseFloat(currentStock);
+      var newStock = current - netQty; // netQty positivo reduce stock, netQty negativo lo aumenta
+      return newStock < 0 ? 0 : newStock;
+    }, function(error, committed, snapshot) {
+      if (error) {
+        console.error("Error al ajustar stock en " + path + ":", error);
+      } else {
+        console.log("Ajuste de stock exitoso en " + path + ". Comprometido: " + committed + ". Nuevo stock: " + (snapshot ? snapshot.val() : "N/A"));
+      }
+    });
+  });
+}
+
+/* ═══════════════════════════════════════
    PROCESAR ORDEN
 ═══════════════════════════════════════ */
 function procesarOrden(tipoAccion){
   if(!pedido.length){ toast('Agrega al menos un platillo','err'); return; }
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
+
+  var saveMesa = MESA_SEL;
+  var saveCanal = CANAL;
+  var saveOrden = ORDEN;
 
   var sub = pedido.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
   var tip = tipoAccion==='cobrar' ? (parseFloat(document.getElementById('ck-tip-input').value)||0) : 0;
@@ -3985,12 +4261,24 @@ function procesarOrden(tipoAccion){
   }
 
   // Get or create timestamp and check if it exists in cocina_orders
-  var refPed = db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/timestamp');
+  var refPed = db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN);
   var refCoc = db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN);
   
   Promise.all([refPed.once('value'), refCoc.once('value')]).then(function(results){
-    var ts = results[0].exists() ? results[0].val() : Date.now();
+    var orderSnap = results[0];
     var existeEnCocina = results[1].exists();
+    
+    var ts = Date.now();
+    var prevItems = [];
+    if (orderSnap.exists()) {
+      var orderVal = orderSnap.val();
+      ts = orderVal.timestamp || ts;
+      prevItems = orderVal.items || [];
+    }
+    
+    // Calcular diferencias de stock y actualizar Firebase
+    ajustarStockPorDiferencia(prevItems, pedido);
+    
     ejecutarGuardado(ts, existeEnCocina);
   }).catch(function(err){
     console.error(err);
@@ -4002,9 +4290,16 @@ function procesarOrden(tipoAccion){
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
 
-    var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS'];
+    var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
     function _esBarCatLocal(cat){
-      return _BAR_CATS.indexOf((cat||'').trim().toUpperCase()) !== -1;
+      var c = (cat||'').trim().toUpperCase();
+      var parts = c.split(/[-/:]/);
+      var parent = parts[0].trim();
+      if (_BAR_CATS.indexOf(c) !== -1) return true;
+      if (_BAR_CATS.indexOf(parent) !== -1) return true;
+      if (c.indexOf('BEBIDA') !== -1 || c.indexOf('CERVEZA') !== -1 || c.indexOf('COCTEL') !== -1 || c.indexOf('LICOR') !== -1) return true;
+      if (parent.indexOf('BEBIDA') !== -1 || parent.indexOf('CERVEZA') !== -1 || parent.indexOf('COCTEL') !== -1 || parent.indexOf('LICOR') !== -1) return true;
+      return false;
     }
 
     pedido.forEach(function(i) {
@@ -4161,28 +4456,35 @@ function procesarOrden(tipoAccion){
           btnCocina.disabled = false;
           btnCocina.innerHTML = originalHtml;
       }
-      clearInterval(_timerInterval);
-      if(tipoAccion==='guardar'){
-        toast('✅ '+ORDEN+' enviada a cocina','ok');
-        nuevaOrden();
-      } else {
-        if (_isTablet && !_procesandoSplit) {
+      
+      // Guard against fast switching: check if the user is still on the same table and channel
+      if (CANAL === saveCanal && (CANAL !== 'mesa' || MESA_SEL === saveMesa) && ORDEN === saveOrden) {
+        clearInterval(_timerInterval);
+        if(tipoAccion==='guardar'){
+          toast('✅ '+saveOrden+' enviada a cocina','ok');
           nuevaOrden();
         } else {
-          toast('✅ '+ORDEN+' cobrada — '+_dteModalActual,'ok');
-          
-          // Mostrar vista de éxito
-          document.getElementById('ck-success-total').textContent = '$' + total.toFixed(2);
-          document.getElementById('ck-success-vuelto').textContent = '$' + Math.max(0, abono - total).toFixed(2);
-          
-          var formView = document.getElementById('ck-form-view');
-          var successView = document.getElementById('ck-success-view');
-          if (formView) formView.style.display = 'none';
-          if (successView) successView.style.display = 'flex';
-          
-          // Imprimir automáticamente el tique de 80mm AON / 57mm Bluetooth
-          imprimirTicket(true);
+          if (_isTablet && !_procesandoSplit) {
+            nuevaOrden();
+          } else {
+            toast('✅ '+saveOrden+' cobrada — '+_dteModalActual,'ok');
+            
+            // Mostrar vista de éxito
+            document.getElementById('ck-success-total').textContent = '$' + total.toFixed(2);
+            document.getElementById('ck-success-vuelto').textContent = '$' + Math.max(0, abono - total).toFixed(2);
+            
+            var formView = document.getElementById('ck-form-view');
+            var successView = document.getElementById('ck-success-view');
+            if (formView) formView.style.display = 'none';
+            if (successView) successView.style.display = 'flex';
+            
+            // Imprimir automáticamente el tique de 80mm AON / 57mm Bluetooth
+            imprimirTicket(true);
+          }
         }
+      } else {
+        console.warn("procesarOrden: Guardado completado pero se omitió el reset de la interfaz por cambio de mesa.");
+        toast('✅ Orden '+saveOrden+' guardada en segundo plano','ok');
       }
       var btn = document.getElementById('btn-cobrar-final');
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
@@ -4202,88 +4504,8 @@ function finalizarYLimpiarVenta() {
   cerrarCheckout();
   
   if (_procesandoSplit) {
-    // Restar el ticket cobrado del pedido original
-    var itemsCobrados = pedido; // porque 'pedido' contiene los items del ticket actual
-    var remainingUnpaidItems = actualizarPedidoOriginalRestandoTicket(itemsCobrados);
-    
-    if (remainingUnpaidItems.length > 0) {
-      // Quedan artículos sin pagar
-      var sub = remainingUnpaidItems.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
-      
-      // Actualizar orden principal en Firebase
-      var saves = [
-        db.ref('negocios/'+negocioID+'/pedidos/'+_originalOrdenId).update({
-          items: remainingUnpaidItems,
-          subtotal: sub.toFixed(2),
-          total: sub.toFixed(2)
-        })
-      ];
-      
-      // Mantener mesa ocupada con los artículos restantes
-      if (CANAL === 'mesa' && MESA_SEL) {
-        saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-          pedido_activo_id: _originalOrdenId,
-          estado: 'ocupada'
-        }));
-      }
-      
-      Promise.all(saves).then(function() {
-        _originalPedido = remainingUnpaidItems;
-        pedido = JSON.parse(JSON.stringify(remainingUnpaidItems));
-        ORDEN = _originalOrdenId;
-        
-        // 1. Obtener el ID del ticket cobrado
-        var ticketCobradoId = _splitTickets[_ticketCobrandoIdx] ? _splitTickets[_ticketCobrandoIdx].id : null;
-        
-        // 2. Eliminar el ticket cobrado de _splitTickets
-        if (ticketCobradoId !== null) {
-          _splitTickets = _splitTickets.filter(function(t) {
-            return t.id !== ticketCobradoId;
-          });
-        }
-        
-        // 3. Reajustar keys e indices de los tickets restantes
-        reconstruirKeysYIndicesTicketsRestantes(_splitTickets, remainingUnpaidItems);
-        
-        toast('✅ Ticket cobrado. Artículos pendientes actualizados.', 'ok');
-        
-        // 4. Continuar secuencia de cobro o reabrir el modal con los restantes
-        if (_cobroSecuencial && _splitTickets.length > 0) {
-          // Lógica secuencial: cobrar el siguiente ticket automáticamente
-          cobrarTicketEspecifico(0);
-        } else {
-          // Lógica individual: mantener en split y reabrir modal para seguir cobrando manualmente
-          _procesandoSplit = false;
-          _cobroSecuencial = false;
-          renderCart();
-          renderSplit();
-          document.getElementById('split-overlay').classList.add('open');
-        }
-      }).catch(function(err) {
-        console.error(err);
-        toast('Error al actualizar la orden principal.', 'err');
-      });
-    } else {
-      // Todo pagado! Liberar la mesa
-      var saves = [];
-      if (CANAL === 'mesa' && MESA_SEL) {
-        saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-          mesa_num: '',
-          mesero: '',
-          personas: 1,
-          estado: 'libre',
-          pedido_activo_id: null,
-          timestamp: Date.now()
-        }));
-      }
-      
-      Promise.all(saves).then(function() {
-        _procesandoSplit = false;
-        _cobroSecuencial = false;
-        toast('🎉 Mesa completamente pagada y liberada.', 'ok');
-        nuevaOrden();
-      });
-    }
+    _ticketCobrandoIdx++;
+    cobrarSiguienteTicketSplit();
   } else {
     nuevaOrden();
   }
@@ -4534,11 +4756,25 @@ async function imprimirTicket(soloImprimir){
   html += '</head><body>';
 
   /* 1. ENCABEZADO */
-  html += '<div class="c" style="text-align:center;">';
+  html += '<div class="c">';
   if(logoUrl) html += '<img src="'+logoUrl+'" class="logo"><br>';
-  html += '<div class="b" style="font-size:18px">EL PARCHE</div>';
-  html += '<div class="xs" style="font-size:11px;">EREGUAYQUIN , USULUTAN</div>';
-  html += '<div class="xs" style="font-size:11px;">TEL. 7854-7797 NRC 384588-5</div>';
+  if (bizNombre.includes("EL PARCHE") || bizNombre.includes("PARCHE")) {
+    html += '<div class="b" style="font-size:18px">EL PARCHE</div>'
+      + '<div class="xs">EREGUAYQUIN , USULUTAN</div>'
+      + '<div class="xs">TEL. 7854-7797</div>'
+      + '<div class="xs">NRC 384588-5</div>';
+  } else {
+    html += '<div class="b" style="font-size:18px">'+bizNombre+'</div>';
+    if(bizRazon && bizRazon!==bizNombre) html += '<div class="sm">'+bizRazon+'</div>';
+    if(bizEslog) html += '<div class="xs" style="font-style:italic">'+bizEslog+'</div>';
+    html += '<div class="xs" style="margin-top:3px">';
+    if(bizNit) html += 'NIT: '+bizNit+'&nbsp;&nbsp;';
+    if(bizNrc) html += 'NRC: '+bizNrc;
+    html += '</div>';
+    if(bizDir)   html += '<div class="xs">'+bizDir+'</div>';
+    if(bizTel)   html += '<div class="xs">Tel: '+bizTel+'</div>';
+    if(bizEmail) html += '<div class="xs">'+bizEmail+'</div>';
+  }
   html += '</div>';
 
   /* 2. TIPO DOCUMENTO */
@@ -4693,9 +4929,18 @@ function formatTicket57mm() {
   var text = "";
   
   // Header
-  text += "[C][B][D]EL PARCHE[/D][/B]\n";
-  text += "[C]EREGUAYQUIN , USULUTAN\n";
-  text += "[C]TEL. 7854-7797 NRC 384588-5\n";
+  if (bizNombre.includes("EL PARCHE") || bizNombre.includes("PARCHE")) {
+    text += "[C][B][D]EL PARCHE[/D][/B]\n";
+    text += "[C]EREGUAYQUIN , USULUTAN\n";
+    text += "[C]TEL. 7854-7797\n";
+    text += "[C]NRC 384588-5\n";
+  } else {
+    text += "[C][B][D]" + bizNombre + "[/D][/B]\n";
+    if (bizDir) text += "[C]" + bizDir + "\n";
+    if (bizTel) text += "[C]Tel: " + bizTel + "\n";
+    if (bizNit) text += "[C]NIT: " + bizNit + "\n";
+    if (bizNrc) text += "[C]NRC: " + bizNrc + "\n";
+  }
   text += "[HR]\n";
   
   // Document Type
@@ -5062,7 +5307,6 @@ var _splitDragFrom = null; // 'source' | ticket index
 var _ticketsParaCobrar = [];
 var _ticketCobrandoIdx = 0;
 var _procesandoSplit = false;
-var _cobroSecuencial = false;
 var _originalOrdenId = '';
 var _originalPedido = [];
 
@@ -5122,14 +5366,7 @@ function renderSplit(){
     return '<div class="split-ticket" id="split-t-'+t.id+'" data-ticket="'+ti+'">'
       +'<div class="split-ticket-head">'
       +'<div class="split-ticket-name"><i class="fa-solid fa-receipt" style="font-size:10px"></i>'+t.nombre+'</div>'
-      +'<div style="display:flex; align-items:center; gap:6px;">'
-      +'<div class="split-ticket-total" style="margin-right:6px;">$'+tTotal.toFixed(2)+'</div>'
-      +(t.items.length
-        ? '<button onclick="imprimirSolicitudCuentaDeItems(_splitTickets['+ti+'].items, \''+t.nombre+'\')" style="background:var(--accent-light); border:1px solid var(--accent); color:var(--accent); border-radius:4px; padding:3px 6px; font-size:10px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;" title="Imprimir Pre-ticket"><i class="fa-solid fa-print"></i></button>'
-         +'<button onclick="cobrarTicketEspecifico('+ti+')" style="background:var(--accent); border:none; color:white; border-radius:4px; padding:3px 8px; font-size:10px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:3px;" title="Cobrar este ticket"><i class="fa-solid fa-cash-register"></i> Cobrar</button>'
-        : ''
-      )
-      +'</div>'
+      +'<div class="split-ticket-total">$'+tTotal.toFixed(2)+'</div>'
       +'</div>'
       +'<div class="split-ticket-items" id="split-ti-'+t.id+'">'
       +(t.items.length
@@ -5240,15 +5477,12 @@ function cobrarTicketsSplit(){
   // Guardar estado original
   _originalOrdenId = ORDEN;
   _originalPedido = JSON.parse(JSON.stringify(pedido));
-  
-  // Guardar solo los tickets que tienen productos
-  _splitTickets = JSON.parse(JSON.stringify(activeTickets));
-  
-  _cobroSecuencial = true;
+  _ticketsParaCobrar = JSON.parse(JSON.stringify(activeTickets));
+  _ticketCobrandoIdx = 0;
   _procesandoSplit = true;
 
   cerrarSplit();
-  cobrarTicketEspecifico(0);
+  cobrarSiguienteTicketSplit();
 }
 
 function cobrarSiguienteTicketSplit(){
@@ -5306,94 +5540,6 @@ function imprimirPreticketsSplit(){
   });
 }
 
-function cobrarTicketEspecifico(ti) {
-  var t = _splitTickets[ti];
-  if (!t || !t.items.length) {
-    toast('El ticket está vacío', 'err');
-    return;
-  }
-  
-  // Guardar estado original de la orden si no se ha guardado ya
-  if (!_originalOrdenId) {
-    _originalOrdenId = ORDEN;
-    _originalPedido = JSON.parse(JSON.stringify(pedido));
-  }
-  
-  // Configurar el pedido para este ticket
-  pedido = t.items;
-  
-  // ID de la orden para este ticket
-  ORDEN = _originalOrdenId + '-' + t.nombre.replace(/\s+/g, '');
-  
-  _ticketCobrandoIdx = ti;
-  _procesandoSplit = true;
-  
-  // Si no es cobro secuencial, se asume cobro individual
-  if (typeof _cobroSecuencial === 'undefined' || !_cobroSecuencial) {
-    _cobroSecuencial = false;
-  }
-  
-  cerrarSplit();
-  abrirCheckout();
-  
-  // Mostrar etiqueta en el checkout
-  var lbl = document.getElementById('ck-orden-lbl');
-  if (lbl) lbl.textContent = ORDEN + ' (' + t.nombre + ')';
-}
-
-function actualizarPedidoOriginalRestandoTicket(itemsCobrados) {
-  var nuevoPedido = JSON.parse(JSON.stringify(_originalPedido));
-  itemsCobrados.forEach(function(itemCobrado) {
-    var idx = itemCobrado._cartIdx;
-    if (nuevoPedido[idx]) {
-      nuevoPedido[idx].cant = (nuevoPedido[idx].cant || 0) - 1;
-    }
-  });
-  
-  // Filtrar los que tengan cant > 0
-  nuevoPedido = nuevoPedido.filter(function(it) {
-    return it.cant > 0;
-  });
-  
-  return nuevoPedido;
-}
-
-function reconstruirKeysYIndicesTicketsRestantes(remainingTickets, remainingUnpaidItems) {
-  var slotsPorProducto = {};
-  
-  remainingUnpaidItems.forEach(function(it, idx) {
-    var desc = (it.desc || it.nombre || '').trim().toUpperCase();
-    var price = parseFloat(it.precio || 0).toFixed(2);
-    var key = desc + '_' + price;
-    
-    if (!slotsPorProducto[key]) {
-      slotsPorProducto[key] = [];
-    }
-    var cant = it.cant || 1;
-    for (var q = 0; q < cant; q++) {
-      slotsPorProducto[key].push({ idx: idx, q: q });
-    }
-  });
-
-  remainingTickets.forEach(function(ticket) {
-    ticket.items.forEach(function(item) {
-      var desc = (item.desc || item.nombre || '').trim().toUpperCase();
-      var price = parseFloat(item.price || item.precio || 0).toFixed(2);
-      var key = desc + '_' + price;
-      
-      var slots = slotsPorProducto[key];
-      if (slots && slots.length > 0) {
-        var slot = slots.shift();
-        item._cartIdx = slot.idx;
-        item._splitKey = 'item_' + slot.idx + '_' + slot.q;
-      } else {
-        item._cartIdx = -1;
-        item._splitKey = 'item_unknown_' + Math.random();
-      }
-    });
-  });
-}
-
 function imprimirSolicitudCuentaDeItems(items, nombreTicket){
   const biz    = _biz || {};
   const bizN   = biz.nombre_comercial || biz.nombre || 'PARCHE SYS';
@@ -5426,6 +5572,18 @@ function imprimirSolicitudCuentaDeItems(items, nombreTicket){
     +'.aviso{text-align:center;font-size:11px;font-style:italic;margin-top:6px;opacity:.9;line-height:1.3;font-weight:normal}'
     +'@media print{body{margin:0;padding:2px 2px}}'
     +'</style></head><body>';
+
+  /* --- ENCABEZADO --- */
+  if (bizN.toUpperCase().includes("EL PARCHE") || bizN.toUpperCase().includes("PARCHE")) {
+    html += '<div class="c" style="margin-bottom:8px;">'
+      + '<div class="b" style="font-size:16px;">EL PARCHE</div>'
+      + '<div class="xs">EREGUAYQUIN , USULUTAN</div>'
+      + '<div class="xs">TEL. 7854-7797</div>'
+      + '<div class="xs">NRC 384588-5</div>'
+      + '</div>';
+  } else {
+    html += '<div class="c" style="margin-bottom:8px;"><div class="b" style="font-size:16px;">'+bizN+'</div></div>';
+  }
 
   /* --- TITULO --- */
   html += '<div class="title">SOLICITAR CUENTA<br>(' + nombreTicket.toUpperCase() + ')</div>';
@@ -5656,16 +5814,6 @@ function filtrarHistorial(){
   
   var filtradas = entries.filter(function(e){
     var v = e[1];
-    
-    // Filtrar para mostrar solo el historial del mesero/usuario activo
-    if (_loggedMesero) {
-      var mDb = (v.mesero || '').trim().toLowerCase();
-      var mLog = _loggedMesero.trim().toLowerCase();
-      if (mDb !== mLog) {
-        return false;
-      }
-    }
-    
     return !q || (v.orden||'').toLowerCase().includes(q) || (v.cliente||'').toLowerCase().includes(q) || (v.mesa_num||'').toString().includes(q);
   });
 
@@ -5828,14 +5976,8 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     if(bellEl) bellEl.textContent = "🍹";
     overlay.style.display = 'flex';
     
-    // Sonar solo si está configurado en Firebase (por defecto false)
-    if (_configSonidos && _configSonidos.bar === true) {
-      _kaBeep(true);
-      if(_kaInterval) clearInterval(_kaInterval);
-      _kaInterval = setInterval(function() { _kaBeep(true); }, 1600);
-    } else {
-      if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
-    }
+    // Bar no lleva sonido, solo vibración (si estuviera disponible)
+    if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
   } else {
     overlay.classList.add('ka-flash-red');
     if(titleEl) {
@@ -5845,15 +5987,9 @@ function mostrarAlarmaKitchen(mensaje, tipo){
     }
     if(bellEl) bellEl.textContent = "🔔";
     overlay.style.display = 'flex';
-    
-    // Sonar solo si cocina está activado (por defecto true)
-    if (!_configSonidos || _configSonidos.cocina !== false) {
-      _kaBeep(false);
-      if(_kaInterval) clearInterval(_kaInterval);
-      _kaInterval = setInterval(function() { _kaBeep(false); }, 1600);
-    } else {
-      if(_kaInterval) { clearInterval(_kaInterval); _kaInterval = null; }
-    }
+    _kaBeep(false);
+    if(_kaInterval) clearInterval(_kaInterval);
+    _kaInterval = setInterval(function() { _kaBeep(false); }, 1600);
   }
 }
 
@@ -5881,23 +6017,5 @@ function switchMobileTab(t){
   if(t===3) document.querySelector('.pnl-r').classList.add('active-tab');
 }
 </script>
-
-  <!-- Botón de Cerrar Sesión (Logout FAB) -->
-  <button id="logout-fab" title="Cerrar Sesión" onclick="cerrarSesionTablet()" style="position:fixed; bottom:30px; left:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border:2px solid rgba(255,255,255,0.18); color:#fff; font-size:22px; cursor:pointer; z-index:99996; display:none; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(239,68,68,0.35); transition:transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent;">
-    <i class="fa-solid fa-right-from-bracket"></i>
-  </button>
-  
-  <script>
-    function cerrarSesionTablet() {
-      if (confirm('¿Está seguro de que desea cerrar la sesión en esta Tablet?')) {
-        localStorage.removeItem('food_session_elparche');
-        localStorage.removeItem('food_operador_elparche');
-        localStorage.removeItem('meseroId');
-        localStorage.removeItem('mesero');
-        window.location.href = 'login.html';
-      }
-    }
-    window.cerrarSesionTablet = cerrarSesionTablet;
-  </script>
 </body>
 </html>

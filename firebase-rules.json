@@ -14,7 +14,17 @@
         },
         "productos": {
           ".read": true,
-          ".write": "auth != null"
+          ".write": "auth != null",
+          "$child1": {
+            "stockFijo": {
+              ".write": true
+            },
+            "$child2": {
+              "stockFijo": {
+                ".write": true
+              }
+            }
+          }
         },
         "menu_categorias": {
           ".read": true,

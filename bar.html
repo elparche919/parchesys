@@ -246,9 +246,16 @@ function iniciar(){
 }
 
 /* ─── Categorías que van al Bar KDS ─── */
-var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS'];
+var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
 function _esBarCat(cat){
-  return _BAR_CATS.indexOf((cat||'').trim().toUpperCase()) !== -1;
+  var c = (cat||'').trim().toUpperCase();
+  var parts = c.split(/[-/:]/);
+  var parent = parts[0].trim();
+  if (_BAR_CATS.indexOf(c) !== -1) return true;
+  if (_BAR_CATS.indexOf(parent) !== -1) return true;
+  if (c.indexOf('BEBIDA') !== -1 || c.indexOf('CERVEZA') !== -1 || c.indexOf('COCTEL') !== -1 || c.indexOf('LICOR') !== -1) return true;
+  if (parent.indexOf('BEBIDA') !== -1 || parent.indexOf('CERVEZA') !== -1 || parent.indexOf('COCTEL') !== -1 || parent.indexOf('LICOR') !== -1) return true;
+  return false;
 }
 
 /* ─── BOARD KDS ─── */

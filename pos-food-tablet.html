@@ -399,6 +399,37 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn-dismiss:active { transform: scale(0.95); }
+    
+    #logout-fab {
+      position: fixed;
+      bottom: 30px;
+      left: 30px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      border: 2px solid rgba(255,255,255,0.18);
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      z-index: 99996;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(239,68,68,0.35);
+      transition: transform 0.15s, box-shadow 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #logout-fab:active {
+      transform: scale(0.92);
+    }
+    
+    @media (min-width: 600px) and (max-width: 1023px) {
+      #logout-fab {
+        bottom: 130px !important;
+        left: 20px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -460,7 +491,7 @@
   </div>
 
   <!-- Botón de Cerrar Sesión (Logout FAB) -->
-  <button id="logout-fab" title="Cerrar Sesión" onclick="cerrarSesionTablet()" style="position:fixed; bottom:30px; left:30px; width:60px; height:60px; border-radius:50%; background:linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); border:2px solid rgba(255,255,255,0.18); color:#fff; font-size:22px; cursor:pointer; z-index:99996; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 24px rgba(239,68,68,0.35); transition:transform 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent;">
+  <button id="logout-fab" title="Cerrar Sesión" onclick="cerrarSesionTablet()">
     <i class="fa-solid fa-right-from-bracket"></i>
   </button>
 
@@ -493,6 +524,14 @@
                     localStorage.getItem('negocioID') ||
                     'elparche';
     var meseroId = localStorage.getItem('meseroId');
+
+    // Hide logout FAB if running inside iframe (browser portal view wrapper)
+    if (window.self !== window.top) {
+      var logoutBtn = document.getElementById('logout-fab');
+      if (logoutBtn) {
+        logoutBtn.style.display = 'none';
+      }
+    }
 
     if (!negocioID || !meseroId) {
       window.location.href = 'login.html';
@@ -762,16 +801,6 @@
       if ('vibrate' in navigator) navigator.vibrate(0); // cancel any active vibration
     }
 
-    var _configSonidos = { cocina: true, bar: false };
-
-    function cargarConfigSonidos() {
-      db.ref(`negocios/${negocioID}/config/sonidos`).on('value', snap => {
-        if (snap.exists()) {
-          _configSonidos = snap.val();
-        }
-      });
-    }
-
     function startAlarm(msg, tipo) {
       document.getElementById('alarm-message').textContent = msg;
       const overlay = document.getElementById('alarm-overlay');
@@ -790,17 +819,9 @@
         if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-glass-water" style="color:#3b82f6"></i>';
         overlay.style.display = 'flex';
         
-        // Vibrar siempre
+        // Bar no lleva sonido, solo vibración
         startVibration(true);  // 🔵 BAR: vibración suave 2 pulsos
-        
-        // Sonar solo si está configurado en Firebase (por defecto false)
-        if (_configSonidos && _configSonidos.bar === true) {
-          playAlarmSound(true);
-          if (alarmInterval) clearInterval(alarmInterval);
-          alarmInterval = setInterval(function() { playAlarmSound(true); }, 1500);
-        } else {
-          if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-        }
+        if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
       } else {
         overlay.classList.add('flash-red');
         if (titleEl) {
@@ -810,16 +831,10 @@
         if (iconEl) iconEl.innerHTML = '<i class="fa-solid fa-bell"></i>';
         overlay.style.display = 'flex';
         
+        playAlarmSound(false);
         startVibration(false);  // 🔴 COCINA: vibración fuerte 3 pulsos
-        
-        // Sonar solo si cocina está activado (por defecto true)
-        if (!_configSonidos || _configSonidos.cocina !== false) {
-          playAlarmSound(false);
-          if (alarmInterval) clearInterval(alarmInterval);
-          alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
-        } else {
-          if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-        }
+        if (alarmInterval) clearInterval(alarmInterval);
+        alarmInterval = setInterval(function() { playAlarmSound(false); }, 1500);
       }
     }
 
@@ -828,7 +843,7 @@
       overlay.style.display = 'none';
       overlay.classList.remove('flash-red', 'flash-blue');
       if (alarmInterval) { clearInterval(alarmInterval); alarmInterval = null; }
-      stopVibration();
+      stopVibration(); // ✅ Detener vibración al cerrar la alarma
       
       // ✅ Suspender AudioContext para silenciar inmediatamente los osciladores activos
       if (audioCtx && audioCtx.state === 'running') {
@@ -840,7 +855,6 @@
 
     function startNotificationListener() {
       if (!meseroId) return;
-      cargarConfigSonidos();
       const path = `negocios/${negocioID}/notificaciones/${meseroId.toLowerCase().trim()}`;
       db.ref(path).on('child_added', snap => {
         const noti = snap.val();
