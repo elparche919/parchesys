@@ -2306,6 +2306,33 @@ function guardarEmpleado(){
   const editId=document.getElementById('emp-id-edit').value;
   const colors=['#1B4E8B','#10b981','#f59e0b','#ec4899','#1B4E8B','#06b6d4','#f97316','#14b8a6'];
   const color=(editId&&empleados[editId]?.color)||colors[Math.floor(Math.random()*colors.length)];
+  const mPerms = (function(){
+    var r=document.getElementById('emp-rol').value;
+    var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
+    var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
+    var isPropAdmin = r === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
+    if(isPropAdmin)
+      return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
+    return {
+      pos:!!document.getElementById('perm-pos')?.checked,
+      pronostico:!!document.getElementById('perm-pronostico')?.checked,
+      auditoria:!!document.getElementById('perm-auditoria')?.checked,
+      menu:!!document.getElementById('perm-menu')?.checked,
+      inventario:!!document.getElementById('perm-inventario')?.checked,
+      cocina:!!document.getElementById('perm-cocina')?.checked,
+      mapa_mesas:!!document.getElementById('perm-mapa-mesas')?.checked,
+      delivery:!!document.getElementById('perm-delivery')?.checked,
+      pos_movil:!!document.getElementById('perm-pos-movil')?.checked,
+      app_cliente:!!document.getElementById('perm-app-cliente')?.checked,
+      empleados:!!document.getElementById('perm-empleados')?.checked,
+      dte:!!document.getElementById('perm-dte')?.checked,
+      contabilidad:!!document.getElementById('perm-contabilidad')?.checked,
+      ajustes:!!document.getElementById('perm-ajustes')?.checked,
+      mi_empresa:!!document.getElementById('perm-mi-empresa')?.checked,
+      mi_perfil:document.getElementById('perm-mi-perfil')?.checked!==false,
+    };
+  })();
+
   const data={
     nombre,dui:document.getElementById('emp-dui').value,
     tel:document.getElementById('emp-tel').value,email:document.getElementById('emp-email').value,
@@ -2321,59 +2348,9 @@ function guardarEmpleado(){
     afp_inst:document.getElementById('emp-afp-inst').value,
     aplica_isss:document.getElementById('emp-aplica-isss').checked,
     aplica_afp:document.getElementById('emp-aplica-afp').checked,
-    modulos_permitidos:(function(){
-      var r=document.getElementById('emp-rol').value;
-      var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
-      var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
-      var isPropAdmin = r === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
-      if(isPropAdmin)
-        return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
-      return {
-        pos:!!document.getElementById('perm-pos')?.checked,
-        pronostico:!!document.getElementById('perm-pronostico')?.checked,
-        auditoria:!!document.getElementById('perm-auditoria')?.checked,
-        menu:!!document.getElementById('perm-menu')?.checked,
-        inventario:!!document.getElementById('perm-inventario')?.checked,
-        cocina:!!document.getElementById('perm-cocina')?.checked,
-        mapa_mesas:!!document.getElementById('perm-mapa-mesas')?.checked,
-        delivery:!!document.getElementById('perm-delivery')?.checked,
-        pos_movil:!!document.getElementById('perm-pos-movil')?.checked,
-        app_cliente:!!document.getElementById('perm-app-cliente')?.checked,
-        empleados:!!document.getElementById('perm-empleados')?.checked,
-        dte:!!document.getElementById('perm-dte')?.checked,
-        contabilidad:!!document.getElementById('perm-contabilidad')?.checked,
-        ajustes:!!document.getElementById('perm-ajustes')?.checked,
-        mi_empresa:!!document.getElementById('perm-mi-empresa')?.checked,
-        mi_perfil:document.getElementById('perm-mi-perfil')?.checked!==false,
-      };
-    })(),
-    // modulos_custom: campo canónico leído por portal-food.html
-    modulos_custom:(function(){
-      var r=document.getElementById('emp-rol').value;
-      var empNombre = (document.getElementById('emp-nombre')?.value || '').toLowerCase();
-      var empEmail = (document.getElementById('emp-email')?.value || '').toLowerCase();
-      var isPropAdmin = r === 'propietario' || empNombre.includes('modus') || empEmail.includes('modus');
-      if(isPropAdmin)
-        return {pos:true,pronostico:true,auditoria:true,menu:true,inventario:true,cocina:true,mapa_mesas:true,delivery:true,pos_movil:true,app_cliente:true,empleados:true,dte:true,contabilidad:true,ajustes:true,mi_empresa:true,mi_perfil:true};
-      return {
-        pos:!!document.getElementById('perm-pos')?.checked,
-        pronostico:!!document.getElementById('perm-pronostico')?.checked,
-        auditoria:!!document.getElementById('perm-auditoria')?.checked,
-        menu:!!document.getElementById('perm-menu')?.checked,
-        inventario:!!document.getElementById('perm-inventario')?.checked,
-        cocina:!!document.getElementById('perm-cocina')?.checked,
-        mapa_mesas:!!document.getElementById('perm-mapa-mesas')?.checked,
-        delivery:!!document.getElementById('perm-delivery')?.checked,
-        pos_movil:!!document.getElementById('perm-pos-movil')?.checked,
-        app_cliente:!!document.getElementById('perm-app-cliente')?.checked,
-        empleados:!!document.getElementById('perm-empleados')?.checked,
-        dte:!!document.getElementById('perm-dte')?.checked,
-        contabilidad:!!document.getElementById('perm-contabilidad')?.checked,
-        ajustes:!!document.getElementById('perm-ajustes')?.checked,
-        mi_empresa:!!document.getElementById('perm-mi-empresa')?.checked,
-        mi_perfil:document.getElementById('perm-mi-perfil')?.checked!==false,
-      };
-    })(),
+    modulos: mPerms,
+    modulos_permitidos: mPerms,
+    modulos_custom: mPerms
   };
   const fotoFile=document.getElementById('emp-foto-file').files[0];
   const btn=document.querySelector('#modal-emp .btn-primary');

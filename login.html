@@ -169,6 +169,10 @@
     <div class="logo-title">PARCHE SYS</div>
     <div class="logo-subtitle">Acceso POS Tablet · Bajo Licencia de MODUS FOOD</div>
     
+    <div id="connStatus" style="font-size: 11px; font-weight: 700; color: #f59e0b; margin: 8px 0 14px 0; text-align: center; display: none;">
+      <i class="fa-solid fa-wifi fa-fade"></i> Esperando conexión con base de datos...
+    </div>
+    
     <div class="error-box" id="errorBox">
       <i class="fa-solid fa-triangle-exclamation"></i>
       <span id="errorMessage">PIN incorrecto</span>
@@ -188,8 +192,8 @@
     </button>
   </div>
 
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-database-compat.js"></script>
   <script src="firebase-config.js"></script>
   <script>
     // Firebase configurado a través de firebase-config.js
@@ -221,64 +225,97 @@
     }
     
     function doLogin() {
-      const pin = document.getElementById('pin').value.trim();
-      const btn = document.getElementById('enterBtn');
+      try {
+        const pin = document.getElementById('pin').value.trim();
+        const btn = document.getElementById('enterBtn');
 
-      if (!pin) {
-        showError('Por favor, ingresa tu PIN');
-        return;
+        if (!pin) {
+          showError('Por favor, ingresa tu PIN');
+          return;
+        }
+
+        hideError();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Verificando...</span>';
+
+        if (typeof db === 'undefined' || !db) {
+          throw new Error('Servicio de base de datos no disponible. Verifica conexión.');
+        }
+
+        // Negocio único: verificar PIN directamente en el nodo fijo "elparche"
+        db.ref('negocios/' + NEGOCIO_ID + '/empleados').once('value').then(empSnap => {
+          let foundEmp = null;
+
+          if (empSnap.exists()) {
+            empSnap.forEach(e => {
+              const emp = e.val();
+              const empPin = String(emp.pin || emp.pin_app || '').trim();
+              if (empPin === pin && !foundEmp) {
+                foundEmp = { key: e.key, data: emp };
+              }
+            });
+          }
+
+          if (!foundEmp) {
+            throw new Error('PIN incorrecto');
+          }
+
+          const emp = foundEmp.data;
+          const meseroId = emp.nombre || foundEmp.key;
+
+          // Crear sesión para pasar el validador de firebase-config.js
+          const ses = {
+            tipo: (emp.rol === 'propietario' || emp.rol === 'admin') ? 'admin' : 'empleado',
+            nombre: emp.nombre || 'Usuario',
+            rol: emp.rol || 'empleado',
+            dui: emp.dui || '',
+            puesto: emp.puesto || '',
+            empKey: foundEmp.key,
+            timestamp: Date.now(),
+            modulos: emp.modulos_custom || emp.modulos_permitidos || emp.modulos || {}
+          };
+
+          localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
+          localStorage.setItem('food_operador_' + NEGOCIO_ID, JSON.stringify(ses));
+          localStorage.setItem('meseroId', meseroId);
+          localStorage.setItem('mesero', meseroId);
+          localStorage.setItem('modus_emp', JSON.stringify(emp));
+
+          var params = new URLSearchParams(window.location.search);
+          var isElectron = navigator.userAgent.toLowerCase().includes('electron') || (typeof window !== 'undefined' && window.process && window.process.versions && window.process.versions.electron);
+          var isAndroid = !!window.AndroidBridge;
+          var defaultRedirect = isElectron ? 'pos-food.html' : 'pos-food-tablet.html';
+          var redirectPage = params.get('redirect') || defaultRedirect;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>¡Ingreso exitoso!</span>';
+          setTimeout(() => { window.location.href = redirectPage; }, 600);
+
+        }).catch(err => {
+          showError(err.message || 'Error de conexión');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Ingresar al POS</span>';
+        });
+      } catch (err) {
+        showError(err.message || 'Error de base de datos');
+        const btn = document.getElementById('enterBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Ingresar al POS</span>';
+        }
       }
+    }
 
-      hideError();
-      btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Verificando...</span>';
-
-      // Negocio único: verificar PIN directamente en el nodo fijo "elparche"
-      db.ref('negocios/' + NEGOCIO_ID + '/empleados').once('value').then(empSnap => {
-        let foundEmp = null;
-
-        if (empSnap.exists()) {
-          empSnap.forEach(e => {
-            const emp = e.val();
-            const empPin = String(emp.pin || emp.pin_app || '').trim();
-            if (empPin === pin && !foundEmp) {
-              foundEmp = { key: e.key, data: emp };
-            }
-          });
+    // Listen for database connection status
+    if (typeof db !== 'undefined' && db) {
+      db.ref('.info/connected').on('value', function(snap) {
+        var connDiv = document.getElementById('connStatus');
+        if (!connDiv) return;
+        if (snap.val() === true) {
+          connDiv.style.display = 'none';
+        } else {
+          connDiv.style.display = 'block';
+          connDiv.innerHTML = '<i class="fa-solid fa-wifi fa-fade"></i> Esperando conexión con base de datos...';
+          connDiv.style.color = '#f59e0b';
         }
-
-        if (!foundEmp) {
-          throw new Error('PIN incorrecto');
-        }
-
-        const emp = foundEmp.data;
-        const meseroId = emp.nombre || foundEmp.key;
-
-        // Crear sesión para pasar el validador de firebase-config.js
-        const ses = {
-          tipo: (emp.rol === 'propietario' || emp.rol === 'admin') ? 'admin' : 'empleado',
-          nombre: emp.nombre || 'Usuario',
-          rol: emp.rol || 'empleado',
-          dui: emp.dui || '',
-          puesto: emp.puesto || '',
-          empKey: foundEmp.key,
-          timestamp: Date.now(),
-          modulos: emp.modulos || {}
-        };
-
-        localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
-        localStorage.setItem('food_operador_' + NEGOCIO_ID, JSON.stringify(ses));
-        localStorage.setItem('meseroId', meseroId);
-        localStorage.setItem('mesero', meseroId);
-        localStorage.setItem('modus_emp', JSON.stringify(emp));
-
-        btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>¡Ingreso exitoso!</span>';
-        setTimeout(() => { window.location.href = 'pos-food-tablet.html'; }, 600);
-
-      }).catch(err => {
-        showError(err.message || 'Error de conexión');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Ingresar al POS</span>';
       });
     }
   </script>
