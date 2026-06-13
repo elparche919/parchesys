@@ -2008,9 +2008,9 @@ document.addEventListener('DOMContentLoaded', function(){
             var roleIcon = document.getElementById('tb-mesero-role-icon');
             if(roleIcon) roleIcon.textContent = '👑';
           }
-          // ── Detectar cajero por código 5061 ──
-          var empCodigo = String(e.codigo || e.code || e.id_empleado || '').trim();
-          _esCajero = (empCodigo === _CAJERO_CODE);
+          // ── Detectar cajero por código 5061 o rol/puesto ──
+          var empCodigo = String(e.codigo || e.code || e.id_empleado || e.pin_app || e.pin || '').trim();
+          _esCajero = (empCodigo === _CAJERO_CODE) || puesto.includes('cajero') || puesto.includes('cajera') || puesto.includes('caja');
           // Guardar código en var global para uso en movimientos
           window._empCodigoActivo = empCodigo;
         }
@@ -5892,11 +5892,12 @@ function confirmarMovCaja() {
     snap.forEach(function(c) {
       var emp = c.val();
       var empPin = String(emp.pin || emp.pin_app || '').trim();
-      var empCod = String(emp.codigo || emp.code || emp.id_empleado || '').trim();
-      // Acepta PIN del cajero 5061 o de un admin
+      var empCod = String(emp.codigo || emp.code || emp.id_empleado || emp.pin_app || emp.pin || '').trim();
+      // Acepta PIN del cajero (código o rol/puesto) o de un admin
       var puesto = (emp.puesto || emp.rol || '').toLowerCase();
       var esAdminEmp = puesto.includes('admin') || puesto.includes('gerente') || emp.admin === true;
-      if (empPin === pin && (empCod === _CAJERO_CODE || esAdminEmp) && !foundEmp) {
+      var esCajeroEmp = (empCod === _CAJERO_CODE) || puesto.includes('cajero') || puesto.includes('cajera') || puesto.includes('caja');
+      if (empPin === pin && (esCajeroEmp || esAdminEmp) && !foundEmp) {
         foundEmp = emp;
       }
     });
