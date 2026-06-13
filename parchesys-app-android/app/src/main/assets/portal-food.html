@@ -3267,11 +3267,17 @@
       var isManager = (rol === 'propietario' || rol === 'admin');
       if (isManager) return;
 
-      // Helper: leer permiso soportando snake_case y kebab-case
+      // Helper: leer permiso soportando snake_case, kebab-case y diferencias de mayúsculas
       function tiene(key) {
-        return modulos[key] === true
-          || modulos[key.replace(/_/g,'-')] === true
-          || modulos[key.replace(/-/g,'_')] === true;
+        if (!modulos) return false;
+        var normalized = {};
+        for (var k in modulos) {
+          if (modulos.hasOwnProperty(k)) {
+            normalized[k.toLowerCase().replace(/-/g, '_')] = modulos[k];
+          }
+        }
+        var target = key.toLowerCase().replace(/-/g, '_');
+        return normalized[target] === true;
       }
 
       // Helper: ocultar elemento por ID completamente (no opacidad)

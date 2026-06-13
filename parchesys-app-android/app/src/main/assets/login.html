@@ -272,7 +272,7 @@
             puesto: emp.puesto || '',
             empKey: foundEmp.key,
             timestamp: Date.now(),
-            modulos: emp.modulos || {}
+            modulos: emp.modulos_custom || emp.modulos_permitidos || emp.modulos || {}
           };
 
           localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));

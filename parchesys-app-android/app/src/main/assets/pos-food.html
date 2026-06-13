@@ -1942,10 +1942,49 @@ var _paxCancelado = false;
 
 // ── SESIÓN Y ROL ──
 var _loggedMesero = localStorage.getItem('meseroId') || localStorage.getItem('mesero') || '';
-var _esAdmin = false;  // se resuelve desde Firebase
-var _esCajero = false; // empleado código 5061
+var _esAdmin = false;  // se resuelve desde Firebase/localStorage
+var _esCajero = false; // empleado código 5061/localStorage
 var _kaInterval = null; // kitchen alarm interval
 var _CAJERO_CODE = '5061'; // código exclusivo para Mov.Caja
+
+function checkUserRoles() {
+  try {
+    var negocioID = new URLSearchParams(window.location.search).get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+    var localEmpStr = localStorage.getItem('modus_emp');
+    var localSesStr = localStorage.getItem('food_session_elparche') || localStorage.getItem('food_session_' + negocioID);
+    
+    if (localEmpStr) {
+      var emp = JSON.parse(localEmpStr);
+      var rol = (emp.rol || '').toLowerCase();
+      var puesto = (emp.puesto || '').toLowerCase();
+      var pin = String(emp.pin || emp.pin_app || '').trim();
+      var empCod = String(emp.codigo || emp.code || emp.id_empleado || emp.pin_app || emp.pin || '').trim();
+      
+      if (rol.includes('admin') || rol.includes('propietario') || puesto.includes('admin') || puesto.includes('gerente') || puesto.includes('supervisor') || emp.admin === true) {
+        _esAdmin = true;
+      }
+      if (pin === _CAJERO_CODE || empCod === _CAJERO_CODE || rol.includes('cajero') || rol.includes('cajera') || rol.includes('caja') || puesto.includes('cajero') || puesto.includes('cajera') || puesto.includes('caja')) {
+        _esCajero = true;
+      }
+    }
+    if (localSesStr) {
+      var ses = JSON.parse(localSesStr);
+      var sesRol = (ses.rol || '').toLowerCase();
+      var sesPuesto = (ses.puesto || '').toLowerCase();
+      var sesEmpKey = String(ses.empKey || '').trim();
+      if (sesRol.includes('admin') || sesRol.includes('propietario') || sesPuesto.includes('admin') || sesPuesto.includes('gerente') || sesPuesto.includes('supervisor') || ses.tipo === 'admin') {
+        _esAdmin = true;
+      }
+      if (sesEmpKey === _CAJERO_CODE || sesRol.includes('cajero') || sesRol.includes('cajera') || sesRol.includes('caja') || sesPuesto.includes('cajero') || sesPuesto.includes('cajera') || sesPuesto.includes('caja')) {
+        _esCajero = true;
+      }
+    }
+  } catch(e) {
+    console.error("Error en checkUserRoles:", e);
+  }
+}
+checkUserRoles();
+
 
 /* ═══════════════════════════════════════
    INIT
@@ -1994,11 +2033,22 @@ document.addEventListener('DOMContentLoaded', function(){
     if(mn && mb) { mn.textContent = _loggedMesero; mb.style.display = 'inline-flex'; mb.style.alignItems = 'center'; mb.style.gap = '4px'; }
 
     // Buscar rol del empleado en Firebase
+    // Buscar rol del empleado en Firebase
     db.ref('negocios/'+negocioID+'/empleados').once('value', function(snap){
+      var matched = false;
       snap.forEach(function(c){
         var e = c.val();
         var nombre = (e.nombre || '').toLowerCase().trim();
-        if(nombre === _loggedMesero.toLowerCase().trim()){
+        var isThisEmp = (nombre === _loggedMesero.toLowerCase().trim());
+        try {
+          var localSes = JSON.parse(localStorage.getItem('food_session_' + negocioID) || '{}');
+          if (localSes.empKey && String(c.key).trim() === String(localSes.empKey).trim()) {
+            isThisEmp = true;
+          }
+        } catch(err){}
+
+        if(isThisEmp){
+          matched = true;
           var puesto = (e.puesto || e.rol || '').toLowerCase();
           var esAdminFlag = puesto.includes('admin') || puesto.includes('gerente') || puesto.includes('supervisor') || e.admin === true;
           _esAdmin = esAdminFlag;
@@ -2015,6 +2065,19 @@ document.addEventListener('DOMContentLoaded', function(){
           window._empCodigoActivo = empCodigo;
         }
       });
+
+      if (!matched) {
+        // Fallback robusto si no se encontró coincidencia exacta en Firebase
+        checkUserRoles();
+      }
+      
+      var badge = document.getElementById('tb-admin-badge');
+      if(badge) badge.style.display = _esAdmin ? 'inline-block' : 'none';
+      if(_esAdmin){
+        var roleIcon = document.getElementById('tb-mesero-role-icon');
+        if(roleIcon) roleIcon.textContent = '👑';
+      }
+
       // Mostrar botón Mov. Caja si es cajero (5061) o admin
       var btnMovCaja = document.getElementById('btn-mov-caja');
       if(btnMovCaja) btnMovCaja.style.display = (_esCajero || _esAdmin) ? '' : 'none';
@@ -3264,6 +3327,7 @@ function cerrarMesaAperturaModal() {
 }
 
 function selMesa(n) {
+  checkUserRoles();
   _mesaAperturaId = n;
   var m = _mesas[n] || {};
   
@@ -3340,6 +3404,7 @@ function selMesa(n) {
 }
 
 function ejecutarSelMesa(n){
+  checkUserRoles();
   // Admin y cajero pueden acceder a todas las mesas
   if (_isTablet && !_esAdmin && !_esCajero && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
@@ -3993,6 +4058,7 @@ function generarOrden(targetMesa, targetCanal){
    CHECKOUT MODAL
 ═══════════════════════════════════════ */
 function abrirCheckout(){
+  checkUserRoles();
   if(!_cajaSesion || _cajaSesion.estado !== 'abierta') {
     toast('La caja está cerrada. Debes iniciar turno para cobrar.', 'err');
     abrirModalCaja();
@@ -4810,12 +4876,11 @@ async function imprimirTicket(soloImprimir){
       var ticketText = formatTicket57mm();
       if (window.AndroidBridge && typeof window.AndroidBridge.printBluetooth === 'function') {
         window.AndroidBridge.printBluetooth(ticketText);
+        toast("Pre-ticket enviado a impresora", "ok");
       } else {
         console.warn("AndroidBridge.printBluetooth no disponible. Ticket:\n", ticketText);
         toast("Bluetooth Bridge no disponible", "err");
       }
-      // Bypassear el modal de cobro y cerrar/liberar la mesa de inmediato
-      procesarOrden('cobrar');
     } catch(e) {
       console.error(e);
       toast("Error al formatear ticket", "err");
