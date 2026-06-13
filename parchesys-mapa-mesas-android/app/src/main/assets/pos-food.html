@@ -1569,7 +1569,7 @@ body {
         <!-- Contenedor si es nuestra o somos admin -->
         <div id="mesa-apertura-ocupada-nuestra" style="display: none;">
           <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; line-height: 1.5;">
-            Eres el mesero asignado (o administrador). ¿Deseas abrir la orden activa de esta mesa?
+            Eres el mesero asignado (o administrador/cajero). ¿Deseas abrir la orden activa de esta mesa?
           </p>
           <button id="btn-mesa-apertura-abrir-ocupada" class="acc-btn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fb923c, #f97316); border: none; border-radius: 12px; color: white; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 10px 20px -10px rgba(249,115,22,0.5); margin-bottom: 12px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
             <i class="fa-solid fa-folder-open"></i> Abrir Orden Activa
@@ -1580,7 +1580,7 @@ body {
         <div id="mesa-apertura-ocupada-ajena" style="display: none;">
           <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 14px; border-radius: 10px; margin-bottom: 24px;">
             <p style="font-size: 12px; color: #fca5a5; margin: 0; line-height: 1.5; font-weight: 600;">
-              <i class="fa-solid fa-ban" style="margin-right: 4px;"></i> Acceso restringido. Solo el mesero responsable o el administrador pueden abrir esta orden.
+              <i class="fa-solid fa-ban" style="margin-right: 4px;"></i> Acceso restringido. Solo el mesero responsable, cajero o el administrador pueden abrir esta orden.
             </p>
           </div>
         </div>
@@ -2577,8 +2577,8 @@ function actualizarDropdownMeseros(){
     } else {
       sel.value = _loggedMesero;
     }
-    // Admin puede cambiar el mesero asignado, mesero no puede
-    sel.disabled = !_esAdmin;
+    // Admin o Cajero puede cambiar el mesero asignado, mesero no puede
+    sel.disabled = !(_esAdmin || _esCajero);
   } else {
     sel.value = current;
     sel.disabled = false;
@@ -2692,7 +2692,7 @@ function renderCanalDetail(){
           var st = m.estado || 'libre';
           var sel = id == MESA_SEL ? 'seleccionada' : '';
           var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
-          if(_esAdmin) isOtherMesero = false;
+          if(_esAdmin || _esCajero) isOtherMesero = false;
           var classOther = isOtherMesero ? 'otro-mesero' : '';
           
           var content = '<span class="mesa-num">'+id+'</span>';
@@ -2768,7 +2768,7 @@ function renderCanalDetail(){
           var st = m.estado || 'libre';
           var sel = MESA_SEL == id ? 'seleccionada' : '';
           var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
-          if(_esAdmin) isOtherMesero = false;
+          if(_esAdmin || _esCajero) isOtherMesero = false;
           var classOther = isOtherMesero ? 'otro-mesero' : '';
           var content = '<span class="mesa-num">'+id+'</span>';
           if (st !== 'libre' && m.mesero) {
@@ -2900,7 +2900,7 @@ function abrirMesaModal(defaultTab){
         var st = m.estado || 'libre';
         var sel = MESA_SEL == id ? 'seleccionada' : '';
         var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
-        if(_esAdmin) isOtherMesero = false;
+        if(_esAdmin || _esCajero) isOtherMesero = false;
         var classOther = isOtherMesero ? 'otro-mesero' : '';
 
         var content = '<span class="mesa-num">'+id+'</span>';
@@ -3320,7 +3320,7 @@ function selMesa(n) {
       esNuestra = (meseroNombre.trim().toLowerCase() === _loggedMesero.trim().toLowerCase());
     }
     
-    if (esNuestra || _esAdmin) {
+    if (esNuestra || _esAdmin || _esCajero) {
       document.getElementById('mesa-apertura-ocupada-nuestra').style.display = 'block';
       document.getElementById('mesa-apertura-ocupada-ajena').style.display = 'none';
       
@@ -3340,8 +3340,8 @@ function selMesa(n) {
 }
 
 function ejecutarSelMesa(n){
-  // Admin puede acceder a todas las mesas
-  if (_isTablet && !_esAdmin && _loggedMesero && _mesas[n]) {
+  // Admin y cajero pueden acceder a todas las mesas
+  if (_isTablet && !_esAdmin && !_esCajero && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
     if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()) {
       toast('🔒 Mesa de ' + m.mesero + ' — Solo el admin puede acceder a mesas de otros meseros', 'err');
@@ -4002,7 +4002,7 @@ function abrirCheckout(){
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
 
   // Verificar que el mesero puede cobrar esta mesa
-  if(_isTablet && !_esAdmin && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
+  if(_isTablet && !_esAdmin && !_esCajero && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
     var mesaInfo = _mesas[MESA_SEL];
     if(mesaInfo.mesero && _loggedMesero && mesaInfo.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()){
       toast('🔒 Solo el admin o '+mesaInfo.mesero+' puede cobrar esta mesa','err');
