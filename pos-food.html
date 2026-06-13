@@ -1521,6 +1521,79 @@ body {
   </div>
 </div>
 
+<!-- MODAL DE APERTURA / ACCESO A MESA -->
+<div class="overlay" id="mesa-apertura-overlay" onclick="if(event.target===this)cerrarMesaAperturaModal()">
+  <div class="ck-modal" style="max-width: 400px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); background: #0f172a; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+    <div class="modal-head" style="border-bottom: 1px solid rgba(255,255,255,0.06); padding: 18px 24px; background: rgba(255,255,255,0.01);">
+      <h3 id="mesa-apertura-titulo" style="font-size: 20px; font-weight: 800; color: white; margin: 0; display: flex; align-items: center; gap: 10px;">
+        <i class="fa-solid fa-table-cells" style="color: var(--accent);"></i> Mesa
+      </h3>
+      <button class="modal-close" onclick="cerrarMesaAperturaModal()" style="font-size: 22px; color: rgba(255,255,255,0.5);">&times;</button>
+    </div>
+    <div class="modal-body" style="padding: 24px;">
+      
+      <!-- Estado: Mesa Libre (Preguntar comensales y cliente) -->
+      <div id="mesa-apertura-libre-container" style="display: none;">
+        <p style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 0; margin-bottom: 20px; line-height: 1.5;">
+          Esta mesa está libre. Ingresa los datos para iniciar la orden (puedes dejarlos en blanco).
+        </p>
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 8px; letter-spacing: 0.5px;">Número de Comensales</label>
+          <div style="position: relative;">
+            <i class="fa-solid fa-users" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.4); font-size: 14px;"></i>
+            <input type="number" id="mesa-apertura-comensales" min="1" max="50" placeholder="Ej: 2" style="width: 100%; padding: 12px 14px 12px 40px; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-family: inherit; font-size: 15px; outline: none; box-sizing: border-box; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'" />
+          </div>
+        </div>
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 8px; letter-spacing: 0.5px;">Nombre o Apellido del Cliente</label>
+          <div style="position: relative;">
+            <i class="fa-solid fa-user" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.4); font-size: 14px;"></i>
+            <input type="text" id="mesa-apertura-cliente" placeholder="Ej: Gomez" style="width: 100%; padding: 12px 14px 12px 40px; background: rgba(255,255,255,0.03); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px; color: white; font-family: inherit; font-size: 15px; outline: none; box-sizing: border-box; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'" />
+          </div>
+        </div>
+        <button id="btn-mesa-apertura-confirmar-libre" class="acc-btn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fb923c, #f97316); border: none; border-radius: 12px; color: white; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 10px 20px -10px rgba(249,115,22,0.5); transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+          <i class="fa-solid fa-arrow-right-to-bracket"></i> Abrir Mesa y Menú
+        </button>
+      </div>
+
+      <!-- Estado: Mesa Ocupada -->
+      <div id="mesa-apertura-ocupada-container" style="display: none; text-align: center;">
+        <div style="font-size: 54px; margin-bottom: 16px; color: var(--accent);">
+          <i class="fa-solid fa-user-lock"></i>
+        </div>
+        <div style="font-size: 14px; line-height: 1.6; margin-bottom: 24px; color: rgba(255,255,255,0.8);">
+          Esta mesa está siendo atendida por:<br>
+          <strong id="mesa-apertura-ocupada-mesero" style="font-size: 18px; color: white; display: block; margin-top: 6px; font-weight: 800;">Mesero</strong>
+        </div>
+
+        <!-- Contenedor si es nuestra o somos admin -->
+        <div id="mesa-apertura-ocupada-nuestra" style="display: none;">
+          <p style="font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 20px; line-height: 1.5;">
+            Eres el mesero asignado (o administrador). ¿Deseas abrir la orden activa de esta mesa?
+          </p>
+          <button id="btn-mesa-apertura-abrir-ocupada" class="acc-btn" style="width: 100%; padding: 15px; background: linear-gradient(135deg, #fb923c, #f97316); border: none; border-radius: 12px; color: white; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 10px 20px -10px rgba(249,115,22,0.5); margin-bottom: 12px; transition: 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <i class="fa-solid fa-folder-open"></i> Abrir Orden Activa
+          </button>
+        </div>
+
+        <!-- Contenedor si no es nuestra -->
+        <div id="mesa-apertura-ocupada-ajena" style="display: none;">
+          <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); padding: 14px; border-radius: 10px; margin-bottom: 24px;">
+            <p style="font-size: 12px; color: #fca5a5; margin: 0; line-height: 1.5; font-weight: 600;">
+              <i class="fa-solid fa-ban" style="margin-right: 4px;"></i> Acceso restringido. Solo el mesero responsable o el administrador pueden abrir esta orden.
+            </p>
+          </div>
+        </div>
+
+        <button onclick="cerrarMesaAperturaModal()" class="acc-btn" style="width: 100%; padding: 12px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); border: 1.5px solid rgba(255,255,255,0.1); border-radius: 12px; font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+          Cancelar
+        </button>
+      </div>
+      
+    </div>
+  </div>
+</div>
+
 <!-- ÓRDENES ABIERTAS OVERLAY (kept for admin use if needed) -->
 <div class="overlay" id="ordenes-overlay" onclick="if(event.target===this)cerrarOrdenesModal()">
   <div class="ck-modal" style="max-width: 600px; width: 95%;">
@@ -3006,29 +3079,8 @@ function confirmarModalComensales(){
 }
 
 function selMesaModal(id){
-  var m = _mesas[id] || {};
-  var estaOcupada = m.estado && m.estado !== 'libre';
-  
-  if (estaOcupada) {
-    selMesa(id);
-    
-    // Actualizar clase seleccionada en la lista del modal
-    document.querySelectorAll('#mesa-view-list .mesa-btn').forEach(function(b){ b.classList.remove('seleccionada'); });
-    var btn = document.getElementById('pos-btn-mesa-' + id);
-    if(btn) btn.classList.add('seleccionada');
-    var btnMy = document.getElementById('pos-btn-mesa-my-' + id);
-    if(btnMy) btnMy.classList.add('seleccionada');
-    
-    setTimeout(function(){
-      cerrarMesaModal();
-      var mobTabs = document.getElementById('mobile-tabs');
-      if (mobTabs && window.getComputedStyle(mobTabs).display !== 'none') {
-        switchMobileTab(2);
-      }
-    }, 150);
-  } else {
-    abrirModalComensales(id);
-  }
+  cerrarMesaModal();
+  selMesa(id);
 }
 
 /* Update the quick-action Mesa button label to show selected table */
@@ -3204,7 +3256,90 @@ function cargarMesas(){
   });
 }
 
-function selMesa(n){
+var _mesaAperturaId = null;
+
+function cerrarMesaAperturaModal() {
+  var overlay = document.getElementById('mesa-apertura-overlay');
+  if (overlay) overlay.classList.remove('open');
+}
+
+function selMesa(n) {
+  _mesaAperturaId = n;
+  var m = _mesas[n] || {};
+  
+  // 1. Mostrar título del modal
+  document.getElementById('mesa-apertura-titulo').innerHTML = '<i class="fa-solid fa-table-cells" style="color: var(--accent);"></i> Mesa ' + n;
+  
+  // 2. Limpiar campos de comensales y cliente
+  document.getElementById('mesa-apertura-comensales').value = '';
+  document.getElementById('mesa-apertura-cliente').value = '';
+  
+  // 3. Determinar si la mesa está ocupada
+  var ocupada = !!(m.pedido_activo_id);
+  
+  if (!ocupada) {
+    // Caso mesa libre: mostrar formulario de apertura
+    document.getElementById('mesa-apertura-libre-container').style.display = 'block';
+    document.getElementById('mesa-apertura-ocupada-container').style.display = 'none';
+    
+    // Configurar acción del botón de confirmar
+    document.getElementById('btn-mesa-apertura-confirmar-libre').onclick = function() {
+      var pax = document.getElementById('mesa-apertura-comensales').value.trim();
+      var cliente = document.getElementById('mesa-apertura-cliente').value.trim();
+      
+      cerrarMesaAperturaModal();
+      
+      // Guardar en Firebase primero para que una lectura inmediata del snapshot de la mesa traiga estos datos
+      db.ref('negocios/' + negocioID + '/mesas/' + _mesaAperturaId).update({
+        personas: pax || '',
+        cliente_nombre: cliente || '',
+        mesero: _loggedMesero || 'Desconocido',
+        estado: 'ocupada'
+      }, function(error) {
+        // Ejecutar selección de mesa real
+        ejecutarSelMesa(_mesaAperturaId);
+      });
+    };
+    
+    // Abrir el modal
+    document.getElementById('mesa-apertura-overlay').classList.add('open');
+    setTimeout(function() {
+      document.getElementById('mesa-apertura-comensales').focus();
+    }, 100);
+  } else {
+    // Caso mesa ocupada: mostrar mesero que la atiende
+    document.getElementById('mesa-apertura-libre-container').style.display = 'none';
+    document.getElementById('mesa-apertura-ocupada-container').style.display = 'block';
+    
+    var meseroNombre = m.mesero || 'Desconocido';
+    document.getElementById('mesa-apertura-ocupada-mesero').textContent = meseroNombre;
+    
+    // Determinar si la mesa pertenece al mesero actual o si es admin
+    var esNuestra = false;
+    if (_loggedMesero && meseroNombre) {
+      esNuestra = (meseroNombre.trim().toLowerCase() === _loggedMesero.trim().toLowerCase());
+    }
+    
+    if (esNuestra || _esAdmin) {
+      document.getElementById('mesa-apertura-ocupada-nuestra').style.display = 'block';
+      document.getElementById('mesa-apertura-ocupada-ajena').style.display = 'none';
+      
+      // Configurar acción del botón de abrir
+      document.getElementById('btn-mesa-apertura-abrir-ocupada').onclick = function() {
+        cerrarMesaAperturaModal();
+        ejecutarSelMesa(_mesaAperturaId);
+      };
+    } else {
+      document.getElementById('mesa-apertura-ocupada-nuestra').style.display = 'none';
+      document.getElementById('mesa-apertura-ocupada-ajena').style.display = 'block';
+    }
+    
+    // Abrir el modal
+    document.getElementById('mesa-apertura-overlay').classList.add('open');
+  }
+}
+
+function ejecutarSelMesa(n){
   // Admin puede acceder a todas las mesas
   if (_isTablet && !_esAdmin && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
@@ -3277,6 +3412,22 @@ function selMesa(n){
               document.getElementById('tb-clock').textContent = String(m2).padStart(2,'0')+':'+String(s).padStart(2,'0');
             },1000);
           }
+        } else {
+          // Si el pedido no tiene ítems o no existe aún en Firebase
+          pedido = [];
+          _notaCocina = '';
+          _descuentoAplicado = 0;
+          _descDUI = '';
+          var fb = document.getElementById('btn-fire');
+          if(fb){ fb.classList.remove('active'); fb.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora'; }
+          var db2 = document.getElementById('ck-desc-badge');
+          if(db2) db2.style.display = 'none';
+          
+          ORDEN = m.pedido_activo_id;
+          document.getElementById('tb-ord').textContent = ORDEN;
+          document.getElementById('ord-num').textContent = ORDEN;
+          renderCart();
+          toast('📋 Nueva orden — Mesa '+n,'ok');
         }
       });
     } else {
@@ -3322,24 +3473,60 @@ var _selectedSubCat = 'Todos';
 var _subCatsMap = {};
 
 function cargarProductos(){
-  db.ref('negocios/'+negocioID+'/productos').on('value', function(snap){
-    _prods = {};
-    var cats = new Set(['Todos']);
-    _subCatsMap = {};
+  // 1. Cargar desde caché offline inmediatamente para inicio rápido y soporte offline
+  var cached = localStorage.getItem('offline_menu_' + negocioID);
+  if(cached) {
+    try {
+      var cachedProds = JSON.parse(cached);
+      if (cachedProds && Object.keys(cachedProds).length > 0) {
+        _prods = cachedProds;
+        window._menuData = _prods;
+        
+        var catsCached = new Set(['Todos']);
+        _subCatsMap = {};
+        Object.values(_prods).forEach(function(p){ catsCached.add(p._cat || 'General'); });
+        
+        var mainCatsCached = new Set(['Todos']);
+        catsCached.forEach(function(c) {
+          if (c === 'Todos') return;
+          var parts = c.split('-');
+          var main = parts[0].trim();
+          var sub = parts[1] ? parts[1].trim() : null;
+          mainCatsCached.add(main);
+          if (sub) {
+            if (!_subCatsMap[main]) _subCatsMap[main] = new Set(['Todos']);
+            _subCatsMap[main].add(sub);
+          }
+        });
+        
+        renderCats(Array.from(mainCatsCached));
+        filtrarCat(_selectedMainCat);
+        console.log('📦 Menú cargado inicialmente desde caché offline');
+      }
+    } catch(e) {
+      console.error('Error al cargar caché offline:', e);
+    }
+  }
 
-    // Try flat structure first
+  // 2. Establecer el listener en tiempo real de Firebase
+  db.ref('negocios/'+negocioID+'/productos').on('value', function(snap){
+    var tempProds = {};
+    var cats = new Set(['Todos']);
+    var tempSubCatsMap = {};
+
+    // Intentar estructura plana primero
     snap.forEach(function(c){
       var p = c.val();
       if(p && p.nombre){
         p._id = c.key;
         p._cat = p.categoria || p.cat || 'General';
-        _prods[c.key] = p;
+        tempProds[c.key] = p;
         cats.add(p._cat);
       }
     });
 
-    // If empty, try nested categories
-    if(Object.keys(_prods).length === 0){
+    // Si está vacía, intentar estructura anidada por categorías
+    if(Object.keys(tempProds).length === 0){
       snap.forEach(function(catSnap){
         var items = catSnap.val();
         if(typeof items === 'object' && items !== null && !items.nombre){
@@ -3347,7 +3534,7 @@ function cargarProductos(){
             var p = items[id];
             if(p && p.nombre){
               p._id = id; p._cat = catSnap.key;
-              _prods[id] = p;
+              tempProds[id] = p;
               cats.add(catSnap.key);
             }
           });
@@ -3355,58 +3542,36 @@ function cargarProductos(){
       });
     }
 
-    if(Object.keys(_prods).length === 0){
-      // Try loading from offline cache before showing demo
-      var cached = localStorage.getItem('offline_menu_' + negocioID);
-      if(cached) {
-        try {
-          _prods = JSON.parse(cached);
-          var catsCached = new Set(['Todos']);
-          Object.values(_prods).forEach(function(p){ catsCached.add(p._cat || 'General'); });
-          window._menuData = _prods;
-          
-          var mainCatsCached = new Set(['Todos']);
-          catsCached.forEach(function(c) {
-            if (c === 'Todos') return;
-            var parts = c.split('-');
-            var main = parts[0].trim();
-            var sub = parts[1] ? parts[1].trim() : null;
-            mainCatsCached.add(main);
-            if (sub) {
-              if (!_subCatsMap[main]) _subCatsMap[main] = new Set(['Todos']);
-              _subCatsMap[main].add(sub);
-            }
-          });
-          
-          renderCats(Array.from(mainCatsCached));
-          filtrarCat(_selectedMainCat);
-          toast('📦 Menú cargado desde caché offline','ok');
-          return;
-        } catch(e) { /* fallback to demo */ }
+    // Si Firebase devolvió productos, actualizamos el estado y la caché
+    if(Object.keys(tempProds).length > 0){
+      _prods = tempProds;
+      window._menuData = _prods;
+      
+      // Procesar categorías y subcategorías
+      var mainCats = new Set(['Todos']);
+      cats.forEach(function(c) {
+        if (c === 'Todos') return;
+        var parts = c.split('-');
+        var main = parts[0].trim();
+        var sub = parts[1] ? parts[1].trim() : null;
+        mainCats.add(main);
+        if (sub) {
+          if (!tempSubCatsMap[main]) tempSubCatsMap[main] = new Set(['Todos']);
+          tempSubCatsMap[main].add(sub);
+        }
+      });
+
+      _subCatsMap = tempSubCatsMap;
+      localStorage.setItem('offline_menu_' + negocioID, JSON.stringify(_prods));
+      
+      renderCats(Array.from(mainCats));
+      filtrarCat(_selectedMainCat);
+    } else {
+      // Si Firebase no tiene productos y no hay nada en caché, inicializar demo
+      if (Object.keys(_prods).length === 0) {
+        seedDemoProductos();
       }
-      seedDemoProductos();
-      return;
     }
-
-    // Process categories and subcategories
-    var mainCats = new Set(['Todos']);
-    cats.forEach(function(c) {
-      if (c === 'Todos') return;
-      var parts = c.split('-');
-      var main = parts[0].trim();
-      var sub = parts[1] ? parts[1].trim() : null;
-      mainCats.add(main);
-      if (sub) {
-        if (!_subCatsMap[main]) _subCatsMap[main] = new Set(['Todos']);
-        _subCatsMap[main].add(sub);
-      }
-    });
-
-    window._menuData = _prods; // Save reference for offline caching
-    localStorage.setItem('offline_menu_' + negocioID, JSON.stringify(_prods));
-    
-    renderCats(Array.from(mainCats));
-    filtrarCat(_selectedMainCat);
   });
 }
 
@@ -3812,6 +3977,14 @@ function generarOrden(targetMesa, targetCanal){
       ORDEN = prefix+'-'+String(snap.val()).padStart(4,'0');
       document.getElementById('tb-ord').textContent = ORDEN;
       document.getElementById('ord-num').textContent = ORDEN;
+      
+      // Si es una mesa en canal mesa, asociar el pedido_activo_id en Firebase de inmediato
+      if (startCanal === 'mesa' && startMesa) {
+        db.ref('negocios/'+negocioID+'/mesas/'+startMesa).update({
+          pedido_activo_id: ORDEN,
+          timestamp: Date.now()
+        });
+      }
     }
   });
 }
