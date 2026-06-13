@@ -167,10 +167,10 @@
     .rooms-bar::-webkit-scrollbar { display: none; }
     
     .room-tab {
-      padding: 8px 16px; 
+      padding: 12px 24px; 
       border-radius: 99px; 
       font-weight: 700; 
-      font-size: 12px; 
+      font-size: 15px; 
       cursor: pointer;
       background: transparent; 
       color: var(--ink-muted); 
@@ -189,9 +189,9 @@
       box-shadow: 0 0 10px rgba(16, 185, 129, 0.1);
     }
     .btn-add-room { 
-      padding: 8px 14px; 
+      padding: 12px 20px; 
       border-radius: 99px; 
-      font-size: 11px; 
+      font-size: 14px; 
       font-weight: 800; 
       background: transparent; 
       border: 1px dashed var(--accent); 
@@ -202,7 +202,7 @@
       margin-left: 6px;
     }
     .btn-add-room:hover { 
-      background: rgba(16, 185, 129, 0.1); 
+      background: rgba(16, 185, 129, 0.15); 
       border-style: solid;
       color: var(--accent-hover);
     }
@@ -210,12 +210,12 @@
     /* ── TABLES ── */
     .mesa {
       position: absolute; 
-      width: 85px; 
-      height: 85px; 
+      width: 100px; 
+      height: 100px; 
       touch-action: none;
       background: var(--sur-solid); 
       border: 2px solid rgba(255, 255, 255, 0.1); 
-      border-radius: 18px;
+      border-radius: 20px;
       display: flex; 
       flex-direction: column; 
       align-items: center; 
@@ -243,20 +243,20 @@
       transition: none; 
     }
     
-    .mesa-id { font-family: var(--fh); font-weight: 800; font-size: 24px; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-    .mesa-cap { font-size: 11px; font-weight: 700; opacity: 0.7; margin-top: 4px; display: flex; align-items: center; gap: 3px; }
+    .mesa-id { font-family: var(--fh); font-weight: 800; font-size: 28px; line-height: 1; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .mesa-cap { font-size: 13px; font-weight: 700; opacity: 0.7; margin-top: 5px; display: flex; align-items: center; gap: 4px; }
 
     .mesa.round { border-radius: 50%; }
-    .mesa.horiz { width: 135px; height: 85px; }
-    .mesa.vert { width: 85px; height: 135px; }
+    .mesa.horiz { width: 160px; height: 100px; }
+    .mesa.vert { width: 100px; height: 160px; }
     .mesa.large { 
-      width: 160px; 
-      height: 160px; 
-      border-radius: 24px;
+      width: 200px; 
+      height: 200px; 
+      border-radius: 28px;
       border-width: 3px;
     }
-    .mesa.large .mesa-id { font-size: 36px; }
-    .mesa.large .mesa-cap { font-size: 13px; margin-top: 6px; }
+    .mesa.large .mesa-id { font-size: 42px; }
+    .mesa.large .mesa-cap { font-size: 15px; margin-top: 8px; }
 
     /* Estilos de Estados con Degradados Premium y Brillos */
     .mesa.libre { 
@@ -396,6 +396,194 @@
     body.embed-mode .rooms-bar {
       top: 10px;
     }
+
+    /* ── CREATOR PALETTE SIDEBAR ── */
+    .creator-palette {
+      position: absolute;
+      top: 90px;
+      left: 20px;
+      z-index: 500;
+      width: 90px;
+      background: rgba(18, 18, 22, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--bd);
+      border-radius: 20px;
+      padding: 12px 6px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    body.editor-active .creator-palette {
+      display: flex;
+    }
+    .cp-title {
+      font-size: 8px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      text-align: center;
+      border-bottom: 1px solid var(--bd);
+      padding-bottom: 8px;
+      width: 100%;
+    }
+    .cp-items {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+    .cp-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 4px 0;
+      border-radius: 8px;
+    }
+    .cp-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+    }
+    .cp-item span {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--ink-muted);
+    }
+    .cp-item:hover span {
+      color: var(--ink);
+    }
+    .cp-preview {
+      width: 32px;
+      height: 32px;
+      border: 2px solid rgba(255, 255, 255, 0.25);
+      background: rgba(255, 255, 255, 0.03);
+      transition: all 0.2s ease;
+    }
+    .cp-item:hover .cp-preview {
+      border-color: var(--accent);
+      background: rgba(16, 185, 129, 0.1);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+    }
+    .cp-preview.square { border-radius: 6px; }
+    .cp-preview.round { border-radius: 50%; }
+    .cp-preview.horiz { width: 42px; height: 26px; border-radius: 6px; }
+    .cp-preview.vert { width: 26px; height: 42px; border-radius: 6px; }
+    .cp-preview.large { width: 38px; height: 38px; border-radius: 8px; border-width: 2.5px; }
+
+    /* ── QUICK ACTION FLOATING MENU ── */
+    .quick-menu {
+      position: absolute;
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(18, 18, 22, 0.9);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1.5px solid var(--accent);
+      border-radius: 12px;
+      padding: 6px 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5), 0 0 12px var(--accent-glow);
+      pointer-events: auto;
+      user-select: none;
+      animation: pop-up 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop-up {
+      0% { transform: scale(0.8) translateY(10px); opacity: 0; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .quick-menu button {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--bd);
+      color: var(--ink);
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+    .quick-menu button:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+      box-shadow: 0 0 8px var(--accent-glow);
+    }
+    .quick-menu button:active {
+      transform: scale(0.9);
+    }
+    .quick-menu button.danger:hover {
+      background: #ef4444;
+      border-color: #ef4444;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+    }
+    .quick-menu #quick-cap-val {
+      font-family: var(--fh);
+      font-weight: 800;
+      font-size: 14px;
+      color: var(--ink);
+      min-width: 16px;
+      text-align: center;
+    }
+    .quick-menu .divider {
+      color: var(--bd);
+      font-weight: 300;
+      font-size: 12px;
+    }
+
+    /* ── ROOM ACTIONS ── */
+    .room-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--ink-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-left: 4px;
+    }
+    .room-action-btn:hover {
+      background: var(--accent);
+      color: white;
+    }
+    .room-action-btn.danger:hover {
+      background: #ef4444;
+      color: white;
+    }
+
+    /* ── DRAG ALIGNMENT GUIDES ── */
+    .drag-guide-x {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      border-left: 1px dashed rgba(16, 185, 129, 0.4);
+      display: none;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .drag-guide-y {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      border-top: 1px dashed rgba(16, 185, 129, 0.4);
+      display: none;
+      pointer-events: none;
+      z-index: 5;
+    }
   </style>
 </head>
 <body>
@@ -461,7 +649,49 @@
       <!-- Tabs se inyectan dinámicamente -->
     </div>
 
+    <!-- PANEL FLOTANTE DE CREACIÓN DE MESAS -->
+    <div class="creator-palette" id="creator-palette">
+      <div class="cp-title"><i class="fa-solid fa-circle-plus"></i> MESA</div>
+      <div class="cp-items">
+        <div class="cp-item" onclick="spawnShape('square')" title="Mesa Cuadrada">
+          <div class="cp-preview square"></div>
+          <span>Cuadrada</span>
+        </div>
+        <div class="cp-item" onclick="spawnShape('round')" title="Mesa Redonda">
+          <div class="cp-preview round"></div>
+          <span>Redonda</span>
+        </div>
+        <div class="cp-item" onclick="spawnShape('horiz')" title="Mesa Rectangular Horizontal">
+          <div class="cp-preview horiz"></div>
+          <span>Rect. H</span>
+        </div>
+        <div class="cp-item" onclick="spawnShape('vert')" title="Mesa Rectangular Vertical">
+          <div class="cp-preview vert"></div>
+          <span>Rect. V</span>
+        </div>
+        <div class="cp-item" onclick="spawnShape('large')" title="Mesa Grande">
+          <div class="cp-preview large"></div>
+          <span>Grande</span>
+        </div>
+      </div>
+    </div>
+
     <div class="main-canvas" id="canvas">
+      <!-- Guías de alineación -->
+      <div class="drag-guide-x" id="drag-guide-x"></div>
+      <div class="drag-guide-y" id="drag-guide-y"></div>
+
+      <!-- Menú de acciones flotantes rápidas -->
+      <div id="quick-menu" class="quick-menu">
+        <button onclick="changeCap(-1)" title="Restar capacidad"><i class="fa-solid fa-minus"></i></button>
+        <span id="quick-cap-val">4</span>
+        <button onclick="changeCap(1)" title="Sumar capacidad"><i class="fa-solid fa-plus"></i></button>
+        <div class="divider">|</div>
+        <button onclick="cycleQuickShape()" title="Cambiar forma"><i class="fa-solid fa-shapes"></i></button>
+        <div class="divider">|</div>
+        <button onclick="quickDeleteMesa()" class="danger" title="Borrar mesa"><i class="fa-solid fa-trash"></i></button>
+      </div>
+
       <!-- Mesas se cargan aquí -->
     </div>
   </div>
@@ -490,6 +720,7 @@
           <div class="shape-btn" data-shape="round" onclick="setShape('round', this)"><i class="fa-solid fa-circle"></i></div>
           <div class="shape-btn" data-shape="horiz" onclick="setShape('horiz', this)"><i class="fa-solid fa-minus" style="transform:scaleY(3)"></i></div>
           <div class="shape-btn" data-shape="vert" onclick="setShape('vert', this)"><i class="fa-solid fa-minus" style="transform:rotate(90deg) scaleY(3)"></i></div>
+          <div class="shape-btn" data-shape="large" onclick="setShape('large', this)"><i class="fa-solid fa-expand"></i></div>
         </div>
       </div>
       <div class="field-group">
@@ -515,7 +746,7 @@
     var _currentDragMesa = null;
     var _offset = { x: 0, y: 0 };
     var _currentZona = "INTERIOR";
-    var _isTablet = new URLSearchParams(window.location.search).get('tablet') === 'true';
+    var _isTablet = true;
     
     const CANVAS_WIDTH = 2400;
     const CANVAS_HEIGHT = 1600;
@@ -557,6 +788,54 @@
 
       setupDragging();
       centerCanvas();
+
+      // Deselect and close quick menu when clicking on empty canvas space
+      document.getElementById('canvas-container').addEventListener('click', (e) => {
+        if (!_editMode) return;
+        if (e.target.id === 'canvas-container' || e.target.id === 'canvas' || e.target.classList.contains('edit-grid')) {
+          closeQuickMenu();
+          document.querySelectorAll('.mesa').forEach(m => m.classList.remove('selected'));
+          _selectedMesaId = null;
+        }
+      });
+
+      // Double click to spawn table
+      document.getElementById('canvas').addEventListener('dblclick', (e) => {
+        if (!_editMode) return;
+        if (e.target.id !== 'canvas' && !e.target.classList.contains('edit-grid')) return;
+        
+        const rect = e.currentTarget.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) / _zoom;
+        const clickY = (e.clientY - rect.top) / _zoom;
+        
+        const snappedX = Math.round(clickX / 10) * 10;
+        const snappedY = Math.round(clickY / 10) * 10;
+        
+        spawnShapeAt('square', snappedX, snappedY);
+      });
+
+      // Custom double tap for mobile/tablets
+      let lastTap = 0;
+      document.getElementById('canvas').addEventListener('touchstart', (e) => {
+        if (!_editMode) return;
+        if (e.target.id !== 'canvas' && !e.target.classList.contains('edit-grid')) return;
+        
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const rect = document.getElementById('canvas').getBoundingClientRect();
+          const clickX = (touch.clientX - rect.left) / _zoom;
+          const clickY = (touch.clientY - rect.top) / _zoom;
+          
+          const snappedX = Math.round(clickX / 10) * 10;
+          const snappedY = Math.round(clickY / 10) * 10;
+          
+          spawnShapeAt('square', snappedX, snappedY);
+        }
+        lastTap = currentTime;
+      });
     });
 
     // ── INICIALIZACIÓN POR DEFECTO DE LOS 4 SALONES ──
@@ -657,6 +936,7 @@
         db.ref(`negocios/${negocioID}/mesas`).remove().then(() => {
           inicializarMapaMesasPorDefecto();
           closeEditor();
+          closeQuickMenu();
           toast('Plano restablecido correctamente', 'ok');
         });
       }
@@ -708,35 +988,66 @@
         if(liberarBtn) liberarBtn.style.display = 'none';
         if(zoomControls) zoomControls.style.display = 'none';
         closeEditor();
+        closeQuickMenu();
       }
       renderMesas();
     }
 
-    function addNuevaMesa() {
+    function spawnShapeAt(shape, x, y) {
       const existingIds = Object.keys(_mesas).map(k => parseInt(k)).filter(k => !isNaN(k));
       const nextId = existingIds.length ? Math.max(...existingIds) + 1 : 1;
       
       const newMesa = {
         capacidad: 4,
         estado: 'libre',
-        forma: 'square',
-        x: 300,
-        y: 200,
+        forma: shape,
+        x: x,
+        y: y,
         zona: _currentZona,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       };
 
       db.ref(`negocios/${negocioID}/mesas/${nextId}`).set(newMesa);
       _selectedMesaId = nextId;
-      openEditor(nextId);
+      renderMesas();
+      setTimeout(() => {
+        openQuickMenu(nextId);
+      }, 100);
+    }
+
+    function spawnShape(shape) {
+      const container = document.getElementById('canvas-container');
+      if (!container) return;
+      
+      let centerX = (container.scrollLeft + container.clientWidth / 2) / _zoom;
+      let centerY = (container.scrollTop + container.clientHeight / 2) / _zoom;
+      
+      centerX -= 50;
+      centerY -= 50;
+      
+      centerX = Math.max(0, Math.round(centerX / 10) * 10);
+      centerY = Math.max(0, Math.round(centerY / 10) * 10);
+      
+      spawnShapeAt(shape, centerX, centerY);
+    }
+
+    function addNuevaMesa() {
+      spawnShape('square');
     }
 
     function renderMesas() {
       const canvas = document.getElementById('canvas');
       if(_isDragging) return;
 
-      canvas.innerHTML = '';
-      if(_editMode) canvas.innerHTML += '<div class="edit-grid"></div>';
+      // Remove only mesas and edit grid to preserve guides and quick menu
+      const elementsToRemove = canvas.querySelectorAll('.mesa, .edit-grid');
+      elementsToRemove.forEach(el => el.remove());
+
+      if(_editMode) {
+        const grid = document.createElement('div');
+        grid.className = 'edit-grid';
+        canvas.insertBefore(grid, canvas.firstChild);
+      }
 
       buildRoomTabs();
 
@@ -761,11 +1072,10 @@
         div.className = `mesa ${m.forma || 'square'} ${m.estado || 'libre'}`;
         div.id = `mesa-${id}`;
         
-        // Asignación de tamaños reales de la mesa para el snap y posicionamiento correcto
-        let w = 85, h = 85;
-        if(m.forma === 'horiz') { w = 135; h = 85; }
-        else if(m.forma === 'vert') { w = 85; h = 135; }
-        else if(m.forma === 'large') { w = 160; h = 160; }
+        let w = 100, h = 100;
+        if(m.forma === 'horiz') { w = 160; h = 100; }
+        else if(m.forma === 'vert') { w = 100; h = 160; }
+        else if(m.forma === 'large') { w = 200; h = 200; }
         
         div.style.left = `${m.x || 100}px`;
         div.style.top = `${m.y || 100}px`;
@@ -786,6 +1096,14 @@
 
         canvas.appendChild(div);
       });
+
+      if (_selectedMesaId && _editMode) {
+        setTimeout(() => {
+          openQuickMenu(_selectedMesaId);
+        }, 50);
+      } else {
+        closeQuickMenu();
+      }
     }
 
     function cambiarFondoLienzo() {
@@ -799,13 +1117,15 @@
 
     function handleMesaClick(id, e) {
       if(_isDragging) return;
+      if (e) e.stopPropagation();
       
       _selectedMesaId = id;
       document.querySelectorAll('.mesa').forEach(m => m.classList.remove('selected'));
-      document.getElementById(`mesa-${id}`).classList.add('selected');
+      const div = document.getElementById(`mesa-${id}`);
+      if (div) div.classList.add('selected');
 
       if(_editMode) {
-        openEditor(id);
+        openQuickMenu(id);
       } else {
         var isEmbedded = (window.self !== window.top) || new URLSearchParams(window.location.search).get('embed') === '1';
         if (isEmbedded) {
@@ -823,11 +1143,8 @@
       
       var isEmbedded = (window.self !== window.top) || new URLSearchParams(window.location.search).get('embed') === '1';
       if (isEmbedded) {
-        // Enviar mensaje al parent de forma segura (evita bloqueos de origen null en file://)
         if (window.parent && window.parent !== window) {
           window.parent.postMessage({ type: 'selectMesa', mesaId: mesaId }, '*');
-          
-          // Fallback en caso de que postMessage falle o no se escuche
           if (typeof window.parent.selMesaModal === 'function') {
             window.parent.selMesaModal(mesaId);
           }
@@ -883,12 +1200,88 @@
 
       _currentZona = zona || 'INTERIOR';
       closeEditor();
+      closeQuickMenu();
     }
 
     function deleteMesa() {
       if(!confirm('¿Eliminar la mesa ' + _selectedMesaId + '?')) return;
       db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).remove();
       closeEditor();
+      closeQuickMenu();
+    }
+
+    function openQuickMenu(id) {
+      const m = _mesas[id];
+      if (!m) return;
+      
+      const quickMenu = document.getElementById('quick-menu');
+      if (!quickMenu) return;
+      
+      quickMenu.style.display = 'flex';
+      
+      const tableX = m.x || 100;
+      const tableY = m.y || 100;
+      
+      let w = 100;
+      if (m.forma === 'horiz') w = 160;
+      else if (m.forma === 'large') w = 200;
+      
+      quickMenu.style.left = `${tableX + w/2 - quickMenu.offsetWidth/2}px`;
+      quickMenu.style.top = `${tableY - 60}px`;
+      
+      document.getElementById('quick-cap-val').textContent = m.capacidad || 4;
+    }
+
+    function closeQuickMenu() {
+      const quickMenu = document.getElementById('quick-menu');
+      if (quickMenu) quickMenu.style.display = 'none';
+    }
+
+    function changeCap(delta) {
+      if (!_selectedMesaId) return;
+      const m = _mesas[_selectedMesaId];
+      if (!m) return;
+      
+      let newCap = (m.capacidad || 4) + delta;
+      if (newCap < 1) newCap = 1;
+      if (newCap > 20) newCap = 20;
+      
+      db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).update({ capacidad: newCap });
+      document.getElementById('quick-cap-val').textContent = newCap;
+      
+      if (document.getElementById('side-panel').classList.contains('open')) {
+        document.getElementById('edit-cap').value = newCap;
+      }
+    }
+
+    function cycleQuickShape() {
+      if (!_selectedMesaId) return;
+      const m = _mesas[_selectedMesaId];
+      if (!m) return;
+      
+      const shapes = ['square', 'round', 'horiz', 'vert', 'large'];
+      let currentIdx = shapes.indexOf(m.forma || 'square');
+      let nextIdx = (currentIdx + 1) % shapes.length;
+      const nextShape = shapes[nextIdx];
+      
+      db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).update({ forma: nextShape });
+      
+      document.querySelectorAll('.shape-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.shape == nextShape);
+      });
+      
+      setTimeout(() => {
+        openQuickMenu(_selectedMesaId);
+      }, 120);
+    }
+
+    function quickDeleteMesa() {
+      if (!_selectedMesaId) return;
+      if (confirm('¿Eliminar la mesa ' + _selectedMesaId + '?')) {
+        db.ref(`negocios/${negocioID}/mesas/${_selectedMesaId}`).remove();
+        closeQuickMenu();
+        closeEditor();
+      }
     }
 
     /* ── ROOMS LOGIC ── */
@@ -899,7 +1292,6 @@
         if(m.zona) zones.add(m.zona);
       });
       
-      // Asegurar que las zonas por defecto siempre estén representadas si la base de datos se borra
       if(zones.size === 0) {
         zones.add('INTERIOR');
         zones.add('MIRADOR');
@@ -913,15 +1305,68 @@
 
       let html = '<div style="font-size:10px; color:var(--accent); padding-right:8px; font-weight:800; display:flex; align-items:center; gap:5px; border-right:1px solid var(--bd); margin-right:6px"><i class="fa-solid fa-door-open" style="font-size:12px"></i> SALONES</div>';
       
-      // Ordenar alfabéticamente para mantener un orden consistente
       Array.from(zones).sort().forEach(z => {
-        html += `<div class="room-tab ${z === _currentZona ? 'active' : ''}" onclick="switchRoom('${z}')">${z}</div>`;
+        const isActive = z === _currentZona;
+        html += `
+          <div class="room-tab ${isActive ? 'active' : ''}" onclick="switchRoom('${z}')" style="display:flex; align-items:center; gap:6px">
+            ${z}
+            ${_editMode && isActive ? `
+              <span class="room-action-btn" onclick="renameRoom('${z}', event)" title="Renombrar Salón"><i class="fa-solid fa-pen"></i></span>
+              <span class="room-action-btn danger" onclick="deleteRoom('${z}', event)" title="Eliminar Salón"><i class="fa-solid fa-trash"></i></span>
+            ` : ''}
+          </div>`;
       });
       
       if(_editMode) {
         html += `<button class="btn-add-room" onclick="addRoom()"><i class="fa-solid fa-plus"></i> Crear Salón</button>`;
       }
       container.innerHTML = html;
+    }
+
+    function renameRoom(zonaStr, e) {
+      if (e) e.stopPropagation();
+      const newName = prompt(`Renombrar el salón '${zonaStr}' a:`, zonaStr);
+      if (!newName || newName.trim().toUpperCase() === zonaStr) return;
+      const cleanedName = newName.trim().toUpperCase();
+      
+      const updates = {};
+      Object.entries(_mesas).forEach(([id, m]) => {
+        if (m.zona === zonaStr) {
+          updates[`${id}/zona`] = cleanedName;
+        }
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        db.ref(`negocios/${negocioID}/mesas`).update(updates).then(() => {
+          _currentZona = cleanedName;
+          toast('Salón renombrado correctamente', 'ok');
+        });
+      } else {
+        _currentZona = cleanedName;
+        renderMesas();
+      }
+    }
+
+    function deleteRoom(zonaStr, e) {
+      if (e) e.stopPropagation();
+      if (!confirm(`¿Estás seguro de que deseas eliminar el salón '${zonaStr}' y TODAS sus mesas? Esta acción no se puede deshacer.`)) return;
+      
+      const updates = {};
+      Object.entries(_mesas).forEach(([id, m]) => {
+        if (m.zona === zonaStr) {
+          updates[id] = null;
+        }
+      });
+      
+      db.ref(`negocios/${negocioID}/mesas`).update(updates).then(() => {
+        toast('Salón eliminado', 'ok');
+        const remainingZones = new Set();
+        Object.values(_mesas).forEach(m => {
+          if (m.zona && m.zona !== zonaStr) remainingZones.add(m.zona);
+        });
+        _currentZona = Array.from(remainingZones)[0] || 'INTERIOR';
+        renderMesas();
+      });
     }
 
     function switchRoom(zonaStr) {
@@ -936,7 +1381,7 @@
       const resp = prompt("Nombre del nuevo salón (Ej. TERRAZA):");
       if(!resp) return;
       _currentZona = resp.trim().toUpperCase();
-      addNuevaMesa();
+      spawnShape('square');
     }
 
     /* ── DRAGGING LOGIC ── */
@@ -946,6 +1391,8 @@
       _currentDragMesa = id;
       const div = document.getElementById(`mesa-${id}`);
       div.classList.add('dragging');
+      
+      closeQuickMenu();
       
       const rect = div.getBoundingClientRect();
       _offset.x = ((e.clientX !== undefined ? e.clientX : e.touches?.[0].clientX) - rect.left) / _zoom;
@@ -966,12 +1413,12 @@
         let y = (clientY - canvasRect.top) / _zoom - _offset.y;
 
         // Tamaño real de la mesa actual para el límite de arrastre
-        let w = 85, h = 85;
+        let w = 100, h = 100;
         const currentMesa = _mesas[_currentDragMesa];
         if (currentMesa) {
-          if (currentMesa.forma === 'horiz') { w = 135; }
-          else if (currentMesa.forma === 'vert') { h = 135; }
-          else if (currentMesa.forma === 'large') { w = 160; h = 160; }
+          if (currentMesa.forma === 'horiz') { w = 160; }
+          else if (currentMesa.forma === 'vert') { h = 160; }
+          else if (currentMesa.forma === 'large') { w = 200; h = 200; }
         }
 
         x = Math.max(0, Math.min(x, CANVAS_WIDTH - w));
@@ -986,6 +1433,16 @@
           div.style.left = `${x}px`;
           div.style.top = `${y}px`;
         }
+
+        // Show alignment guides
+        const guideX = document.getElementById('drag-guide-x');
+        const guideY = document.getElementById('drag-guide-y');
+        if (guideX && guideY) {
+          guideX.style.display = 'block';
+          guideY.style.display = 'block';
+          guideX.style.left = `${x + w/2}px`;
+          guideY.style.top = `${y + h/2}px`;
+        }
       };
 
       const upHandler = () => {
@@ -996,11 +1453,23 @@
         const x = parseInt(div.style.left);
         const y = parseInt(div.style.top);
 
+        const guideX = document.getElementById('drag-guide-x');
+        const guideY = document.getElementById('drag-guide-y');
+        if (guideX && guideY) {
+          guideX.style.display = 'none';
+          guideY.style.display = 'none';
+        }
+
         db.ref(`negocios/${negocioID}/mesas/${_currentDragMesa}`).update({ x, y });
 
         _isDragging = false;
+        const draggedMesaId = _currentDragMesa;
         _currentDragMesa = null;
         div.classList.remove('dragging');
+
+        setTimeout(() => {
+          openQuickMenu(draggedMesaId);
+        }, 50);
       };
 
       document.addEventListener('mousemove', moveHandler);
@@ -1029,16 +1498,16 @@
       if (mesas.length > 0) {
         minX = Math.min(...mesas.map(m => m.x || 0)) - 60;
         maxX = Math.max(...mesas.map(m => {
-          let w = 85;
-          if (m.forma === 'horiz') w = 135;
-          else if (m.forma === 'large') w = 160;
+          let w = 100;
+          if (m.forma === 'horiz') w = 160;
+          else if (m.forma === 'large') w = 200;
           return (m.x || 0) + w;
         })) + 60;
         minY = Math.min(...mesas.map(m => m.y || 0)) - 60;
         maxY = Math.max(...mesas.map(m => {
-          let h = 85;
-          if (m.forma === 'vert') h = 135;
-          else if (m.forma === 'large') h = 160;
+          let h = 100;
+          if (m.forma === 'vert') h = 160;
+          else if (m.forma === 'large') h = 200;
           return (m.y || 0) + h;
         })) + 60;
       }

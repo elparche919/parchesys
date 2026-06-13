@@ -324,8 +324,8 @@ html,body{
 if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
 /* Firebase centralizado en firebase-config.js */
 
-const urlParams = new URLSearchParams(window.location.search);
-const negocioID = urlParams.get('negocio') || localStorage.getItem('modus_food_negocio');
+// negocioID already declared as var in firebase-config.js — just re-assign
+negocioID = urlParams.get('negocio') || localStorage.getItem('modus_food_negocio') || NEGOCIO_ID || 'elparche';
 
 if(!negocioID) {
     location.href = '../index.html';
@@ -456,6 +456,14 @@ function cerrarSesion() {
 function aplicarPermisosMovil(modulos, rol) {
   var isManager = (rol === 'propietario' || rol === 'admin' || rol === 'supervisor');
   if (isManager) return;
+  if (!modulos) return;
+
+  var normalized = {};
+  for (var k in modulos) {
+    if (modulos.hasOwnProperty(k)) {
+      normalized[k.toLowerCase().replace(/-/g, '_')] = modulos[k];
+    }
+  }
 
   // Tarjetas del grid de operaciones
   var mapCards = {
@@ -464,7 +472,7 @@ function aplicarPermisosMovil(modulos, rol) {
     mi_perfil: 'card-perfil',
   };
   Object.entries(mapCards).forEach(function([key, id]) {
-    var tieneAcceso = modulos[key] === true;
+    var tieneAcceso = normalized[key] === true;
     var card = document.getElementById(id);
     if (card && !tieneAcceso) {
       card.style.opacity = '0.4';
@@ -480,7 +488,7 @@ function aplicarPermisosMovil(modulos, rol) {
     empleados:    'item-empleados',
   };
   Object.entries(mapItems).forEach(function([key, id]) {
-    var tieneAcceso = modulos[key] === true || modulos[key.replace('_','-')] === true;
+    var tieneAcceso = normalized[key] === true;
     var item = document.getElementById(id);
     if (item && !tieneAcceso) {
       item.style.opacity = '0.4';
