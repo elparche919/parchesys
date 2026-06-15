@@ -2,15 +2,21 @@
 /* Base styles are inherited from the original inline CSS in pos-food.html */
 
 /* Tablet specific overrides (optimized for 8.7" screens: Lenovo Tab, Galaxy Tab A7 Lite, etc.) */
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   /* Layout: 2 columns fixed (Left: Catalog, Right: Cart + Totals stacked) */
   .layout {
     display: grid !important;
     grid-template-columns: 1fr 390px !important;
-    grid-template-rows: 55vh 45vh !important;
-    height: calc(100vh - 70px) !important; /* adjust for top bar */
+    grid-template-rows: 55fr 45fr !important;
+    flex: 1 !important;
+    min-height: 0 !important;
     margin-bottom: 0 !important;
     overflow: hidden !important;
+  }
+
+  /* Ocultar botones superiores en la tableta */
+  #btn-caja-status, #btn-mov-caja, #btn-pax-config, #link-cocina {
+    display: none !important;
   }
 
   /* Catalog Panel occupies the entire left side */
@@ -215,12 +221,12 @@
 
   .prod-card {
     height: auto !important;
-    min-height: 140px !important;
-    border-radius: 20px !important;
+    min-height: 110px !important;
+    border-radius: 16px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: space-between !important;
-    padding: 18px !important;
+    padding: 12px !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25) !important;
     position: relative !important;
@@ -257,11 +263,11 @@
   }
 
   .prod-name {
-    font-size: 18px !important;
+    font-size: 15px !important;
     font-weight: 800 !important;
     color: #ffffff !important;
     line-height: 1.25 !important;
-    min-height: 54px !important;
+    min-height: 38px !important;
     word-break: break-word !important;
   }
 
@@ -400,6 +406,22 @@
   border: 1px solid var(--border);
 }
 
+/* Ocultar botones superiores siempre en modo tableta (independientemente del ancho de pantalla) */
+.tablet-mode-active #btn-caja-status,
+.tablet-mode-active #btn-mov-caja,
+.tablet-mode-active #btn-pax-config,
+.tablet-mode-active #link-cocina,
+.tablet-mode-active #link-menu,
+.tablet-mode-active #link-dte,
+.tablet-mode-active #link-portal {
+  display: none !important;
+}
+
+/* Mostrar botón flotante de cerrar sesión en la tableta */
+.tablet-mode-active #logout-fab {
+  display: flex !important;
+}
+
 /* Micro‑animations for button presses */
 button, .caja-btn, .mesa-btn, .prod-add, .mtab, .cat-btn, .ck-opt, .btn-sec {
   transition: transform 0.1s cubic-bezier(0.25, 0.8, 0.25, 1), background-color 0.2s ease;
@@ -511,132 +533,222 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   height: 40px !important;
   font-size: 18px !important;
   border-radius: 12px !important;
+}
 
 /* ═══════════════════════════════════════════
-   4 QUICK ACTION BUTTONS GRID (Tablet mode)
+   COBRO SUMMARY & BUTTONS OVERRIDES (Tablet mode)
    ═══════════════════════════════════════════ */
-@media (min-width: 768px) {
-  .pnl-r-body {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    grid-template-rows: 1fr 1fr !important;
-    gap: 16px !important;
-    padding: 20px !important;
-    height: 100% !important;
-  }
-
-  /* Hide other elements in pnl-r-body */
-  .pnl-r-body .tot-card,
-  .pnl-r-body .action-row,
-  .pnl-r-body .fire-btn,
-  .pnl-r-body #pendientes-section {
+@media (min-width: 1024px) {
+  /* Ocultar elementos innecesarios en el panel de cobro de tablet */
+  .tablet-mode-active .pnl-r-body .checkout-trigger,
+  .tablet-mode-active .pnl-r-body .action-row,
+  .tablet-mode-active .pnl-r-body .send-kitchen-btn,
+  .tablet-mode-active .pnl-r-body .fire-btn,
+  .tablet-mode-active .pnl-r-body #tablet-quick-actions,
+  .tablet-mode-active .pnl-r-body #tablet-checkout-wrapper,
+  .tablet-mode-active .pnl-r-body #tablet-btn-offline,
+  .tablet-mode-active .pnl-r-body #pendientes-section {
     display: none !important;
   }
 
-  /* Style all 4 buttons uniformly as premium touch-targets */
-  #tablet-btn-mesas,
-  #tablet-btn-offline,
-  .pnl-r-body .send-kitchen-btn,
-  .pnl-r-body #btn-checkout-trigger {
+  /* Forzar Flex Layout y reordenar elementos */
+  .tablet-mode-active .pnl-r-body {
     display: flex !important;
     flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 12px !important;
+  }
+
+  /* El área de Total queda abajo de la cuadrícula de botones */
+  .tablet-mode-active .pnl-r-body .tot-card {
+    order: 2 !important;
+    display: block !important;
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
+    padding: 12px 18px !important;
+    border-radius: 14px !important;
+    background: rgba(255,255,255,0.04) !important;
+    border: 1px solid rgba(255,255,255,0.08) !important;
+    box-shadow: inset 0 1px 1px rgba(255,255,255,0.05) !important;
+  }
+
+  .tablet-mode-active .pnl-r-body .tot-row {
+    font-size: 13px !important;
+    padding: 4px 0 !important;
+  }
+
+  .tablet-mode-active .pnl-r-body .tot-row.bold {
+    border-top: 1px dashed rgba(255, 255, 255, 0.15) !important;
+    padding-top: 8px !important;
+    margin-top: 6px !important;
+  }
+
+  .tablet-mode-active .pnl-r-body .tot-row.bold span:last-child {
+    font-size: 24px !important;
+  }
+
+  /* Mostrar y dar estilo a la cuadrícula 2x2 de la tablet, colocada ARRIBA del total */
+  .tablet-mode-active #tablet-actions-grid {
+    order: 1 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    width: 100% !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn {
+    display: flex !important;
+    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 10px !important;
+    gap: 8px !important;
+    padding: 14px 10px !important;
+    border-radius: 14px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.1) !important;
+    cursor: pointer !important;
+    min-height: 58px !important;
+    transition: transform 0.1s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn:active {
+    transform: scale(0.95) !important;
+    box-shadow: none !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn i {
+    font-size: 15px !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn.send-kitchen {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    color: #ffffff !important;
+    border: none !important;
+    box-shadow: 0 6px 16px rgba(29, 78, 216, 0.4) !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn.fire-alarm {
+    background: #09090b !important;
+    border: 2px solid #ef4444 !important;
+    color: #ef4444 !important;
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.25) !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn.show-tables {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+  }
+
+  .tablet-mode-active #tablet-actions-grid .t-btn.pre-ticket {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    color: white !important;
+    border: none !important;
+    box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4) !important;
+  }
+
+
+  /* Ocultar elementos del topbar en la tablet */
+  .tablet-mode-active #btn-caja-status,
+  .tablet-mode-active #btn-mov-caja,
+  .tablet-mode-active #btn-pax-config,
+  .tablet-mode-active #link-cocina,
+  .tablet-mode-active #link-menu,
+  .tablet-mode-active #link-dte,
+  .tablet-mode-active #link-portal {
+    display: none !important;
+  }
+
+  /* Estilos para los botones del canal bar en tablet */
+  .tablet-mode-active #tablet-btn-respaldo-local {
+    background: #10b981 !important;
+    color: #000000 !important;
+    border: none !important;
+    font-weight: 800 !important;
+  }
+  .tablet-mode-active #tablet-btn-cobrar-offline {
+    background: #f97316 !important;
+    color: #ffffff !important;
+    border: none !important;
+    font-weight: 800 !important;
+  }
+
+  /* Full screen mesa overlay on tablet */
+  .tablet-mode-active #mesa-overlay {
+    padding: 0 !important;
+    background: #09090b !important;
+    display: none !important;
+    align-items: stretch !important;
+    justify-content: stretch !important;
+  }
+  .tablet-mode-active #mesa-overlay.open {
+    display: flex !important;
+  }
+  .tablet-mode-active #mesa-overlay .ck-modal,
+  .tablet-mode-active #mesa-overlay .modal {
     width: 100% !important;
     height: 100% !important;
-    min-height: 110px !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
     margin: 0 !important;
-    padding: 16px !important;
-    border-radius: 20px !important;
-    font-family: 'DM Sans', sans-serif !important;
+    padding: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    background: #09090b !important;
+    box-shadow: none !important;
+  }
+  .tablet-mode-active #mesa-overlay .modal-head {
+    height: 40px !important;
+    padding: 4px 16px !important;
+    background: #0f172a !important;
+    border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex-shrink: 0 !important;
+  }
+  .tablet-mode-active #mesa-overlay .modal-head h3 {
     font-size: 14px !important;
     font-weight: 800 !important;
-    letter-spacing: 0.03em !important;
+    color: #fff !important;
+  }
+  .tablet-mode-active #mesa-overlay .modal-close {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+    border-radius: 8px !important;
+    background: rgba(255,255,255,0.08) !important;
+    border: none !important;
+    color: #fff !important;
     cursor: pointer !important;
-    transition: transform 0.1s ease, background-color 0.2s ease, border-color 0.2s ease !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2) !important;
-    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
-
-  #tablet-btn-mesas:active,
-  #tablet-btn-offline:active,
-  .pnl-r-body .send-kitchen-btn:active,
-  .pnl-r-body #btn-checkout-trigger:active {
-    transform: scale(0.95) !important;
+  .tablet-mode-active #mesa-view-map {
+    flex: 1 !important;
+    height: calc(100vh - 40px) !important;
+    max-height: calc(100vh - 40px) !important;
+    display: block !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
-
-  #tablet-btn-mesas i,
-  #tablet-btn-offline i,
-  .pnl-r-body .send-kitchen-btn i,
-  .pnl-r-body #btn-checkout-trigger i {
-    font-size: 26px !important;
-  }
-
-  /* Specific order and colors */
-  #tablet-btn-mesas {
-    order: 1 !important;
-    background: rgba(16, 185, 129, 0.08) !important;
-    border-color: rgba(16, 185, 129, 0.4) !important;
-    color: #10b981 !important;
-  }
-  #tablet-btn-mesas:hover {
-    background: rgba(16, 185, 129, 0.15) !important;
-  }
-
-  /* OFFLINE button replaces the old ORDENES button */
-  #tablet-btn-offline {
-    order: 2 !important;
-    background: rgba(245, 158, 11, 0.08) !important;
-    border-color: rgba(245, 158, 11, 0.4) !important;
-    color: #f59e0b !important;
-    position: relative !important;
-  }
-  #tablet-btn-offline:hover {
-    background: rgba(245, 158, 11, 0.15) !important;
-  }
-
-  .pnl-r-body .send-kitchen-btn {
-    order: 3 !important;
-    background: rgba(59, 130, 246, 0.08) !important;
-    border-color: rgba(59, 130, 246, 0.4) !important;
-    color: #3b82f6 !important;
-  }
-  .pnl-r-body .send-kitchen-btn:hover {
-    background: rgba(59, 130, 246, 0.15) !important;
-  }
-
-  .pnl-r-body #btn-checkout-trigger {
-    order: 4 !important;
-    background: rgba(139, 92, 246, 0.08) !important;
-    border-color: rgba(139, 92, 246, 0.4) !important;
-    color: #8b5cf6 !important;
-  }
-  .pnl-r-body #btn-checkout-trigger:hover {
-    background: rgba(139, 92, 246, 0.15) !important;
-  }
-}
-
-/* ── HEIGHT OPTIMIZATION FOR LENOVO TAB 8.7 OR SMALL VIEWPORTS (<=800px) ── */
-@media (max-height: 800px) and (min-width: 768px) {
-  .pnl-r-body {
-    padding: 12px !important;
-    gap: 10px !important;
-  }
-  #tablet-btn-mesas,
-  #tablet-btn-offline,
-  .pnl-r-body .send-kitchen-btn,
-  .pnl-r-body #btn-checkout-trigger {
-    min-height: 90px !important;
-    padding: 10px !important;
-    gap: 6px !important;
-    font-size: 13px !important;
-  }
-  #tablet-btn-mesas i,
-  #tablet-btn-offline i,
-  .pnl-r-body .send-kitchen-btn i,
-  .pnl-r-body #btn-checkout-trigger i {
-    font-size: 22px !important;
+  .tablet-mode-active #mapa-iframe {
+    width: 100% !important;
+    height: 100% !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 }
 
@@ -656,7 +768,8 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   font-size: 22px !important;
 }
 #mesa-view-map {
-  height: 500px !important;
+  height: calc(90vh - 70px) !important;
+  max-height: 440px !important;
   overflow: hidden !important;
 }
 #mapa-iframe {
@@ -664,5 +777,70 @@ button:active, .caja-btn:active, .mesa-btn:active, .prod-add:active, .mtab:activ
   height: 100% !important;
   border: none !important;
 }
+
+/* Ocultar botón de Domicilio en tableta */
+#canal-domicilio {
+  display: none !important;
+}
+
+/* ── Overrides para el Botón de Cierre de Sesión en la Tableta ── */
+#logout-fab {
+  display: none; /* Se maneja por JS si es tablet */
+}
+
+@media (min-width: 1024px) {
+  #logout-fab {
+    bottom: 30px !important;
+    left: 30px !important;
+  }
+}
+
+/* ── Ajustes de Orientación Vertical para Tablet (Portrait) ── */
+@media (min-width: 600px) and (max-width: 1023px) {
+  /* Barra de pestañas inferior más grande y alta en tablet vertical */
+  .mobile-tabs {
+    height: 110px !important;
+    display: flex !important;
+  }
+  .layout {
+    margin-bottom: 110px !important;
+  }
+  .pnl-l, .pnl-c, .pnl-r {
+    height: calc(100% - 110px) !important;
+  }
+  .mtab {
+    font-size: 18px !important;
+    gap: 10px !important;
+  }
+  .mtab i {
+    font-size: 36px !important;
+  }
+
+  /* Botones de acción del carrito y cobro más altos para tacto cómodo */
+  .send-kitchen-btn, .checkout-trigger, .acc-btn, .btn-sec, .ck-opt {
+    padding: 22px !important;
+    font-size: 18px !important;
+  }
+
+  /* Mover el botón de cierre de sesión hacia arriba para no tapar los tabs */
+  #logout-fab {
+    bottom: 130px !important;
+    left: 20px !important;
+  }
+
+  /* Subcategorías con tamaño táctil para tablet */
+  .subcat-scroll {
+    display: flex !important;
+    gap: 10px !important;
+    padding: 8px 0 !important;
+    margin-top: 6px !important;
+  }
+  .subcat-btn {
+    padding: 8px 18px !important;
+    font-size: 13px !important;
+    border-radius: 24px !important;
+  }
+}
+
 
 

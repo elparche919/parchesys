@@ -650,11 +650,16 @@ function iniciar(){
   db.ref('negocios/'+NID+'/info').once('value',s=>{
     const inf=s.val()||{};
     document.getElementById('tb-emp').textContent=inf.nombre||'PARCHE SYS';
-    if(inf.gps_lat&&inf.gps_lng){
+    if(inf.gps_radio)GPS_CONFIG.radio=parseFloat(inf.gps_radio);
+
+    // Si el empleado tiene registro de GPS personalizado, usarlo
+    if(EMP.gps_lat !== undefined && EMP.gps_lng !== undefined && EMP.gps_lat !== null && EMP.gps_lng !== null){
+      GPS_CONFIG.lat=parseFloat(EMP.gps_lat);
+      GPS_CONFIG.lng=parseFloat(EMP.gps_lng);
+    } else if(inf.gps_lat&&inf.gps_lng){
       GPS_CONFIG.lat=parseFloat(inf.gps_lat);
       GPS_CONFIG.lng=parseFloat(inf.gps_lng);
     }
-    if(inf.gps_radio)GPS_CONFIG.radio=parseFloat(inf.gps_radio);
 
     // Sobrescribir coordenadas locales si hay override en localStorage
     const overrideLat = localStorage.getItem('gps_override_lat');
@@ -681,12 +686,6 @@ function haversineM(lat1,lng1,lat2,lng2){
 }
 
 function verificarGPS(esReintento){
-  // BYPASS TEMPORAL DE GPS
-  gpsOk = true;
-  setGPSStatus('ok', 'GPS Omitido (Modo Pruebas)', '0m');
-  mostrarApp();
-  return;
-
   if(esReintento){
     setGPSStatus('pend','Obteniendo ubicación...', '...');
   }
@@ -702,22 +701,52 @@ function verificarGPS(esReintento){
     position => {
       const lat = position.coords.latitude;
       const lng = position.coords.longitude;
-      const dist = haversineM(lat, lng, GPS_CONFIG.lat, GPS_CONFIG.lng);
-      gpsDist = dist;
       
-      if(dist <= GPS_CONFIG.radio){
+      const tieneRegistro = (EMP.gps_lat !== undefined && EMP.gps_lng !== undefined && EMP.gps_lat !== null && EMP.gps_lng !== null);
+      
+      if(!tieneRegistro){
+        // Registrar ubicación actual por primera vez en Firebase
+        db.ref('negocios/'+NID+'/empleados/'+EID).update({
+          gps_lat: lat,
+          gps_lng: lng
+        }).then(() => {
+          console.log("Coordenadas iniciales guardadas en Firebase:", lat, lng);
+        }).catch(err => {
+          console.error("Error al registrar ubicación en Firebase:", err);
+        });
+
+        // Actualizar datos locales de EMP
+        EMP.gps_lat = lat;
+        EMP.gps_lng = lng;
+        localStorage.setItem('modus_emp', JSON.stringify({NID, EID, EMP}));
+
+        // Actualizar configuración GPS local
+        GPS_CONFIG.lat = lat;
+        GPS_CONFIG.lng = lng;
+
         gpsOk = true;
-        setGPSStatus('ok', 'Ubicación verificada', Math.round(dist) + 'm');
+        setGPSStatus('ok', 'Ubicación registrada', '0m');
+        toast('Ubicación inicial de asistencia registrada', 'ok');
         mostrarApp();
       } else {
-        gpsOk = false;
-        bloquearPorGPS(
-          `Tu ubicación actual está a <b>${Math.round(dist)}m</b> del negocio.<br>` +
-          `El límite máximo permitido es de <b>${GPS_CONFIG.radio}m</b>.<br>` +
-          `Coordenadas de referencia: ${GPS_CONFIG.lat.toFixed(6)}, ${GPS_CONFIG.lng.toFixed(6)}<br>` +
-          `Asegúrate de estar en el establecimiento y tener activo el GPS del dispositivo.`,
-          Math.round(dist) + 'm'
-        );
+        // Validación subsecuente
+        const dist = haversineM(lat, lng, GPS_CONFIG.lat, GPS_CONFIG.lng);
+        gpsDist = dist;
+        
+        if(dist <= GPS_CONFIG.radio){
+          gpsOk = true;
+          setGPSStatus('ok', 'Ubicación verificada', Math.round(dist) + 'm');
+          mostrarApp();
+        } else {
+          gpsOk = false;
+          bloquearPorGPS(
+            `Tu ubicación actual está a <b>${Math.round(dist)}m</b> de tu ubicación autorizada.<br>` +
+            `El límite máximo permitido es de <b>${GPS_CONFIG.radio}m</b>.<br>` +
+            `Coordenadas de referencia: ${GPS_CONFIG.lat.toFixed(6)}, ${GPS_CONFIG.lng.toFixed(6)}<br>` +
+            `Asegúrate de estar en el establecimiento y tener activo el GPS del dispositivo.`,
+            Math.round(dist) + 'm'
+          );
+        }
       }
     },
     error => {

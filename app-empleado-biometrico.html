@@ -427,21 +427,11 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
 
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script>
 // ════════════════════════════════════════════════
-// CONFIGURACIÓN — Firebase
+// CONFIGURACIÓN — Firebase (Centralizado en firebase-config.js)
 // ════════════════════════════════════════════════
-const FB={
-  apiKey:"AIzaSyBoM-hQcdhJxfeODu848q2D1AYsa1dvRqQ",
-  authDomain:"ventas-id-43ff8.firebaseapp.com",
-  databaseURL:"https://ventas-id-43ff8-default-rtdb.firebaseio.com",
-  projectId:"ventas-id-43ff8",
-  storageBucket:"ventas-id-43ff8.firebasestorage.app",
-  messagingSenderId:"898228544993",
-  appId:"1:898228544993:web:06658053096e51cdfa5ea0"
-};
-firebase.initializeApp(FB);
-const db=firebase.database();
 
 // ════════════════════════════════════════════════
 // CONFIGURACIÓN GPS — ZONA DE TRABAJO

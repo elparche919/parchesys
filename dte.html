@@ -1476,9 +1476,14 @@ window.onload = () => {
     var _bp=document.getElementById('btn-portal');if(_bp){_bp.href='portal-food.html?negocio='+negocioID; _bp.onclick=null;}
     var _sb=document.getElementById('sb-back');if(_sb){_sb.href='portal-food.html?negocio='+negocioID; _sb.onclick=null;}
   }
-  // Cablear botón Contabilidad con negocioID
+  // Cablear botón Contabilidad con negocioID (ocultar en Electron)
   var _bc=document.getElementById('btn-contabilidad');
-  if(_bc && negocioID){_bc.href='contabilidad.html?negocio='+negocioID;}
+  var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+  if (isElectron) {
+    if(_bc) _bc.style.display = 'none';
+  } else {
+    if(_bc && negocioID){_bc.href='contabilidad.html?negocio='+negocioID;}
+  }
 
   // Mes actual en filtro listado
   const hoy = new Date();

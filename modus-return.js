@@ -75,6 +75,16 @@
         if (portalState) lastSection = portalState;
       } catch(e) {}
 
+      // DETECTAR PORTAL DE ORIGEN (Móvil vs Escritorio)
+      try {
+        var referrer = document.referrer || '';
+        if (referrer.indexOf('portal-food-movil.html') > -1) {
+          localStorage.setItem('modus_active_portal', 'portal-food-movil.html');
+        } else if (referrer.indexOf('portal-food.html') > -1) {
+          localStorage.setItem('modus_active_portal', 'portal-food.html');
+        }
+      } catch(e) {}
+
       return nid;
     },
 
@@ -95,7 +105,11 @@
       var nid = this.getNegocioID();
       if (!nid) return 'index.html';
       var sec = section || this._getLastSection() || 'resumen';
-      return 'portal.html?negocio=' + nid + '#' + sec;
+      var portal = 'portal-food.html';
+      try {
+        portal = localStorage.getItem('modus_active_portal') || 'portal-food.html';
+      } catch(e) {}
+      return portal + '?negocio=' + nid + '#' + sec;
     },
 
     /**
@@ -105,7 +119,7 @@
       try { sessionStorage.setItem('modus_return_from_external', '1'); } catch(e) {}
       var nid = this.getNegocioID();
       var sec = section || 'resumen';
-      window.location.href = 'portal-movil.html?negocio=' + (nid||'') + '#' + sec;
+      window.location.href = 'portal-food-movil.html?negocio=' + (nid||'') + '#' + sec;
     },
 
     /**

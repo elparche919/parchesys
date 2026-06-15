@@ -981,8 +981,8 @@ body {
   display: none;
   align-items: center;
   justify-content: flex-start;
-  gap: 32px;
-  padding: 14px 24px;
+  gap: 20px;
+  padding: 8px 20px;
   background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
   border-bottom: 2px solid rgba(99, 102, 241, 0.3);
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
@@ -995,15 +995,15 @@ body {
 .guia-mesa-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #e2e8f0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 .guia-mesa-item i {
-  font-size: 18px;
+  font-size: 15px;
   color: #818cf8;
 }
 #guia-mesa-num {
@@ -1054,6 +1054,123 @@ body {
   background: rgba(16, 185, 129, 0.15);
   color: var(--accent);
   border-color: var(--accent);
+}
+
+/* --- VARIANTES Y TECLADO TÁCTIL --- */
+.variant-btn {
+  width: 100%;
+  padding: 16px 20px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-light);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.variant-btn:hover {
+  border-color: var(--accent);
+  background: rgba(16, 185, 129, 0.05);
+}
+.input-keypad-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+.input-keypad-container input {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+.keypad-trigger-btn {
+  padding: 10px 14px;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 16px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-light);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.keypad-trigger-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(16, 185, 129, 0.05);
+}
+.numkeypad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.numkeypad-btn {
+  padding: 15px;
+  font-size: 18px;
+  font-weight: bold;
+  border-radius: 12px;
+  border: 1.5px solid var(--border);
+  background: var(--surface-light);
+  color: white;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.numkeypad-btn:hover {
+  border-color: var(--accent);
+  background: rgba(16, 185, 129, 0.05);
+}
+.numkeypad-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── SEMAFORO DE ESTADOS EN CARRITO Y ALERTAS ── */
+.item-status-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.status-enviado {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+.status-pendiente {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  animation: pulsePendiente 2.5s infinite ease-in-out;
+}
+@keyframes pulsePendiente {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; background: rgba(239, 68, 68, 0.3); }
+}
+.mesa-unsaved-badge {
+  font-size: 8px;
+  font-weight: 950;
+  background: #ef4444;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 4px;
+  display: block;
+  margin-top: 4px;
+  line-height: 1;
+  animation: pulsePendiente 2.5s infinite ease-in-out;
+}
+.mesa-sin-enviar {
+  animation: borderFlashRed 1.5s infinite ease-in-out !important;
+}
+@keyframes borderFlashRed {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.4) !important; box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); }
+  50% { border-color: rgba(239, 68, 68, 1) !important; box-shadow: 0 0 12px rgba(239, 68, 68, 0.6); background-color: rgba(239, 68, 68, 0.1) !important; }
 }
 </style>
 </head>
@@ -1123,11 +1240,17 @@ body {
               <div class="ck-section-lbl" style="margin-bottom:0">Efectivo recibido</div>
               <div id="ck-change-display" style="font-size:11px;font-weight:800;color:var(--a)">Cambio: $0.00</div>
             </div>
-            <input type="number" class="ck-input" id="ck-cash-input" placeholder="0.00" step="0.01" min="0" oninput="calcCheckout()">
+            <div class="input-keypad-container">
+              <input type="number" class="ck-input" id="ck-cash-input" placeholder="0.00" step="0.01" min="0" oninput="calcCheckout()">
+              <button class="keypad-trigger-btn" onclick="abrirNumKeypad('ck-cash-input', 'Efectivo Recibido')" type="button"><i class="fa-solid fa-calculator"></i></button>
+            </div>
           </div>
           <div>
             <div class="ck-section-lbl">Propina (opcional)</div>
-            <input type="number" class="ck-input" id="ck-tip-input" placeholder="0.00" step="0.01" min="0" style="font-size:16px;padding:10px" oninput="calcCheckout()">
+            <div class="input-keypad-container">
+              <input type="number" class="ck-input" id="ck-tip-input" placeholder="0.00" step="0.01" min="0" style="font-size:16px;padding:10px" oninput="calcCheckout()">
+              <button class="keypad-trigger-btn" onclick="abrirNumKeypad('ck-tip-input', 'Propina')" type="button"><i class="fa-solid fa-calculator"></i></button>
+            </div>
           </div>
           <div id="ck-change-badge-wrap" style="display:none">
             <div class="ck-change-badge">
@@ -1271,7 +1394,7 @@ body {
     <div class="split-footer">
       <div style="font-size:12px;color:var(--text-sub)"><i class="fa-solid fa-hand-pointer"></i> Arrastra productos hacia cada ticket</div>
       <div style="display:flex;gap:10px">
-        <button class="btn-sec" onclick="cerrarSplit()" style="padding:10px 18px">Cancelar</button>
+        <button class="btn-sec" onclick="guardarSplitTickets()" style="padding:10px 18px; background: rgba(16, 185, 129, 0.15); color: var(--accent); border-color: var(--accent);"><i class="fa-solid fa-floppy-disk"></i> Guardar y Salir</button>
         <button class="btn-sec" onclick="imprimirPreticketsSplit()" style="padding:10px 18px; border: 1.5px dashed var(--accent); color: var(--accent); background: transparent;">
           <i class="fa-solid fa-print"></i> Pre-tickets
         </button>
@@ -1332,6 +1455,9 @@ body {
   <div class="guia-mesa-item"><i class="fa-solid fa-chair"></i> <span id="guia-mesa-num">Mesa: Ninguna</span></div>
   <div class="guia-mesa-item"><i class="fa-solid fa-users"></i> <span id="guia-mesa-comensales">Comensales: --</span></div>
   <div class="guia-mesa-item"><i class="fa-solid fa-user"></i> <span id="guia-mesa-cliente">Cliente: --</span></div>
+  <div class="guia-mesa-item" id="guia-mesa-pendiente" style="display:none; background:rgba(239, 68, 68, 0.2); border:1.5px solid #ef4444; color:#ef4444; padding:2px 10px; border-radius:6px; font-weight:900; animation: pulsePendiente 2.5s infinite ease-in-out; align-items:center; gap:6px;">
+    <i class="fa-solid fa-bell-concierge"></i> ¡TIENES PLATILLOS SIN ENVIAR!
+  </div>
 </div>
 
 <!-- MAIN LAYOUT -->
@@ -1690,11 +1816,17 @@ body {
       </div>
       <div>
         <label class="fl">Monto Inicial en Efectivo ($)</label>
-        <input type="number" id="caja-monto-apertura" class="fi" placeholder="0.00" step="0.01" style="font-size:18px; font-weight:bold; text-align:center;">
+        <div class="input-keypad-container">
+          <input type="number" id="caja-monto-apertura" class="fi" placeholder="0.00" step="0.01" style="font-size:18px; font-weight:bold; text-align:center;">
+          <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-monto-apertura', 'Monto Inicial')" type="button"><i class="fa-solid fa-calculator"></i></button>
+        </div>
       </div>
       <div>
         <label class="fl">PIN de Apertura</label>
-        <input type="password" id="caja-pin-apertura" class="fi" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:18px; font-weight:bold; text-align:center; letter-spacing:4px;">
+        <div class="input-keypad-container">
+          <input type="password" id="caja-pin-apertura" class="fi" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:18px; font-weight:bold; text-align:center; letter-spacing:4px;">
+          <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-pin-apertura', 'PIN de Apertura')" type="button"><i class="fa-solid fa-calculator"></i></button>
+        </div>
       </div>
       <div id="caja-apertura-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ PIN incorrecto o usuario no autorizado</div>
       <button class="checkout-trigger" onclick="abrirCajaSesion()" style="padding:14px;">
@@ -1755,11 +1887,17 @@ body {
         <div class="ck-section-lbl" style="color:var(--danger);">🔐 Arqueo y Cierre de Turno</div>
         <div>
           <label class="fl">Efectivo Físico en Caja ($)</label>
-          <input type="number" id="caja-monto-arqueo" class="fi" placeholder="Cuenta de dinero físico" step="0.01" style="font-size:16px; font-weight:bold; text-align:center;">
+          <div class="input-keypad-container">
+            <input type="number" id="caja-monto-arqueo" class="fi" placeholder="Cuenta de dinero físico" step="0.01" style="font-size:16px; font-weight:bold; text-align:center;">
+            <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-monto-arqueo', 'Efectivo Físico')" type="button"><i class="fa-solid fa-calculator"></i></button>
+          </div>
         </div>
         <div>
           <label class="fl">PIN de Autorización Cajero</label>
-          <input type="password" id="caja-pin-cierre" class="fi" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:16px; font-weight:bold; text-align:center; letter-spacing:4px;">
+          <div class="input-keypad-container">
+            <input type="password" id="caja-pin-cierre" class="fi" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:16px; font-weight:bold; text-align:center; letter-spacing:4px;">
+            <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-pin-cierre', 'PIN de Cierre')" type="button"><i class="fa-solid fa-calculator"></i></button>
+          </div>
         </div>
         <div id="caja-cierre-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ PIN incorrecto o usuario no autorizado</div>
         <button class="checkout-trigger" onclick="cerrarCajaSesion()" style="background:var(--danger); box-shadow:0 10px 25px rgba(239,68,68,0.25); padding:14px;">
@@ -1767,6 +1905,20 @@ body {
         </button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- OVERLAY ADVERTENCIA MESA NO SELECCIONADA -->
+<div class="overlay" id="warning-mesa-overlay" style="z-index: 99999; display: none;" onclick="if(event.target===this)cerrarWarningMesaModal()">
+  <div class="ck-modal" style="max-width:400px; width:90%; text-align:center; padding:30px; border-radius:16px; background:var(--surface); border:1px solid rgba(255,255,255,0.08);">
+    <div style="font-size: 54px; margin-bottom: 15px;">⚠️</div>
+    <h2 style="color:white; font-size:22px; font-weight:900; margin-bottom:12px;">Mesa no Seleccionada</h2>
+    <p style="color:var(--text-muted); font-size:14px; line-height:1.6; margin-bottom:24px;">
+      Debes seleccionar una mesa antes de agregar productos o ítems a la orden.
+    </p>
+    <button class="checkout-trigger" style="width:100%; padding:14px; font-size:15px; font-weight:bold; border-radius:8px; background:var(--accent); border-color:var(--accent);" onclick="cerrarWarningMesaModal()">
+      ENTENDIDO
+    </button>
   </div>
 </div>
 
@@ -1779,7 +1931,10 @@ body {
     </div>
     <div class="modal-body" style="text-align:center">
       <div id="dui-sub" style="font-size:12px; color:var(--text-muted); margin-bottom:20px">Ingresa tu DUI para autorizar esta acción</div>
-      <input type="text" class="fi" id="dui-inp" placeholder="00000000-0" style="text-align:center; font-size:20px; letter-spacing:2px">
+      <div class="input-keypad-container" style="margin-bottom:10px;">
+        <input type="text" class="fi" id="dui-inp" placeholder="00000000-0" style="text-align:center; font-size:20px; letter-spacing:2px">
+        <button class="keypad-trigger-btn" onclick="abrirNumKeypad('dui-inp', 'DUI de Autorización')" type="button"><i class="fa-solid fa-calculator"></i></button>
+      </div>
       <div id="dui-err" style="display:none; color:var(--danger); font-size:11px; font-weight:700; margin-top:10px">DUI no encontrado</div>
       <button class="checkout-trigger" id="dui-confirm-btn" onclick="confirmarDui()" style="margin-top:20px; padding:14px; font-size:14px">Validar Identidad</button>
     </div>
@@ -1806,16 +1961,25 @@ body {
       </div>
       <!-- Monto -->
       <label class="fl">Monto ($)</label>
-      <input type="number" class="fi" id="movcaja-monto" placeholder="0.00" min="0.01" step="0.01" style="font-size:22px;font-weight:900;text-align:center;letter-spacing:2px;margin-bottom:14px">
+      <div class="input-keypad-container" style="margin-bottom:14px">
+        <input type="number" class="fi" id="movcaja-monto" placeholder="0.00" min="0.01" step="0.01" style="font-size:22px;font-weight:900;text-align:center;letter-spacing:2px;">
+        <button class="keypad-trigger-btn" onclick="abrirNumKeypad('movcaja-monto', 'Monto Movimiento')" type="button"><i class="fa-solid fa-calculator"></i></button>
+      </div>
       <!-- Concepto -->
       <label class="fl">Concepto</label>
       <input type="text" class="fi" id="movcaja-concepto" placeholder="Ej: Compra insumos, fondo cambio..." maxlength="100" style="margin-bottom:14px">
       <!-- PIN de autorización -->
       <label class="fl">PIN de cajero (autorización)</label>
-      <input type="password" class="fi" id="movcaja-pin" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:18px;font-weight:bold;text-align:center;letter-spacing:4px;margin-bottom:6px">
+      <div class="input-keypad-container" style="margin-bottom:6px">
+        <input type="password" class="fi" id="movcaja-pin" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:18px;font-weight:bold;text-align:center;letter-spacing:4px;">
+        <button class="keypad-trigger-btn" onclick="abrirNumKeypad('movcaja-pin', 'PIN Autorización')" type="button"><i class="fa-solid fa-calculator"></i></button>
+      </div>
       <div id="movcaja-err" style="display:none;color:var(--danger);font-size:12px;font-weight:700;text-align:center;margin-bottom:10px"></div>
       <button class="checkout-trigger" id="movcaja-confirm-btn" onclick="confirmarMovCaja()" style="padding:14px;font-size:14px;background:linear-gradient(135deg,#7c3aed,#a78bfa)">
         <i class="fa-solid fa-check"></i> Registrar Movimiento
+      </button>
+      <button class="checkout-trigger" id="btn-abrir-cajon-mov" onclick="abrirCajonFisico()" style="margin-top:10px;padding:12px;font-size:13px;background:rgba(245,158,11,0.15);color:#f59e0b;border:1px dashed #f59e0b;box-shadow:none;">
+        <i class="fa-solid fa-unlock-keyhole"></i> ⚡ Abrir Cajón
       </button>
     </div>
   </div>
@@ -1907,6 +2071,57 @@ body {
   ">Cancelar en el POS</button>
 </div>
 
+<!-- MODAL SELECCION VARIANTES -->
+<div class="overlay" id="variant-overlay" style="z-index: 31000; display:none">
+  <div class="modal" style="max-width:400px; width:90%">
+    <div class="modal-head">
+      <h3 id="variant-prod-name">🍽️ Seleccionar Variación</h3>
+      <button class="modal-close" onclick="cerrarVariantes()">✕</button>
+    </div>
+    <div class="modal-body" style="padding: 20px 0;">
+      <div id="variant-options-list" style="display:flex; flex-direction:column; gap:12px; max-height:350px; overflow-y:auto; padding: 4px;">
+        <!-- Botones de variantes -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TECLADO NUMÉRICO TÁCTIL -->
+<div class="overlay" id="numkeypad-overlay" style="z-index: 32000; display:none">
+  <div class="modal" style="max-width:320px; width:90%; padding:15px; border-radius:18px; background:var(--surface)">
+    <div class="modal-head" style="margin-bottom:12px;">
+      <h3 id="numkeypad-title" style="font-size:16px;">Teclado Numérico</h3>
+      <button class="modal-close" onclick="cerrarNumKeypad()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div style="margin-bottom:15px;">
+        <input type="text" id="numkeypad-display" readonly style="width:100%; height:54px; font-size:24px; font-weight:bold; text-align:center; border-radius:10px; border:1.5px solid var(--border); background:var(--surface-light); color:white;">
+      </div>
+      <div class="numkeypad-grid">
+        <button class="numkeypad-btn" onclick="pressNumKeypad('1')">1</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('2')">2</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('3')">3</button>
+        
+        <button class="numkeypad-btn" onclick="pressNumKeypad('4')">4</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('5')">5</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('6')">6</button>
+        
+        <button class="numkeypad-btn" onclick="pressNumKeypad('7')">7</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('8')">8</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('9')">9</button>
+        
+        <button class="numkeypad-btn" onclick="pressNumKeypad('-')" id="btn-keypad-dash" style="color:var(--text-muted)">-</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('0')">0</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('.')">.</button>
+        
+        <button class="numkeypad-btn" onclick="pressNumKeypad('C')" style="background:rgba(239,68,68,0.15); color:#ef4444; border-color:rgba(239,68,68,0.3)">C</button>
+        <button class="numkeypad-btn" onclick="pressNumKeypad('back')"><i class="fa-solid fa-backspace"></i></button>
+        <button class="numkeypad-btn" onclick="aplicarNumKeypad()" style="background:var(--accent); color:white; border-color:var(--accent)"><i class="fa-solid fa-circle-check"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="firebase-config.js"></script>
 <script src="modus-return.js"></script>
 <script>
@@ -1942,10 +2157,57 @@ var _paxCancelado = false;
 
 // ── SESIÓN Y ROL ──
 var _loggedMesero = localStorage.getItem('meseroId') || localStorage.getItem('mesero') || '';
-var _esAdmin = false;  // se resuelve desde Firebase
-var _esCajero = false; // empleado código 5061
+var _esAdmin = false;  // se resuelve desde Firebase/localStorage
+var _esCajero = false; // empleado código 5061/localStorage
 var _kaInterval = null; // kitchen alarm interval
 var _CAJERO_CODE = '5061'; // código exclusivo para Mov.Caja
+
+function clearLocalUnsaved(mesa) {
+  if (mesa) {
+    try {
+      localStorage.removeItem('unsaved_items_' + (typeof negocioID !== 'undefined' ? negocioID : 'elparche') + '_' + mesa);
+    } catch(e) { console.error("Error clearing local unsaved:", e); }
+  }
+}
+
+function checkUserRoles() {
+  try {
+    var negocioID = new URLSearchParams(window.location.search).get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+    var localEmpStr = localStorage.getItem('modus_emp');
+    var localSesStr = localStorage.getItem('food_session_elparche') || localStorage.getItem('food_session_' + negocioID);
+    
+    if (localEmpStr) {
+      var emp = JSON.parse(localEmpStr);
+      var rol = (emp.rol || '').toLowerCase();
+      var puesto = (emp.puesto || '').toLowerCase();
+      var pin = String(emp.pin || emp.pin_app || '').trim();
+      var empCod = String(emp.codigo || emp.code || emp.id_empleado || emp.pin_app || emp.pin || '').trim();
+      
+      if (rol.includes('admin') || rol.includes('propietario') || puesto.includes('admin') || puesto.includes('gerente') || puesto.includes('supervisor') || emp.admin === true) {
+        _esAdmin = true;
+      }
+      if (pin === _CAJERO_CODE || empCod === _CAJERO_CODE || rol.includes('cajero') || rol.includes('cajera') || rol.includes('caja') || puesto.includes('cajero') || puesto.includes('cajera') || puesto.includes('caja')) {
+        _esCajero = true;
+      }
+    }
+    if (localSesStr) {
+      var ses = JSON.parse(localSesStr);
+      var sesRol = (ses.rol || '').toLowerCase();
+      var sesPuesto = (ses.puesto || '').toLowerCase();
+      var sesEmpKey = String(ses.empKey || '').trim();
+      if (sesRol.includes('admin') || sesRol.includes('propietario') || sesPuesto.includes('admin') || sesPuesto.includes('gerente') || sesPuesto.includes('supervisor') || ses.tipo === 'admin') {
+        _esAdmin = true;
+      }
+      if (sesEmpKey === _CAJERO_CODE || sesRol.includes('cajero') || sesRol.includes('cajera') || sesRol.includes('caja') || sesPuesto.includes('cajero') || sesPuesto.includes('cajera') || sesPuesto.includes('caja')) {
+        _esCajero = true;
+      }
+    }
+  } catch(e) {
+    console.error("Error en checkUserRoles:", e);
+  }
+}
+checkUserRoles();
+
 
 /* ═══════════════════════════════════════
    INIT
@@ -1994,11 +2256,22 @@ document.addEventListener('DOMContentLoaded', function(){
     if(mn && mb) { mn.textContent = _loggedMesero; mb.style.display = 'inline-flex'; mb.style.alignItems = 'center'; mb.style.gap = '4px'; }
 
     // Buscar rol del empleado en Firebase
+    // Buscar rol del empleado en Firebase
     db.ref('negocios/'+negocioID+'/empleados').once('value', function(snap){
+      var matched = false;
       snap.forEach(function(c){
         var e = c.val();
         var nombre = (e.nombre || '').toLowerCase().trim();
-        if(nombre === _loggedMesero.toLowerCase().trim()){
+        var isThisEmp = (nombre === _loggedMesero.toLowerCase().trim());
+        try {
+          var localSes = JSON.parse(localStorage.getItem('food_session_' + negocioID) || '{}');
+          if (localSes.empKey && String(c.key).trim() === String(localSes.empKey).trim()) {
+            isThisEmp = true;
+          }
+        } catch(err){}
+
+        if(isThisEmp){
+          matched = true;
           var puesto = (e.puesto || e.rol || '').toLowerCase();
           var esAdminFlag = puesto.includes('admin') || puesto.includes('gerente') || puesto.includes('supervisor') || e.admin === true;
           _esAdmin = esAdminFlag;
@@ -2015,6 +2288,19 @@ document.addEventListener('DOMContentLoaded', function(){
           window._empCodigoActivo = empCodigo;
         }
       });
+
+      if (!matched) {
+        // Fallback robusto si no se encontró coincidencia exacta en Firebase
+        checkUserRoles();
+      }
+      
+      var badge = document.getElementById('tb-admin-badge');
+      if(badge) badge.style.display = _esAdmin ? 'inline-block' : 'none';
+      if(_esAdmin){
+        var roleIcon = document.getElementById('tb-mesero-role-icon');
+        if(roleIcon) roleIcon.textContent = '👑';
+      }
+
       // Mostrar botón Mov. Caja si es cajero (5061) o admin
       var btnMovCaja = document.getElementById('btn-mov-caja');
       if(btnMovCaja) btnMovCaja.style.display = (_esCajero || _esAdmin) ? '' : 'none';
@@ -2086,6 +2372,40 @@ document.addEventListener('DOMContentLoaded', function(){
           snap.ref.remove();
         }
       });
+    }
+    
+    // ── Escuchar notificaciones globales de stock bajo ──
+    try {
+      var globalNotifRef = db.ref('negocios/' + negocioID + '/notificaciones').orderByChild('fecha').limitToLast(5);
+      globalNotifRef.on('child_added', function(snap) {
+        var notifKey = snap.key;
+        var notif = snap.val();
+        if (!notif) return;
+        
+        var shownKey = 'shown_notif_' + negocioID + '_' + notifKey;
+        if (localStorage.getItem(shownKey)) return;
+        
+        var notifTime = new Date(notif.fecha).getTime();
+        if (Date.now() - notifTime > 60000) return;
+        
+        localStorage.setItem(shownKey, 'true');
+        
+        if (notif.tipo === 'stock_bajo') {
+          toast('⚠️ ' + notif.titulo + '\n' + notif.mensaje, 'warn');
+          
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              new Notification('⚠️ ' + notif.titulo, { body: notif.mensaje, icon: 'LOGOPARCHESYS.png' });
+            } catch(e) {}
+          }
+        }
+      });
+      
+      if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+    } catch(e) {
+      console.error(e);
     }
   }
 
@@ -2239,6 +2559,22 @@ function abrirModalCaja() {
 
 function cerrarModalCaja() {
   var overlay = document.getElementById('caja-mgmt-overlay');
+  if (overlay) {
+    overlay.classList.remove('open');
+    overlay.style.display = 'none';
+  }
+}
+
+function mostrarWarningMesaModal() {
+  var overlay = document.getElementById('warning-mesa-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+    overlay.classList.add('open');
+  }
+}
+
+function cerrarWarningMesaModal() {
+  var overlay = document.getElementById('warning-mesa-overlay');
   if (overlay) {
     overlay.classList.remove('open');
     overlay.style.display = 'none';
@@ -2875,11 +3211,17 @@ function abrirMesaModal(defaultTab){
         var m = entry[1];
         var st = m.estado || 'libre';
         var sel = MESA_SEL == id ? 'seleccionada' : '';
+        var isPendingSend = (MESA_SEL == id && pedido.some(function(i) { return !i.enviado; }));
+        var classUnsaved = isPendingSend ? ' mesa-sin-enviar' : '';
         var content = '<span class="mesa-num">'+id+'</span>';
-        var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
-        content += '<span style="font-size:10px;font-weight:900;color:#10b981;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+        if (isPendingSend) {
+          content += '<span class="mesa-unsaved-badge"><i class="fa-solid fa-bell-concierge"></i> SIN ENVIAR</span>';
+        } else {
+          var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
+          content += '<span style="font-size:10px;font-weight:900;color:#10b981;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
+        }
         
-        html += '<button id="pos-btn-mesa-my-'+id+'" class="mesa-btn '+st+' '+sel+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
+        html += '<button id="pos-btn-mesa-my-'+id+'" class="mesa-btn '+st+' '+sel+classUnsaved+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
           content +
           '</button>';
       });
@@ -2902,9 +3244,13 @@ function abrirMesaModal(defaultTab){
         var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
         if(_esAdmin || _esCajero) isOtherMesero = false;
         var classOther = isOtherMesero ? 'otro-mesero' : '';
+        var isPendingSend = (MESA_SEL == id && pedido.some(function(i) { return !i.enviado; }));
+        var classUnsaved = isPendingSend ? ' mesa-sin-enviar' : '';
 
         var content = '<span class="mesa-num">'+id+'</span>';
-        if (st !== 'libre' && m.mesero) {
+        if (isPendingSend) {
+          content += '<span class="mesa-unsaved-badge"><i class="fa-solid fa-bell-concierge"></i> SIN ENVIAR</span>';
+        } else if (st !== 'libre' && m.mesero) {
           var firstName = (m.mesero || '').split(' ')[0] || 'Mesero';
           var nameColor = isOtherMesero ? '#ef4444' : (currentMesero && m.mesero.trim().toLowerCase() === currentMesero.trim().toLowerCase() ? '#10b981' : '#60a5fa');
           content += '<span style="font-size:10px;font-weight:900;color:'+nameColor+';max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;line-height:1.2;margin-top:2px">'+firstName+'</span>';
@@ -2913,7 +3259,7 @@ function abrirMesaModal(defaultTab){
           content += '<span class="mesa-estado">'+(st==='ocupada'?'●':st==='cuenta'?'!':'○')+'</span>';
         }
 
-        html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
+        html += '<button id="pos-btn-mesa-'+id+'" class="mesa-btn '+st+' '+sel+' '+classOther+classUnsaved+'" onclick="selMesaModal(\''+id+'\')" title="Mesa '+id+'">'+
           content +
           '</button>';
       });
@@ -3102,6 +3448,7 @@ function actualizarGuiaMesaBar() {
     var numEl = document.getElementById('guia-mesa-num');
     var comEl = document.getElementById('guia-mesa-comensales');
     var cliEl = document.getElementById('guia-mesa-cliente');
+    var pendEl = document.getElementById('guia-mesa-pendiente');
     
     if (numEl) numEl.textContent = 'Mesa: ' + MESA_SEL;
     
@@ -3120,6 +3467,11 @@ function actualizarGuiaMesaBar() {
     
     if (comEl) comEl.textContent = 'Comensales: ' + personasVal;
     if (cliEl) cliEl.textContent = 'Cliente: ' + clienteVal;
+    
+    if (pendEl) {
+      var tienePendientes = pedido.some(function(i){ return !i.enviado; });
+      pendEl.style.display = tienePendientes ? 'inline-flex' : 'none';
+    }
   } else {
     bar.style.display = 'none';
   }
@@ -3264,6 +3616,7 @@ function cerrarMesaAperturaModal() {
 }
 
 function selMesa(n) {
+  checkUserRoles();
   _mesaAperturaId = n;
   var m = _mesas[n] || {};
   
@@ -3340,6 +3693,7 @@ function selMesa(n) {
 }
 
 function ejecutarSelMesa(n){
+  checkUserRoles();
   // Admin y cajero pueden acceder a todas las mesas
   if (_isTablet && !_esAdmin && !_esCajero && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
@@ -3392,10 +3746,17 @@ function ejecutarSelMesa(n){
         if (MESA_SEL !== n || CANAL !== 'mesa' || _mesas[n].pedido_activo_id !== m.pedido_activo_id) return;
         
         if(pd && pd.items && pd.estado !== 'pagado'){
-          pedido = (pd.items || []).map(function(item) {
+          var loadedItems = (pd.items || []).map(function(item) {
             item.enviado = true;
             return item;
           });
+          var localUnsaved = [];
+          try {
+            var rawLocal = localStorage.getItem('unsaved_items_' + negocioID + '_' + n);
+            if (rawLocal) localUnsaved = JSON.parse(rawLocal) || [];
+          } catch(e) { console.error(e); }
+          pedido = loadedItems.concat(localUnsaved);
+          
           ORDEN = m.pedido_activo_id;
           document.getElementById('tb-ord').textContent = ORDEN;
           document.getElementById('ord-num').textContent = ORDEN;
@@ -3413,8 +3774,14 @@ function ejecutarSelMesa(n){
             },1000);
           }
         } else {
-          // Si el pedido no tiene ítems o no existe aún en Firebase
-          pedido = [];
+          // Si el pedido no tiene ítems o no existe aún en Firebase, recuperar borrador local
+          var localUnsaved = [];
+          try {
+            var rawLocal = localStorage.getItem('unsaved_items_' + negocioID + '_' + n);
+            if (rawLocal) localUnsaved = JSON.parse(rawLocal) || [];
+          } catch(e) { console.error(e); }
+          pedido = localUnsaved;
+          
           _notaCocina = '';
           _descuentoAplicado = 0;
           _descDUI = '';
@@ -3431,8 +3798,14 @@ function ejecutarSelMesa(n){
         }
       });
     } else {
-      // Mesa libre: limpiar el carrito y generar una nueva orden
-      pedido = [];
+      // Mesa libre: limpiar el carrito pero cargar posibles items guardados localmente
+      var localUnsaved = [];
+      try {
+        var rawLocal = localStorage.getItem('unsaved_items_' + negocioID + '_' + n);
+        if (rawLocal) localUnsaved = JSON.parse(rawLocal) || [];
+      } catch(e) { console.error(e); }
+      pedido = localUnsaved;
+      
       _notaCocina = '';
       _descuentoAplicado = 0;
       _descDUI = '';
@@ -3748,19 +4121,39 @@ function renderProds(prods){
 /* ═══════════════════════════════════════
    CART
 ═══════════════════════════════════════ */
-function addItem(id){
+function addItem(id, selectedVariant){
+  if (CANAL === 'mesa' && !MESA_SEL) {
+    mostrarWarningMesaModal();
+    return;
+  }
   var p = _prods[id];
   if(!p) return;
   
+  // Si el producto tiene variantes y NO se ha seleccionado ninguna todavía, abrir modal de variantes
+  if (p.variantes && p.variantes.length > 0 && !selectedVariant) {
+    abrirVariantes(id);
+    return;
+  }
+  
   var stockMax = p.descuenta ? parseFloat(p.stockFijo || 0) : Infinity;
+  if (selectedVariant && p.descuenta) {
+    stockMax = parseFloat(selectedVariant.stock || 0);
+  }
+  
   var agotado = p.disponible===false || p.activo===false || p.oculto===true || (p.descuenta && stockMax <= 0);
   if(agotado){
     toast('⚠ Producto agotado / no disponible','warn');
     return;
   }
 
+  var descCompleto = p.nombre;
   var precio = parseFloat(p.precio || p.precio_venta || 0);
-  var idx = pedido.findIndex(function(i){ return i.id===id && !i.nota && !i.enviado; });
+  if (selectedVariant) {
+    descCompleto = p.nombre + ' (' + (selectedVariant.n || selectedVariant.nombre) + ')';
+    precio = parseFloat(selectedVariant.p || selectedVariant.precio || 0);
+  }
+
+  var idx = pedido.findIndex(function(i){ return i.id===id && i.desc===descCompleto && !i.nota && !i.enviado; });
   if(idx >= 0){
     if(p.descuenta && pedido[idx].cant >= stockMax){
       toast('⚠ Solo hay ' + stockMax + ' unidades en stock','warn');
@@ -3770,10 +4163,22 @@ function addItem(id){
     pedido[idx].total = pedido[idx].cant * pedido[idx].precio;
   } else {
     // Si no existe, se crea con precio_base
-    pedido.push({id:id, desc:p.nombre, cant:1, precio:precio, precio_base:precio, total:precio, cat:p._cat||'', tiempo:p.tiempo_prep_min||0, nota:'', modificadores:p.modificadores||null});
+    pedido.push({
+      id: id,
+      desc: descCompleto,
+      cant: 1,
+      precio: precio,
+      precio_base: precio,
+      total: precio,
+      cat: p._cat||'',
+      tiempo: p.tiempo_prep_min||0,
+      nota: '',
+      modificadores: p.modificadores||null,
+      variante: selectedVariant !== undefined ? selectedVariant : null
+    });
   }
   renderCart();
-  toast('✓ '+p.nombre,'ok');
+  toast('✓ '+descCompleto,'ok');
 }
 
 function removeItem(idx){
@@ -3788,7 +4193,9 @@ function updateCant(idx, val){
   var item = pedido[idx];
   var p = _prods[item.id];
   if(p && p.descuenta){
-    var stockMax = parseFloat(p.stockFijo || 0);
+    var stockMax = (item.variante && item.variante.index !== undefined && p.variantes && p.variantes[item.variante.index])
+      ? parseFloat(p.variantes[item.variante.index].stock || 0)
+      : parseFloat(p.stockFijo || 0);
     if(n > stockMax){
       toast('⚠ Solo hay ' + stockMax + ' unidades en stock','warn');
       n = stockMax;
@@ -3805,18 +4212,34 @@ function renderCart(){
   document.getElementById('items-count').textContent = pedido.length + ' item' + (pedido.length!==1?'s':'');
   if(!pedido.length){
     c.innerHTML = '<div class="empty-cart"><div class="ei">🍽️</div><p>Agrega platillos desde el menú</p></div>';
-    calcTotales(); return;
+    calcTotales(); 
+    actualizarGuiaMesaBar();
+    if (CANAL === 'mesa' && MESA_SEL) {
+      try {
+        localStorage.removeItem('unsaved_items_' + negocioID + '_' + MESA_SEL);
+      } catch(e) { console.error(e); }
+    }
+    return;
   }
   c.innerHTML = pedido.map(function(item, i){
     var notaHtml = item.nota
-      ? '<div class="item-note" onclick="editarNota('+i+')">📝 '+item.nota+'</div>'
-      : '<div class="item-note" onclick="editarNota('+i+')">+ nota</div>';
-    return '<div class="item-row">'+
+      ? '<div class="item-note" style="margin-top:0">📝 '+item.nota+'</div>'
+      : '<div class="item-note" style="margin-top:0">+ nota</div>';
+      
+    var classEnviado = item.enviado ? 'item-enviado' : 'item-pendiente';
+    var badgeHtml = item.enviado
+      ? '<span class="item-status-badge status-enviado"><i class="fa-solid fa-circle-check"></i> Enviado</span>'
+      : '<span class="item-status-badge status-pendiente"><i class="fa-solid fa-circle-exclamation"></i> No enviado</span>';
+
+    return '<div class="item-row '+classEnviado+'">'+
       '<div class="item-row-top">'+
         '<div class="item-num">'+(i+1)+'</div>'+
         '<div class="item-info" onclick="editarNota('+i+')">'+
           '<div class="item-name">'+item.desc+' <i class="fa-solid fa-pen-to-square" style="font-size:10px; color:var(--accent); opacity:0.6; vertical-align:middle"></i></div>'+
-          notaHtml+
+          '<div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">'+
+            badgeHtml+
+            notaHtml+
+          '</div>'+
         '</div>'+
         '<button class="item-del" onclick="removeItem('+i+')"><i class="fa-solid fa-xmark"></i></button>'+
       '</div>'+
@@ -3831,6 +4254,18 @@ function renderCart(){
       '</div>';
   }).join('');
   calcTotales();
+  actualizarGuiaMesaBar();
+  
+  if (CANAL === 'mesa' && MESA_SEL) {
+    var unsaved = pedido.filter(function(i) { return !i.enviado; });
+    try {
+      if (unsaved.length > 0) {
+        localStorage.setItem('unsaved_items_' + negocioID + '_' + MESA_SEL, JSON.stringify(unsaved));
+      } else {
+        localStorage.removeItem('unsaved_items_' + negocioID + '_' + MESA_SEL);
+      }
+    } catch(e) { console.error(e); }
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -3920,6 +4355,10 @@ function guardarMod(){
 }
 
 function addItemLibre(){
+  if (CANAL === 'mesa' && !MESA_SEL) {
+    mostrarWarningMesaModal();
+    return;
+  }
   document.getElementById('libre-name').value = '';
   document.getElementById('libre-price').value = '';
   document.getElementById('libre-overlay').classList.add('open');
@@ -3993,6 +4432,7 @@ function generarOrden(targetMesa, targetCanal){
    CHECKOUT MODAL
 ═══════════════════════════════════════ */
 function abrirCheckout(){
+  checkUserRoles();
   if(!_cajaSesion || _cajaSesion.estado !== 'abierta') {
     toast('La caja está cerrada. Debes iniciar turno para cobrar.', 'err');
     abrirModalCaja();
@@ -4020,6 +4460,15 @@ function abrirCheckout(){
   setDteModal('TIQ');
   setPayModal('efectivo');
   document.getElementById('checkout-overlay').classList.add('open');
+  
+  // ✅ FOCUS AND SELECT ON CASH INPUT FOR TOUCH POS AND KEYBOARD
+  setTimeout(function(){
+    var input = document.getElementById('ck-cash-input');
+    if (input) {
+      input.focus();
+      input.select();
+    }
+  }, 300);
 }
 
 function cerrarCheckout(esCancelacion){
@@ -4341,7 +4790,8 @@ function ajustarStockPorDiferencia(prevItems, newItems) {
   if (Array.isArray(prevItems)) {
     prevItems.forEach(function(i) {
       if (i && i.id) {
-        diffs[i.id] = (diffs[i.id] || 0) - (parseFloat(i.cant) || 0);
+        var key = (i.variante && i.variante.index !== undefined) ? (i.id + '::' + i.variante.index) : i.id;
+        diffs[key] = (diffs[key] || 0) - (parseFloat(i.cant) || 0);
       }
     });
   }
@@ -4350,15 +4800,20 @@ function ajustarStockPorDiferencia(prevItems, newItems) {
   if (Array.isArray(newItems)) {
     newItems.forEach(function(i) {
       if (i && i.id) {
-        diffs[i.id] = (diffs[i.id] || 0) + (parseFloat(i.cant) || 0);
+        var key = (i.variante && i.variante.index !== undefined) ? (i.id + '::' + i.variante.index) : i.id;
+        diffs[key] = (diffs[key] || 0) + (parseFloat(i.cant) || 0);
       }
     });
   }
   
   // Aplicar ajustes en la base de datos
-  Object.keys(diffs).forEach(function(productId) {
-    var netQty = diffs[productId];
+  Object.keys(diffs).forEach(function(key) {
+    var netQty = diffs[key];
     if (netQty === 0) return; // Sin cambios para este producto
+    
+    var parts = key.split('::');
+    var productId = parts[0];
+    var variantIndex = parts[1] !== undefined ? parseInt(parts[1]) : null;
     
     var p = _prods[productId];
     if (!p || !p.descuenta) return; // Si el producto no existe o no descuenta stock, ignorar
@@ -4367,25 +4822,80 @@ function ajustarStockPorDiferencia(prevItems, newItems) {
     
     // Construir la ruta correcta en Firebase
     var path = 'negocios/' + negocioID + '/productos/';
+    var basePath = '';
     if (category && category !== 'General' && category !== 'Todos') {
-      path += category + '/' + productId + '/stockFijo';
+      basePath = category + '/' + productId;
     } else {
-      path += productId + '/stockFijo';
+      basePath = productId;
+    }
+    
+    var finalPath = path + basePath;
+    if (variantIndex !== null) {
+      finalPath += '/variantes/' + variantIndex + '/stock';
+    } else {
+      finalPath += '/stockFijo';
     }
     
     // Realizar la transacción atómica para sumar/restar el stock
-    db.ref(path).transaction(function(currentStock) {
+    db.ref(finalPath).transaction(function(currentStock) {
       var current = (currentStock === null) ? 0 : parseFloat(currentStock);
       var newStock = current - netQty; // netQty positivo reduce stock, netQty negativo lo aumenta
       return newStock < 0 ? 0 : newStock;
     }, function(error, committed, snapshot) {
       if (error) {
-        console.error("Error al ajustar stock en " + path + ":", error);
-      } else {
-        console.log("Ajuste de stock exitoso en " + path + ". Comprometido: " + committed + ". Nuevo stock: " + (snapshot ? snapshot.val() : "N/A"));
+        console.error("Error al ajustar stock en " + finalPath + ":", error);
+      } else if (committed && snapshot !== null && snapshot !== undefined) {
+        var newStock = parseFloat(snapshot.val() || 0);
+        console.log("Ajuste de stock exitoso en " + finalPath + ". Nuevo stock: " + newStock);
+        
+        // Verificar si stock está por debajo del mínimo para disparar alerta
+        var minStock = 5;
+        if (p.stockMinimo !== undefined && p.stockMinimo !== '') {
+          minStock = parseFloat(p.stockMinimo);
+        }
+        
+        if (variantIndex !== null && p.variantes && p.variantes[variantIndex]) {
+          var variant = p.variantes[variantIndex];
+          if (variant.stockMinimo !== undefined && variant.stockMinimo !== '') {
+            minStock = parseFloat(variant.stockMinimo);
+          }
+        }
+        
+        if (newStock <= minStock) {
+          var nameToShow = p.nombre;
+          if (variantIndex !== null && p.variantes && p.variantes[variantIndex]) {
+            nameToShow += ' (' + (p.variantes[variantIndex].n || p.variantes[variantIndex].nombre) + ')';
+          }
+          enviarAlertaStockBajo(productId, nameToShow, newStock);
+        }
       }
     });
   });
+}
+
+function enviarAlertaStockBajo(productId, productName, currentStock) {
+  var notifData = {
+    titulo: 'Stock Bajo: ' + productName,
+    mensaje: 'El producto "' + productName + '" tiene un stock de ' + currentStock + ' unidades.',
+    tipo: 'stock_bajo',
+    urgente: true,
+    fecha: new Date().toISOString(),
+    leida: false,
+    canal: 'push-modus',
+    extra: {
+      productId: productId,
+      stock: currentStock
+    }
+  };
+  
+  db.ref('negocios/' + negocioID + '/notificaciones').push(notifData);
+  
+  // Mostrar push local si es compatible y está concedido
+  if ('Notification' in window && Notification.permission === 'granted') {
+    try {
+      new Notification('⚠️ ' + notifData.titulo, { body: notifData.mensaje, icon: 'LOGOPARCHESYS.png' });
+    } catch(e) {}
+  }
 }
 
 /* ═══════════════════════════════════════
@@ -4394,6 +4904,7 @@ function ajustarStockPorDiferencia(prevItems, newItems) {
 function procesarOrden(tipoAccion){
   if(!pedido.length){ toast('Agrega al menos un platillo','err'); return; }
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
+  if(!ORDEN || ORDEN.trim() === ''){ toast('Generando ID, por favor espera...','warn'); return; }
 
   var saveMesa = MESA_SEL;
   var saveCanal = CANAL;
@@ -4549,74 +5060,6 @@ function procesarOrden(tipoAccion){
       cocinaOrderUpdate.estado_bar = 'pendiente';
     }
 
-    var saves = [
-      db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v)
-    ];
-
-    if (existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
-      saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate));
-    }
-
-    if(tipoAccion==='cobrar'){
-      saves.push(db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(v));
-      // Registrar payload fiscal en dte_pendientes via DteEngine
-      if(typeof DteEngine !== 'undefined' && _dteModalActual !== 'CCF'){
-        var cfNombre = (document.getElementById('ck-cf-nombre')||{value:''}).value || null;
-        var ventaFiscal = Object.assign({}, v, {
-          negocioID: negocioID,
-          cliente: cfNombre || v.cliente
-        });
-        var dtePayload = DteEngine.prepararPayload(ventaFiscal, {
-          tipoDocUI: _dteModalActual
-        });
-        saves.push(DteEngine.registrarEnFirebase(dtePayload, negocioID, db));
-      }
-
-      // ACTUALIZAR TOTALES DE CAJA SESIÓN ACTIVA
-      if (_cajaSesion && _cajaSesion.estado === 'abierta') {
-        var numTotal = parseFloat(total) || 0;
-        if (_payModalActual === 'efectivo') {
-          _cajaSesion.ventas_efectivo = (_cajaSesion.ventas_efectivo || 0) + numTotal;
-        } else if (_payModalActual === 'tarjeta') {
-          _cajaSesion.ventas_tarjeta = (_cajaSesion.ventas_tarjeta || 0) + numTotal;
-        } else if (_payModalActual === 'transferencia') {
-          _cajaSesion.ventas_transferencia = (_cajaSesion.ventas_transferencia || 0) + numTotal;
-        }
-
-        // Calcular esperado
-        var ingresosSum = 0;
-        if (_cajaSesion.ingresos_efectivo && _cajaSesion.ingresos_efectivo.length) {
-          _cajaSesion.ingresos_efectivo.forEach(function(i) {
-            ingresosSum += parseFloat(i.monto) || 0;
-          });
-        }
-        _cajaSesion.monto_esperado = (_cajaSesion.monto_inicial || 0) + (_cajaSesion.ventas_efectivo || 0) + ingresosSum;
-
-        saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').set(_cajaSesion));
-        saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).set(_cajaSesion));
-        localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
-      }
-    }
-
-    if(CANAL==='mesa' && MESA_SEL){
-      saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-        mesa_num:tipoAccion==='guardar'?mesa_num:'',
-        mesero: tipoAccion==='guardar'?(mesero || localStorage.getItem('meseroId') || 'Desconocido'):'',
-        personas:tipoAccion==='guardar'?personas:1,
-        estado: tipoAccion==='guardar'?'ocupada':'libre',
-        pedido_activo_id: tipoAccion==='guardar'?ORDEN:null,
-        timestamp: ts
-      }));
-    }
-
-    if(CANAL==='domicilio' && repartidor){
-      saves.push(db.ref('negocios/'+negocioID+'/repartidores/'+repartidor).update({
-        estado:'en_ruta',
-        pedido_asignado_id:ORDEN,
-        ruta_inicio:Date.now()
-      }));
-    }
-
     const btnCocina = document.querySelector('.send-kitchen-btn');
     const originalHtml = btnCocina ? btnCocina.innerHTML : '';
     if(btnCocina && tipoAccion==='guardar') {
@@ -4624,11 +5067,103 @@ function procesarOrden(tipoAccion){
         btnCocina.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
     }
 
+    var saves = [];
+    try {
+      saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
+
+      if (existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+        saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate));
+      }
+
+      if(tipoAccion==='cobrar'){
+        saves.push(db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(v));
+        // Registrar payload fiscal en dte_pendientes via DteEngine
+        if(typeof DteEngine !== 'undefined' && _dteModalActual !== 'CCF'){
+          var cfNombre = (document.getElementById('ck-cf-nombre')||{value:''}).value || null;
+          var ventaFiscal = Object.assign({}, v, {
+            negocioID: negocioID,
+            cliente: cfNombre || v.cliente
+          });
+          var dtePayload = DteEngine.prepararPayload(ventaFiscal, {
+            tipoDocUI: _dteModalActual
+          });
+          saves.push(DteEngine.registrarEnFirebase(dtePayload, negocioID, db));
+        }
+
+        // ACTUALIZAR TOTALES DE CAJA SESIÓN ACTIVA
+        if (_cajaSesion && _cajaSesion.estado === 'abierta') {
+          var numTotal = parseFloat(total) || 0;
+          if (_payModalActual === 'efectivo') {
+            _cajaSesion.ventas_efectivo = (_cajaSesion.ventas_efectivo || 0) + numTotal;
+          } else if (_payModalActual === 'tarjeta') {
+            _cajaSesion.ventas_tarjeta = (_cajaSesion.ventas_tarjeta || 0) + numTotal;
+          } else if (_payModalActual === 'transferencia') {
+            _cajaSesion.ventas_transferencia = (_cajaSesion.ventas_transferencia || 0) + numTotal;
+          }
+
+          // Calcular esperado
+          var ingresosSum = 0;
+          if (_cajaSesion.ingresos_efectivo && _cajaSesion.ingresos_efectivo.length) {
+            _cajaSesion.ingresos_efectivo.forEach(function(i) {
+              ingresosSum += parseFloat(i.monto) || 0;
+            });
+          }
+          _cajaSesion.monto_esperado = (_cajaSesion.monto_inicial || 0) + (_cajaSesion.ventas_efectivo || 0) + ingresosSum;
+
+          saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').set(_cajaSesion));
+          saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).set(_cajaSesion));
+          localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
+        }
+      }
+
+      if(CANAL==='mesa' && MESA_SEL){
+        if (tipoAccion==='guardar') {
+          saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+            mesa_num:mesa_num,
+            mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
+            personas:personas,
+            estado: 'ocupada',
+            pedido_activo_id: ORDEN,
+            timestamp: ts
+          }));
+        } else if (!_procesandoSplit) {
+          saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+            mesa_num:'',
+            mesero: '',
+            personas:1,
+            estado: 'libre',
+            pedido_activo_id: null,
+            timestamp: ts
+          }));
+        }
+      }
+
+      if(CANAL==='domicilio' && repartidor){
+        saves.push(db.ref('negocios/'+negocioID+'/repartidores/'+repartidor).update({
+          estado:'en_ruta',
+          pedido_asignado_id:ORDEN,
+          ruta_inicio:Date.now()
+        }));
+      }
+    } catch(err) {
+      console.error("Error síncrono al guardar pedido:", err);
+      toast('❌ Error de datos: ' + err.message, 'err');
+      if(btnCocina) {
+        btnCocina.disabled = false;
+        btnCocina.innerHTML = originalHtml;
+      }
+      var btn = document.getElementById('btn-cobrar-final');
+      if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
+      return;
+    }
+
     Promise.all(saves).then(function(){
       if(btnCocina) {
           btnCocina.disabled = false;
           btnCocina.innerHTML = originalHtml;
       }
+      
+      clearLocalUnsaved(saveMesa);
       
       // Guard against fast switching: check if the user is still on the same table and channel
       if (CANAL === saveCanal && (CANAL !== 'mesa' || MESA_SEL === saveMesa) && ORDEN === saveOrden) {
@@ -4662,8 +5197,12 @@ function procesarOrden(tipoAccion){
       var btn = document.getElementById('btn-cobrar-final');
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
     }).catch(function(err){
-      console.error(err);
-      toast('Error al guardar. Verifica conexión.','err');
+      console.error("Error al guardar pedido:", err);
+      toast('❌ Error al guardar: ' + err.message, 'err');
+      if(btnCocina) {
+          btnCocina.disabled = false;
+          btnCocina.innerHTML = originalHtml;
+      }
       var btn = document.getElementById('btn-cobrar-final');
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
     });
@@ -4677,8 +5216,7 @@ function finalizarYLimpiarVenta() {
   cerrarCheckout();
   
   if (_procesandoSplit) {
-    _ticketCobrandoIdx++;
-    cobrarSiguienteTicketSplit();
+    deducirItemsDeOrdenPrincipal();
   } else {
     nuevaOrden();
   }
@@ -4810,12 +5348,11 @@ async function imprimirTicket(soloImprimir){
       var ticketText = formatTicket57mm();
       if (window.AndroidBridge && typeof window.AndroidBridge.printBluetooth === 'function') {
         window.AndroidBridge.printBluetooth(ticketText);
+        toast("Pre-ticket enviado a impresora", "ok");
       } else {
         console.warn("AndroidBridge.printBluetooth no disponible. Ticket:\n", ticketText);
         toast("Bluetooth Bridge no disponible", "err");
       }
-      // Bypassear el modal de cobro y cerrar/liberar la mesa de inmediato
-      procesarOrden('cobrar');
     } catch(e) {
       console.error(e);
       toast("Error al formatear ticket", "err");
@@ -5485,13 +6022,183 @@ var _originalPedido = [];
 
 function abrirSplit(){
   if(!pedido || !pedido.length){ toast('No hay productos en la orden','err'); return; }
-  // Reset
-  _splitTickets = [
-    { id: 1, nombre: 'Ticket 1', items: [] },
-    { id: 2, nombre: 'Ticket 2', items: [] }
-  ];
-  renderSplit();
-  document.getElementById('split-overlay').classList.add('open');
+  
+  db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/split_tickets').once('value', function(snap){
+    var saved = snap.val();
+    if(saved && Array.isArray(saved)){
+      _splitTickets = saved;
+      // Reconciliate: remove items that are no longer in the order
+      validarItemsSplitTickets();
+    } else {
+      _splitTickets = [
+        { id: 1, nombre: 'Ticket 1', items: [] },
+        { id: 2, nombre: 'Ticket 2', items: [] }
+      ];
+    }
+    renderSplit();
+    document.getElementById('split-overlay').classList.add('open');
+  });
+}
+
+function guardarSplitTickets() {
+  db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/split_tickets').set(_splitTickets).then(function() {
+    toast('✅ División de tickets guardada', 'ok');
+    cerrarSplit();
+  }).catch(function(err) {
+    toast('Error al guardar división: ' + err.message, 'err');
+  });
+}
+
+function validarItemsSplitTickets() {
+  // Build pool of items in the current order
+  var pool = [];
+  pedido.forEach(function(it, idx){
+    var cant = it.cant || 1;
+    for(var q=0; q<cant; q++){
+      pool.push({
+        id: it.id,
+        desc: it.desc || it.nombre,
+        price: parseFloat(it.precio || it.price || 0),
+        _cartIdx: idx,
+        subIdx: q,
+        matched: false
+      });
+    }
+  });
+
+  // Reconcile each ticket's items
+  _splitTickets.forEach(function(t) {
+    var validItems = [];
+    t.items.forEach(function(tItem) {
+      var match = pool.find(function(pItem) {
+        return !pItem.matched && 
+               pItem.id === tItem.id && 
+               Math.abs(pItem.price - parseFloat(tItem.price || 0)) < 0.01 &&
+               pItem.desc === tItem.desc;
+      });
+
+      if (match) {
+        match.matched = true;
+        tItem._splitKey = 'item_' + match._cartIdx + '_' + match.subIdx;
+        tItem._cartIdx = match._cartIdx;
+        validItems.push(tItem);
+      }
+    });
+    t.items = validItems;
+  });
+
+  _splitTickets = _splitTickets.filter(function(t) {
+    return t.items.length > 0 || t.id <= 2;
+  });
+}
+
+function imprimirPreticketIndividual(ticketIdx) {
+  var t = _splitTickets[ticketIdx];
+  if (!t || !t.items || !t.items.length) return;
+  imprimirSolicitudCuentaDeItems(t.items, t.nombre);
+}
+
+function cobrarUnTicketSplit(ticketIdx) {
+  var t = _splitTickets[ticketIdx];
+  if (!t || !t.items || !t.items.length) {
+    toast('El ticket seleccionado no tiene productos', 'err');
+    return;
+  }
+  
+  _originalOrdenId = ORDEN;
+  _originalPedido = JSON.parse(JSON.stringify(pedido));
+  _ticketsParaCobrar = [JSON.parse(JSON.stringify(t))];
+  _ticketCobrandoIdx = 0;
+  _procesandoSplit = true;
+  
+  cerrarSplit();
+  cobrarSiguienteTicketSplit();
+}
+
+function deducirItemsDeOrdenPrincipal() {
+  var ticketPagado = _ticketsParaCobrar[_ticketCobrandoIdx];
+  var nuevosItems = JSON.parse(JSON.stringify(_originalPedido));
+  
+  ticketPagado.items.forEach(function(pagItem) {
+    var idx = nuevosItems.findIndex(function(oItem) {
+      return oItem.id === pagItem.id &&
+             Math.abs(parseFloat(oItem.precio || oItem.price || 0) - parseFloat(pagItem.price || 0)) < 0.01 &&
+             (oItem.desc || oItem.nombre) === pagItem.desc;
+    });
+    
+    if (idx >= 0) {
+      nuevosItems[idx].cant--;
+      nuevosItems[idx].total = nuevosItems[idx].cant * nuevosItems[idx].precio;
+      if (nuevosItems[idx].cant <= 0) {
+        nuevosItems.splice(idx, 1);
+      }
+    }
+  });
+
+  var nuevoSub = nuevosItems.reduce(function(a,i){ return a + i.cant * i.precio; }, 0);
+  var todoPagado = (nuevosItems.length === 0);
+  var updates = {};
+  
+  if (todoPagado) {
+    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/split_tickets'] = null;
+    if (CANAL === 'mesa' && MESA_SEL) {
+      updates['negocios/' + negocioID + '/mesas/' + MESA_SEL] = {
+        mesa_num: '',
+        mesero: '',
+        personas: 1,
+        estado: 'libre',
+        pedido_activo_id: null,
+        timestamp: Date.now()
+      };
+    }
+    
+    db.ref().update(updates).then(function() {
+      toast('🎉 Cuenta totalmente cobrada. Mesa liberada.', 'ok');
+      _procesandoSplit = false;
+      _ticketsParaCobrar = [];
+      _ticketCobrandoIdx = 0;
+      nuevaOrden();
+    }).catch(function(err) {
+      toast('Error al liberar mesa: ' + err.message, 'err');
+    });
+  } else {
+    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/items'] = nuevosItems;
+    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/subtotal'] = nuevoSub.toFixed(2);
+    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/total'] = nuevoSub.toFixed(2);
+
+    var ticketNombrePagado = ticketPagado.nombre;
+    _splitTickets = _splitTickets.filter(function(t) {
+      return t.nombre !== ticketNombrePagado;
+    });
+    
+    var tempPedido = pedido;
+    pedido = nuevosItems;
+    validarItemsSplitTickets();
+    pedido = tempPedido;
+    
+    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/split_tickets'] = _splitTickets;
+
+    db.ref().update(updates).then(function() {
+      toast('✅ Ticket cobrado. Mesa sigue abierta con saldo restante.', 'ok');
+      
+      _originalPedido = nuevosItems;
+      pedido = JSON.parse(JSON.stringify(nuevosItems));
+      ORDEN = _originalOrdenId;
+      
+      _ticketCobrandoIdx++;
+      if (_ticketCobrandoIdx < _ticketsParaCobrar.length) {
+        cobrarSiguienteTicketSplit();
+      } else {
+        _procesandoSplit = false;
+        _ticketsParaCobrar = [];
+        _ticketCobrandoIdx = 0;
+        renderCart();
+        abrirSplit();
+      }
+    }).catch(function(err) {
+      toast('Error al actualizar orden: ' + err.message, 'err');
+    });
+  }
 }
 
 function cerrarSplit(){ document.getElementById('split-overlay').classList.remove('open'); }
@@ -5536,23 +6243,35 @@ function renderSplit(){
   tArea.innerHTML = _splitTickets.map(function(t, ti){
     var tTotal = t.items.reduce(function(s,i){ return s+(parseFloat(i.price)||0); },0);
     totalCovered += tTotal;
-    return '<div class="split-ticket" id="split-t-'+t.id+'" data-ticket="'+ti+'">'
-      +'<div class="split-ticket-head">'
-      +'<div class="split-ticket-name"><i class="fa-solid fa-receipt" style="font-size:10px"></i>'+t.nombre+'</div>'
-      +'<div class="split-ticket-total">$'+tTotal.toFixed(2)+'</div>'
+    
+    var actionButtons = '';
+    if (t.items.length > 0) {
+      actionButtons = '<div style="display:flex;gap:6px;padding:6px 8px;border-top:1px solid var(--border);background:rgba(255,255,255,0.02)">'
+        + '<button onclick="imprimirPreticketIndividual('+ti+')" style="flex:1;padding:6px;font-size:11px;font-weight:700;border:1px dashed var(--accent);color:var(--accent);background:transparent;border-radius:6px;cursor:pointer;"><i class="fa-solid fa-print"></i> Preticket</button>'
+        + '<button onclick="cobrarUnTicketSplit('+ti+')" style="flex:1;padding:6px;font-size:11px;font-weight:700;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer;"><i class="fa-solid fa-cash-register"></i> Cobrar</button>'
+        + '</div>';
+    }
+
+    return '<div class="split-ticket" id="split-t-'+t.id+'" data-ticket="'+ti+'" style="display:flex; flex-direction:column; justify-content:space-between; min-height:150px;">'
+      +'<div>'
+        +'<div class="split-ticket-head">'
+        +'<div class="split-ticket-name"><i class="fa-solid fa-receipt" style="font-size:10px"></i>'+t.nombre+'</div>'
+        +'<div class="split-ticket-total">$'+tTotal.toFixed(2)+'</div>'
+        +'</div>'
+        +'<div class="split-ticket-items" id="split-ti-'+t.id+'" style="flex:1; min-height:80px;">'
+        +(t.items.length
+          ? t.items.map(function(it){
+              return '<div class="split-item-chip" draggable="true" data-key="'+it._splitKey+'" data-from="ticket" data-ticket="'+ti+'">'
+                +'<span class="sic-drag"><i class="fa-solid fa-grip-vertical"></i></span>'
+                +'<span style="flex:1">'+it.desc+'</span>'
+                +'<span class="sic-price">$'+parseFloat(it.price||0).toFixed(2)+'</span>'
+                +'</div>';
+            }).join('')
+          : '<div style="text-align:center;padding:12px;font-size:10px;color:var(--text-sub)"><i class="fa-solid fa-arrow-left"></i> Arrastra aquí</div>'
+        )
+        +'</div>'
       +'</div>'
-      +'<div class="split-ticket-items" id="split-ti-'+t.id+'">'
-      +(t.items.length
-        ? t.items.map(function(it){
-            return '<div class="split-item-chip" draggable="true" data-key="'+it._splitKey+'" data-from="ticket" data-ticket="'+ti+'">'
-              +'<span class="sic-drag"><i class="fa-solid fa-grip-vertical"></i></span>'
-              +'<span style="flex:1">'+it.desc+'</span>'
-              +'<span class="sic-price">$'+parseFloat(it.price||0).toFixed(2)+'</span>'
-              +'</div>';
-          }).join('')
-        : '<div style="text-align:center;padding:12px;font-size:10px;color:var(--text-sub)"><i class="fa-solid fa-arrow-left"></i> Arrastra aquí</div>'
-      )
-      +'</div>'
+      + actionButtons
       +'</div>';
   }).join('');
 
@@ -5960,6 +6679,10 @@ function confirmarMovCaja() {
     Promise.all(saves).then(function() {
       var icon = _movcajaTipo === 'ingreso' ? '⬇️' : '⬆️';
       toast(icon + ' ' + (concepto) + ': $' + monto.toFixed(2) + ' registrado', 'ok');
+      
+      // ✅ IMPULSO A CAJÓN FISICO AUTOMÁTICO
+      abrirCajonFisico();
+
       cerrarModalMovCaja();
       btn.disabled = false;
       btn.innerHTML = '<i class="fa-solid fa-check"></i> Registrar Movimiento';
@@ -5970,6 +6693,138 @@ function confirmarMovCaja() {
       btn.innerHTML = '<i class="fa-solid fa-check"></i> Registrar Movimiento';
     });
   });
+}
+
+// ═══════════════════════════════════════
+// IMPULSO CAJÓN / TECLADOS / VARIANTES
+// ═══════════════════════════════════════
+function abrirCajonFisico() {
+  var html = '<html><head><style>'
+    +'@media print { body, html { margin:0; padding:0; height:1px; overflow:hidden; } }'
+    +'body { background: white; margin:0; padding:0; }'
+    +'</style></head><body>'
+    +'<div style="height:1px; width:1px;"></div>'
+    +'<script>window.onload=function(){ setTimeout(function(){ window.print(); window.close(); }, 100); };<\/script>'
+    +'</body></html>';
+  var win = window.open('', '', 'width=50,height=50');
+  win.document.write(html);
+  win.document.close();
+}
+
+var _activeKeypadInputId = null;
+
+function abrirNumKeypad(inputId, titleText) {
+  _activeKeypadInputId = inputId;
+  var targetInput = document.getElementById(inputId);
+  if (!targetInput) return;
+
+  document.getElementById('numkeypad-title').textContent = titleText || 'Teclado Numérico';
+  
+  var display = document.getElementById('numkeypad-display');
+  display.value = targetInput.value || '';
+  
+  var dashBtn = document.getElementById('btn-keypad-dash');
+  if (inputId === 'dui-inp') {
+    dashBtn.disabled = false;
+    dashBtn.style.opacity = '1';
+  } else {
+    dashBtn.disabled = true;
+    dashBtn.style.opacity = '0.3';
+  }
+
+  document.getElementById('numkeypad-overlay').style.display = 'flex';
+}
+
+function pressNumKeypad(char) {
+  var display = document.getElementById('numkeypad-display');
+  if (!display) return;
+
+  if (char === 'C') {
+    display.value = '';
+  } else if (char === 'back') {
+    display.value = display.value.slice(0, -1);
+  } else {
+    if (char === '.' && display.value.includes('.')) return;
+    if (char === '-' && display.value.includes('-')) return;
+    display.value += char;
+  }
+}
+
+function aplicarNumKeypad() {
+  if (!_activeKeypadInputId) return;
+  var targetInput = document.getElementById(_activeKeypadInputId);
+  var display = document.getElementById('numkeypad-display');
+  
+  if (targetInput && display) {
+    targetInput.value = display.value;
+    
+    var event = new Event('input', { bubbles: true });
+    targetInput.dispatchEvent(event);
+    var changeEvent = new Event('change', { bubbles: true });
+    targetInput.dispatchEvent(changeEvent);
+    
+    targetInput.focus();
+  }
+  
+  cerrarNumKeypad();
+}
+
+function cerrarNumKeypad() {
+  document.getElementById('numkeypad-overlay').style.display = 'none';
+  _activeKeypadInputId = null;
+}
+
+var _variantProdId = null;
+
+function abrirVariantes(id) {
+  var p = _prods[id];
+  if(!p) return;
+  _variantProdId = id;
+  document.getElementById('variant-prod-name').textContent = p.nombre;
+  var list = document.getElementById('variant-options-list');
+  list.innerHTML = p.variantes.map(function(v, index) {
+    var vName = v.n || v.nombre || 'Sin nombre';
+    var vPrice = parseFloat(v.p || v.precio || 0);
+    var vStock = parseInt(v.stock || 0);
+    
+    var stockInfo = '';
+    var isOos = false;
+    if (p.descuenta) {
+      if (vStock <= 0) {
+        stockInfo = ' <small style="color:var(--red); font-size:11px;">(Agotado)</small>';
+        isOos = true;
+      } else {
+        stockInfo = ' <small style="color:var(--text-sub); font-size:11px;">(' + vStock + ' disp.)</small>';
+      }
+    }
+    
+    var variantObj = {
+      index: index,
+      n: vName,
+      nombre: vName,
+      p: vPrice,
+      precio: vPrice,
+      stock: vStock
+    };
+    
+    var disabledAttr = isOos ? ' disabled style="opacity:0.5; cursor:not-allowed;"' : '';
+    
+    return '<button class="variant-btn"' + disabledAttr + ' onclick="seleccionarVariante(\''+id+'\', '+JSON.stringify(variantObj).replace(/"/g, '&quot;')+')">'
+      + '<span>' + vName + stockInfo + '</span>'
+      + '<span style="color:var(--accent)">$' + vPrice.toFixed(2) + '</span>'
+      + '</button>';
+  }).join('');
+  document.getElementById('variant-overlay').style.display = 'flex';
+}
+
+function cerrarVariantes() {
+  document.getElementById('variant-overlay').style.display = 'none';
+  _variantProdId = null;
+}
+
+function seleccionarVariante(id, variant) {
+  cerrarVariantes();
+  addItem(id, variant);
 }
 
 

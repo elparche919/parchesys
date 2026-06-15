@@ -352,7 +352,8 @@
       return localStorage.getItem('negocioID') || 'elparche';
     };
 
-    const negocioID = getNegocio();
+    // negocioID already declared as var in firebase-config.js — just assign
+    negocioID = getNegocio();
     window.negocioID = negocioID;
 
     // Propagate to all links
@@ -441,11 +442,18 @@
       const tbody = document.getElementById('cierres-tbody');
       const list = Object.values(allCajas);
 
-      // Filter: Match date string (fecha_apertura starts with selectedDate YYYY-MM-DD)
+      // Filter: match by UTC ISO date OR local-timezone date (safe for SV UTC-6)
       const filtered = list.filter(c => {
-        if (!c.fecha_apertura) return false;
-        const appDate = c.fecha_apertura.substring(0, 10);
-        return appDate === selectedDate;
+        if (!c.fecha_apertura && !c.timestamp_apertura) return false;
+        // Primary: ISO string prefix
+        const isoDate = (c.fecha_apertura || '').substring(0, 10);
+        if (isoDate === selectedDate) return true;
+        // Fallback: local date from timestamp (handles UTC-6 midnight boundary)
+        if (c.timestamp_apertura) {
+          const localDate = new Date(c.timestamp_apertura).toLocaleDateString('en-CA');
+          if (localDate === selectedDate) return true;
+        }
+        return false;
       }).sort((a,b) => (b.timestamp_apertura || 0) - (a.timestamp_apertura || 0));
 
       if (filtered.length === 0) {

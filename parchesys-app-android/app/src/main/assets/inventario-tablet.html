@@ -559,6 +559,164 @@
     }
     .btn-danger:active { transform: scale(0.95); }
 
+    /* ─── LOW STOCK ALERTS PANEL ───────────────────────────────────── */
+    .low-stock-panel {
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(245, 158, 11, 0.05) 100%);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: var(--radius-lg);
+      margin: 16px 24px 0;
+      padding: 16px 20px;
+      display: none; /* Controlled via JS */
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(8px);
+    }
+
+    .low-stock-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .low-stock-title {
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: #fca5a5;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .low-stock-count-badge {
+      background: var(--red);
+      color: white;
+      font-size: 11px;
+      font-weight: 900;
+      padding: 2px 8px;
+      border-radius: 12px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+    }
+
+    .low-stock-toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-sub);
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: bold;
+    }
+    .low-stock-toggle-btn:hover {
+      color: white;
+    }
+
+    .low-stock-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+      max-height: 250px;
+      overflow-y: auto;
+      padding-right: 4px;
+      transition: max-height 0.3s ease;
+    }
+    .low-stock-list.collapsed {
+      max-height: 0;
+      overflow: hidden;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Scrollbar for low stock list */
+    .low-stock-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    .low-stock-list::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 3px;
+    }
+    .low-stock-list::-webkit-scrollbar-thumb {
+      background: rgba(239, 68, 68, 0.3);
+      border-radius: 3px;
+    }
+    .low-stock-list::-webkit-scrollbar-thumb:hover {
+      background: rgba(239, 68, 68, 0.5);
+    }
+
+    .low-stock-item {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid rgba(239, 68, 68, 0.15);
+      border-radius: var(--radius-md);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s, background-color 0.15s;
+    }
+    .low-stock-item:hover {
+      transform: translateY(-2px);
+      border-color: rgba(239, 68, 68, 0.4);
+      background: rgba(239, 68, 68, 0.05);
+    }
+    .low-stock-item:active {
+      transform: scale(0.98);
+    }
+
+    .low-stock-item-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .low-stock-item-emoji {
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+
+    .low-stock-item-name-group {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .low-stock-item-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: white;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .low-stock-item-variant {
+      font-size: 11px;
+      color: var(--text-sub);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .low-stock-item-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: #fca5a5;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      padding: 3px 8px;
+      border-radius: 12px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     /* Toast notification */
     .toast {
       position: fixed;
@@ -601,6 +759,22 @@
       <button class="btn-logout" onclick="logout()" title="Cerrar sesión"><i class="fa-solid fa-right-from-bracket"></i></button>
     </div>
   </header>
+
+  <!-- LOW STOCK PANEL -->
+  <div class="low-stock-panel" id="low-stock-panel">
+    <div class="low-stock-header" onclick="toggleLowStockList()">
+      <div class="low-stock-title">
+        <i class="fa-solid fa-triangle-exclamation"></i> Alertas de Stock Bajo
+        <span class="low-stock-count-badge" id="low-stock-count">0</span>
+      </div>
+      <button class="low-stock-toggle-btn" id="low-stock-toggle-btn">
+        <i class="fa-solid fa-chevron-up"></i> Ocultar
+      </button>
+    </div>
+    <div class="low-stock-list" id="low-stock-list">
+      <!-- Low stock items will be injected here -->
+    </div>
+  </div>
 
   <!-- TOOLBAR -->
   <div class="toolbar-wrap">
@@ -659,8 +833,11 @@
           </div>
 
           <div class="form-group">
-            <label for="p-stock">Stock Físico</label>
-            <input type="number" class="form-control" id="p-stock" step="1" min="0" placeholder="0">
+            <label for="p-stock">Stock / Mín. Alerta</label>
+            <div class="form-row">
+              <input type="number" class="form-control" id="p-stock" step="1" min="0" placeholder="Stock" style="flex:1">
+              <input type="number" class="form-control" id="p-stock-minimo" step="1" min="0" placeholder="Mín. Alerta" style="flex:1">
+            </div>
           </div>
 
           <div class="form-group col-span-2">
@@ -699,6 +876,19 @@
                 <input type="checkbox" id="p-activo" checked>
                 <span class="slider"></span>
               </label>
+            </div>
+          </div>
+
+          <!-- VARIACIONES -->
+          <div class="form-group col-span-2" style="border-top: 1px solid var(--border); padding-top: 15px; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <label style="font-size: 14px; font-weight: 800; color: white;">Variaciones del Producto</label>
+              <button class="btn-action" style="padding: 6px 12px; font-size: 12px; font-weight: 700; box-shadow: none;" onclick="addInventarioVariante(event)">
+                <i class="fa-solid fa-plus"></i> Agregar Variante
+              </button>
+            </div>
+            <div id="i-var-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Variantes lists here -->
             </div>
           </div>
 
@@ -760,6 +950,47 @@
       });
       
       cargarProductos();
+      
+      // Escuchar notificaciones globales (como stock bajo)
+      try {
+        var globalNotifRef = db.ref('negocios/' + negocioID + '/notificaciones').orderByChild('fecha').limitToLast(5);
+        globalNotifRef.on('child_added', function(snap) {
+          var notifKey = snap.key;
+          var notif = snap.val();
+          if (!notif) return;
+          
+          var shownKey = 'shown_notif_' + negocioID + '_' + notifKey;
+          if (localStorage.getItem(shownKey)) return;
+          
+          var notifTime = new Date(notif.fecha).getTime();
+          if (Date.now() - notifTime > 60000) return; // Omitir alertas viejas
+          
+          localStorage.setItem(shownKey, 'true');
+          
+          if (notif.tipo === 'stock_bajo') {
+            showToast("⚠️ " + notif.titulo + ": " + notif.mensaje, "warn");
+            
+            if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
+              try {
+                window.AndroidBridge.showNativeNotification('⚠️ ' + notif.titulo, notif.mensaje);
+              } catch(err) {
+                console.error("Error calling AndroidBridge:", err);
+              }
+            } else if ('Notification' in window && Notification.permission === 'granted') {
+              try {
+                new Notification('⚠️ ' + notif.titulo, { body: notif.mensaje, icon: 'LOGOPARCHESYS.png' });
+              } catch(e) {}
+            }
+          }
+        });
+        
+        // Solicitar permiso de notificaciones push del sistema/navegador
+        if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
+      } catch(e) {
+        console.error("Error en notificaciones:", e);
+      }
     } else {
       showToast("❌ Error: Firebase no inicializado", "err");
     }
@@ -794,8 +1025,161 @@
 
         renderCatTabs();
         renderProductGrid();
+        renderLowStockAlerts();
         populateCategorySelect();
       });
+    }
+
+    var _lowStockCollapsed = false;
+    var _prevStockState = {};
+
+    function toggleLowStockList() {
+      var list = document.getElementById('low-stock-list');
+      var btn = document.getElementById('low-stock-toggle-btn');
+      _lowStockCollapsed = !_lowStockCollapsed;
+      
+      if (_lowStockCollapsed) {
+        list.classList.add('collapsed');
+        btn.innerHTML = '<i class="fa-solid fa-chevron-down"></i> Mostrar';
+      } else {
+        list.classList.remove('collapsed');
+        btn.innerHTML = '<i class="fa-solid fa-chevron-up"></i> Ocultar';
+      }
+    }
+
+    function renderLowStockAlerts() {
+      var panel = document.getElementById('low-stock-panel');
+      var list = document.getElementById('low-stock-list');
+      var countBadge = document.getElementById('low-stock-count');
+      
+      var lowStockItems = [];
+      
+      Object.values(_prods).forEach(function(p) {
+        if (p.activo === false || p.disponible === false || p.oculto === true) return;
+        var descStock = !!p.descuenta;
+        if (!descStock) return;
+        
+        var hasVariants = p.variantes && p.variantes.length > 0;
+        var emoji = p.emoji || p.icono || '🍽️';
+        
+        if (hasVariants) {
+          p.variantes.forEach(function(v, index) {
+            var vStock = parseInt(v.stock || 0);
+            var vMin = v.stockMinimo !== undefined ? parseInt(v.stockMinimo) : 5;
+            var key = p._id + '_' + index;
+            
+            if (vStock <= vMin) {
+              lowStockItems.push({
+                id: p._id,
+                nombre: p.nombre,
+                variante: v.nombre || v.n || ('Variante ' + (index + 1)),
+                stock: vStock,
+                stockMinimo: vMin,
+                emoji: emoji
+              });
+              
+              if (_prevStockState[key] !== undefined && _prevStockState[key] > vMin) {
+                var title = 'Stock Bajo: ' + p.nombre;
+                var msg = 'La variante ' + (v.nombre || v.n || ('Var ' + (index+1))) + ' bajó a ' + vStock + ' unidades.';
+                if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
+                  try {
+                    window.AndroidBridge.showNativeNotification(title, msg);
+                  } catch(e) {}
+                }
+              }
+            }
+            _prevStockState[key] = vStock;
+          });
+        } else {
+          var stock = parseFloat(p.stockFijo || 0);
+          var minLimit = p.stockMinimo !== undefined ? parseFloat(p.stockMinimo) : 5;
+          var key = p._id;
+          
+          if (stock <= minLimit) {
+            lowStockItems.push({
+              id: p._id,
+              nombre: p.nombre,
+              variante: null,
+              stock: stock,
+              stockMinimo: minLimit,
+              emoji: emoji
+            });
+            
+            if (_prevStockState[key] !== undefined && _prevStockState[key] > minLimit) {
+              var title = 'Stock Bajo: ' + p.nombre;
+              var msg = 'El stock de ' + p.nombre + ' bajó a ' + stock + ' unidades.';
+              if (window.AndroidBridge && typeof window.AndroidBridge.showNativeNotification === 'function') {
+                try {
+                  window.AndroidBridge.showNativeNotification(title, msg);
+                } catch(e) {}
+              }
+            }
+          }
+          _prevStockState[key] = stock;
+        }
+      });
+      
+      countBadge.textContent = lowStockItems.length;
+      
+      if (lowStockItems.length === 0) {
+        panel.style.display = 'none';
+        return;
+      }
+      
+      panel.style.display = 'flex';
+      
+      list.innerHTML = lowStockItems.map(function(item) {
+        var subtitle = item.variante ? '<span class="low-stock-item-variant">' + item.variante + '</span>' : '';
+        var warningText = item.stock <= 0 ? 'Agotado' : 'Stock: ' + item.stock;
+        var badgeColor = item.stock <= 0 ? 'var(--red)' : '#fca5a5';
+        
+        return '<div class="low-stock-item" onclick="openEditModal(\'' + item.id + '\')">'
+          + '<div class="low-stock-item-info">'
+            + '<div class="low-stock-item-emoji">' + item.emoji + '</div>'
+            + '<div class="low-stock-item-name-group">'
+              + '<span class="low-stock-item-name">' + item.nombre + '</span>'
+              + subtitle
+            + '</div>'
+          + '</div>'
+          + '<div class="low-stock-item-badge" style="color: ' + badgeColor + '">'
+            + '<i class="fa-solid fa-triangle-exclamation"></i> ' + warningText
+          + '</div>'
+          + '</div>';
+      }).join('');
+    }
+
+    function verificarYNotificarStockBajo(p) {
+      if (p.activo === false || p.disponible === false) return;
+      if (!p.descuenta) return;
+      
+      var hasVariants = p.variantes && p.variantes.length > 0;
+      if (hasVariants) {
+        p.variantes.forEach(function(v, index) {
+          var vStock = parseInt(v.stock || 0);
+          var vMin = v.stockMinimo !== undefined ? parseInt(v.stockMinimo) : 5;
+          if (vStock <= vMin) {
+            pushStockBajoNotification(p.nombre + ' (' + (v.nombre || v.n || ('Var ' + (index+1))) + ')', vStock, vMin);
+          }
+        });
+      } else {
+        var stock = parseFloat(p.stockFijo || 0);
+        var minLimit = p.stockMinimo !== undefined ? parseFloat(p.stockMinimo) : 5;
+        if (stock <= minLimit) {
+          pushStockBajoNotification(p.nombre, stock, minLimit);
+        }
+      }
+    }
+
+    function pushStockBajoNotification(name, stock, min) {
+      var msg = 'El producto ' + name + ' está con stock crítico de ' + stock + ' (mínimo ' + min + ')';
+      var notifData = {
+        tipo: 'stock_bajo',
+        titulo: 'Stock Bajo: ' + name,
+        mensaje: msg,
+        fecha: new Date().toISOString()
+      };
+      
+      db.ref('negocios/' + negocioID + '/notificaciones').push(notifData);
     }
 
     function renderCatTabs() {
@@ -843,17 +1227,42 @@
         var badgeClass = 'unlimited';
         var badgeText = '♾️ Fijo';
         
+        var hasVariants = p.variantes && p.variantes.length > 0;
+        
         if (p.activo === false) {
           badgeClass = 'inactive';
           badgeText = '🚫 Inactivo';
         } else if (p.disponible === false) {
           badgeClass = 'inactive';
           badgeText = '🚫 Oculto';
+        } else if (hasVariants) {
+          if (descStock) {
+            var totalStock = p.variantes.reduce(function(acc, v) { return acc + parseInt(v.stock || 0); }, 0);
+            var hasLowStockVariant = p.variantes.some(function(v) { 
+              var min = v.stockMinimo !== undefined ? v.stockMinimo : 5;
+              return parseInt(v.stock || 0) <= min; 
+            });
+            
+            if (totalStock <= 0) {
+              badgeClass = 'empty';
+              badgeText = '🔴 Agotado (' + p.variantes.length + ' var)';
+            } else if (hasLowStockVariant) {
+              badgeClass = 'low';
+              badgeText = '⚠️ Stock: ' + totalStock + ' (' + p.variantes.length + ' var)';
+            } else {
+              badgeClass = 'ok';
+              badgeText = '📦 Stock: ' + totalStock + ' (' + p.variantes.length + ' var)';
+            }
+          } else {
+            badgeClass = 'unlimited';
+            badgeText = '♾️ Fijo (' + p.variantes.length + ' var)';
+          }
         } else if (descStock) {
+          var minLimit = p.stockMinimo !== undefined ? parseFloat(p.stockMinimo) : 5;
           if (stock <= 0) {
             badgeClass = 'empty';
             badgeText = '🔴 Agotado';
-          } else if (stock <= 5) {
+          } else if (stock <= minLimit) {
             badgeClass = 'low';
             badgeText = '⚠️ Stock: ' + stock;
           } else {
@@ -862,7 +1271,20 @@
           }
         }
 
-        var price = parseFloat(p.precio || p.precio_venta || 0).toFixed(2);
+        var priceText = '';
+        if (hasVariants) {
+          var prices = p.variantes.map(function(v) { return parseFloat(v.p || v.precio || 0); });
+          var minPrice = Math.min.apply(null, prices);
+          var maxPrice = Math.max.apply(null, prices);
+          if (minPrice === maxPrice) {
+            priceText = '$' + minPrice.toFixed(2);
+          } else {
+            priceText = '$' + minPrice.toFixed(2) + ' - $' + maxPrice.toFixed(2);
+          }
+        } else {
+          priceText = '$' + parseFloat(p.precio || p.precio_venta || 0).toFixed(2);
+        }
+        
         var emoji = p.emoji || p.icono || '🍽️';
 
         return '<div class="prod-card" onclick="openEditModal(\'' + p._id + '\')">'
@@ -874,7 +1296,7 @@
             + '<div class="card-name">' + p.nombre + '</div>'
           + '</div>'
           + '<div class="card-bottom">'
-            + '<div class="card-price">$' + price + '</div>'
+            + '<div class="card-price">' + priceText + '</div>'
             + '<div class="card-cat-tag">' + p._cat + '</div>'
           + '</div>'
           + '</div>';
@@ -932,6 +1354,53 @@
       document.getElementById('p-cat-custom').value = val;
     }
 
+    var _currentProductVariantes = [];
+
+    function renderInventarioVariantes() {
+      var container = document.getElementById('i-var-list');
+      if (!_currentProductVariantes || _currentProductVariantes.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 12px; color: var(--text-sub); font-size: 13px; border: 1px dashed var(--border); border-radius: var(--radius-md);">Sin variaciones registradas.</div>';
+        return;
+      }
+      
+      container.innerHTML = _currentProductVariantes.map(function(v, i) {
+        var vName = v.n || v.nombre || '';
+        var vPrice = parseFloat(v.p || v.precio || 0);
+        var vStock = parseInt(v.stock || 0);
+        var vMin = parseInt(v.stockMinimo !== undefined ? v.stockMinimo : 5);
+        
+        return '<div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">'
+          + '<input type="text" class="form-control" style="flex: 2; min-width: 80px;" placeholder="Ej. Salutaris" value="' + vName + '" oninput="updateInventarioVariante(' + i + ', \'n\', this.value)">'
+          + '<input type="number" class="form-control" style="flex: 1.2; min-width: 60px;" placeholder="Prec. ($)" step="0.01" min="0" value="' + vPrice + '" oninput="updateInventarioVariante(' + i + ', \'p\', parseFloat(this.value)||0)">'
+          + '<input type="number" class="form-control" style="flex: 1.2; min-width: 60px;" placeholder="Stock" min="0" value="' + vStock + '" oninput="updateInventarioVariante(' + i + ', \'stock\', parseInt(this.value)||0)">'
+          + '<input type="number" class="form-control" style="flex: 1.2; min-width: 60px;" placeholder="Mínimo" min="0" value="' + vMin + '" oninput="updateInventarioVariante(' + i + ', \'stockMinimo\', parseInt(this.value)||5)">'
+          + '<button class="btn-danger" style="padding: 10px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;" onclick="removeInventarioVariante(' + i + ', event)"><i class="fa-solid fa-trash"></i></button>'
+          + '</div>';
+      }).join('');
+    }
+
+    function addInventarioVariante(e) {
+      if(e) e.preventDefault();
+      _currentProductVariantes.push({ n: '', p: 0, stock: 0, stockMinimo: 5 });
+      renderInventarioVariantes();
+    }
+
+    function updateInventarioVariante(index, field, val) {
+      if (_currentProductVariantes[index]) {
+        _currentProductVariantes[index][field] = val;
+        if (field === 'n') _currentProductVariantes[index]['nombre'] = val;
+        if (field === 'nombre') _currentProductVariantes[index]['n'] = val;
+        if (field === 'p') _currentProductVariantes[index]['precio'] = val;
+        if (field === 'precio') _currentProductVariantes[index]['p'] = val;
+      }
+    }
+
+    function removeInventarioVariante(index, e) {
+      if(e) e.preventDefault();
+      _currentProductVariantes.splice(index, 1);
+      renderInventarioVariantes();
+    }
+
     function openCreateModal() {
       _currentEditingId = null;
       _currentEditingOriginalCat = null;
@@ -943,6 +1412,7 @@
       document.getElementById('p-emoji').value = '🍽️';
       document.getElementById('p-desc-stock').checked = false;
       document.getElementById('p-stock').value = '0';
+      document.getElementById('p-stock-minimo').value = '5';
       document.getElementById('p-disponible').checked = true;
       document.getElementById('p-activo').checked = true;
       document.getElementById('p-desc').value = '';
@@ -961,6 +1431,9 @@
       }
 
       toggleStockField(false);
+      _currentProductVariantes = [];
+      renderInventarioVariantes();
+      
       document.getElementById('btn-delete-product').style.display = 'none';
       document.getElementById('product-modal').classList.add('open');
     }
@@ -981,6 +1454,7 @@
       var descStock = !!p.descuenta;
       document.getElementById('p-desc-stock').checked = descStock;
       document.getElementById('p-stock').value = p.stockFijo || '0';
+      document.getElementById('p-stock-minimo').value = p.stockMinimo !== undefined ? p.stockMinimo : '5';
       toggleStockField(descStock);
 
       document.getElementById('p-disponible').checked = p.disponible !== false;
@@ -994,6 +1468,9 @@
       
       select.value = p._cat;
       document.getElementById('p-cat-custom').value = p._cat;
+
+      _currentProductVariantes = p.variantes ? JSON.parse(JSON.stringify(p.variantes)) : [];
+      renderInventarioVariantes();
 
       document.getElementById('btn-delete-product').style.display = 'block';
       document.getElementById('product-modal').classList.add('open');
@@ -1010,6 +1487,7 @@
       var emoji = document.getElementById('p-emoji').value.trim();
       var descStock = document.getElementById('p-desc-stock').checked;
       var stockVal = parseInt(document.getElementById('p-stock').value) || 0;
+      var stockMinimoVal = parseInt(document.getElementById('p-stock-minimo').value) || 5;
       var disponible = document.getElementById('p-disponible').checked;
       var activo = document.getElementById('p-activo').checked;
       var desc = document.getElementById('p-desc').value.trim();
@@ -1020,6 +1498,23 @@
 
       category = category.toUpperCase().trim();
 
+      var normalizedVariants = _currentProductVariantes.map(function(v) {
+        var nameVal = v.n || v.nombre || '';
+        var priceVal = parseFloat(v.p || v.precio || 0);
+        var stockVal = parseInt(v.stock || 0);
+        var minVal = parseInt(v.stockMinimo !== undefined ? v.stockMinimo : 5);
+        return {
+          n: nameVal,
+          nombre: nameVal,
+          p: priceVal,
+          precio: priceVal,
+          stock: stockVal,
+          stockMinimo: minVal
+        };
+      });
+
+      var originalProd = _currentEditingId ? (_prods[_currentEditingId] || {}) : {};
+
       var data = {
         nombre: name,
         precio: priceVal,
@@ -1028,11 +1523,30 @@
         icono: emoji,
         descuenta: descStock,
         stockFijo: stockVal,
+        stockMinimo: stockMinimoVal,
         disponible: disponible,
         activo: activo,
         descripcion: desc,
+        variantes: normalizedVariants,
         ts: Date.now()
       };
+
+      if (originalProd.ingredientes) data.ingredientes = originalProd.ingredientes;
+      if (originalProd.extras) data.extras = originalProd.extras;
+      if (originalProd.img) data.img = originalProd.img;
+
+      // Update local prev stock state to prevent self-notification
+      if (_currentEditingId) {
+        if (descStock) {
+          if (normalizedVariants.length > 0) {
+            normalizedVariants.forEach(function(v, idx) {
+              _prevStockState[_currentEditingId + '_' + idx] = v.stock;
+            });
+          } else {
+            _prevStockState[_currentEditingId] = stockVal;
+          }
+        }
+      }
 
       if (_currentEditingId) {
         var refId = _currentEditingId;

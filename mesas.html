@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -284,17 +284,7 @@ document.addEventListener('DOMContentLoaded',function(){
   db.ref('negocios/'+negocioID+'/info').once('value',function(s){
     var inf=s.val()||{};
     document.getElementById('tb-neg').textContent=inf.nombre||'Restaurante';
-    // Auto-create mesas if none exist
-    db.ref('negocios/'+negocioID+'/mesas').once('value',function(ms){
-      if(!ms.exists()){
-        var num=parseInt(inf.num_mesas)||8;
-        var batch={};
-        for(var i=1;i<=num;i++){
-          batch[i]={numero:i,estado:'libre',capacidad:4,zona:'Principal',pedido_activo_id:null,timestamp:0};
-        }
-        db.ref('negocios/'+negocioID+'/mesas').set(batch);
-      }
-    });
+
   });
   db.ref('negocios/'+negocioID+'/mesas').on('value',function(snap){
     _mesas={};

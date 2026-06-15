@@ -1194,7 +1194,7 @@
         
         <!-- VARIANTES -->
         <div class="ptab" id="pt-var" style="display:none;">
-           <button class="btn-add" style="margin-bottom:15px;" onclick="addArrItem('variantes', {n:'',p:0})">+ Agregar Variante de Tamaño/Estilo</button>
+           <button class="btn-add" style="margin-bottom:15px;" onclick="addArrItem('variantes', {n:'',p:0,stock:0,stockMinimo:5})">+ Agregar Variante de Tamaño/Estilo</button>
            <div id="p-var-lst"></div>
         </div>
 
@@ -1211,6 +1211,7 @@
                <select id="p-inv-desc" class="f-inp"><option value="no">NO (Es preparado)</option><option value="si">SÍ (Es un empaque fijo)</option></select>
              </div>
              <div class="f-grp"><label>Stock Fijo Actual</label><input type="number" id="p-inv-stk" class="f-inp" placeholder="0"></div>
+             <div class="f-grp"><label>Stock Mínimo para Alerta</label><input type="number" id="p-inv-min" class="f-inp" placeholder="5"></div>
              <div class="f-grp"><label>Tasa Impositiva IVA (13%)</label>
                <select id="p-iva" class="f-inp"><option value="gravado">Venta Gravada (+13%)</option><option value="exento">Venta Exenta</option></select>
              </div>
@@ -1690,6 +1691,7 @@
          document.getElementById('p-pre').value = '';
          document.getElementById('p-dsc').value = '';
          document.getElementById('p-inv-stk').value = '0';
+         document.getElementById('p-inv-min').value = '5';
          document.getElementById('p-img').value = '';
          document.getElementById('p-img-prev').innerHTML = '<i class="fa-solid fa-image" style="font-size:40px; color:#334155"></i>';
       } else {
@@ -1715,6 +1717,7 @@
          document.getElementById('p-est').value = d.oculto ? 'oculto' : 'activo';
          document.getElementById('p-inv-desc').value = d.descuenta ? 'si' : 'no';
          document.getElementById('p-inv-stk').value = d.stockFijo || 0;
+         document.getElementById('p-inv-min').value = d.stockMinimo !== undefined ? d.stockMinimo : 5;
          document.getElementById('p-iva').value = d.gravado ? 'gravado' : 'exento';
          document.getElementById('p-img').value = d.img || '';
          if(d.img) document.getElementById('p-img-prev').innerHTML = `<img src="${d.img}" style="width:100%; height:100%; object-fit:cover">`;
@@ -1750,14 +1753,16 @@
          </div>
        `).join('');
 
-       const vList = document.getElementById('p-var-lst');
-       vList.innerHTML = currentPlat.variantes.map((v, i) => `
-         <div class="dyn-row">
-           <input class="f-inp" placeholder="Ej: Grande" value="${v.n||''}" onchange="updArrItem('variantes',${i},'n',this.value)">
-           <input class="f-inp" placeholder="Prec. Extra" type="number" value="${v.p||0}" onchange="updArrItem('variantes',${i},'p',this.value)">
-           <button class="btn-del" onclick="rmArrItem('variantes', ${i})"><i class="fa-solid fa-trash"></i></button>
-         </div>
-       `).join('');
+        const vList = document.getElementById('p-var-lst');
+        vList.innerHTML = currentPlat.variantes.map((v, i) => `
+          <div class="dyn-row">
+            <input class="f-inp" placeholder="Ej: Grande" value="${v.n||v.nombre||''}" onchange="updArrItem('variantes',${i},'n',this.value)">
+            <input class="f-inp" placeholder="Precio ($)" type="number" value="${v.p||v.precio||0}" onchange="updArrItem('variantes',${i},'p',parseFloat(this.value)||0)">
+            <input class="f-inp" placeholder="Stock" type="number" value="${v.stock||0}" onchange="updArrItem('variantes',${i},'stock',parseInt(this.value)||0)">
+            <input class="f-inp" placeholder="Mín. Alerta" type="number" value="${v.stockMinimo!==undefined?v.stockMinimo:5}" onchange="updArrItem('variantes',${i},'stockMinimo',parseInt(this.value)||5)">
+            <button class="btn-del" onclick="rmArrItem('variantes', ${i})"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        `).join('');
 
        const eList = document.getElementById('p-ext-lst');
        eList.innerHTML = currentPlat.extras.map((ex, i) => `
@@ -1766,7 +1771,7 @@
            <input class="f-inp" placeholder="Costo Ext." type="number" value="${ex.p||0}" onchange="updArrItem('extras',${i},'p',this.value)">
            <button class="btn-del" onclick="rmArrItem('extras', ${i})"><i class="fa-solid fa-trash"></i></button>
          </div>
-       `).join('');
+`).join('');
     }
 
     async function guardarFichaMenu() {
@@ -1783,6 +1788,21 @@
           imgUrl = await task.ref.getDownloadURL();
        }
 
+       let normalizedVars = (currentPlat.variantes || []).map(v => {
+           let nVal = v.n || v.nombre || '';
+           let pVal = parseFloat(v.p || v.precio || 0);
+           let sVal = parseInt(v.stock || 0);
+           let minVal = parseInt(v.stockMinimo !== undefined ? v.stockMinimo : 5);
+           return {
+              n: nVal,
+              nombre: nVal,
+              p: pVal,
+              precio: pVal,
+              stock: sVal,
+              stockMinimo: minVal
+           };
+        });
+
        const d = {
           nombre: document.getElementById('p-nom').value.trim(),
           precio: parseFloat(document.getElementById('p-pre').value||0),
@@ -1791,9 +1811,10 @@
           oculto: document.getElementById('p-est').value === 'oculto',
           descuenta: document.getElementById('p-inv-desc').value === 'si',
           stockFijo: parseFloat(document.getElementById('p-inv-stk').value||0),
+          stockMinimo: parseFloat(document.getElementById('p-inv-min').value||5),
           gravado: document.getElementById('p-iva').value === 'gravado',
           ingredientes: currentPlat.ingredientes,
-          variantes: currentPlat.variantes,
+          variantes: normalizedVars,
           extras: currentPlat.extras
        };
 

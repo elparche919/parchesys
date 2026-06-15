@@ -415,19 +415,8 @@ html,body{height:100%;font-family:var(--font-body);background:#f0f4f8;color:#1e2
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
-<script>
 // ── FIREBASE ──────────────────────────────────────────────────────────────
-const FB={
-  apiKey:"AIzaSyBoM-hQcdhJxfeODu848q2D1AYsa1dvRqQ",
-  authDomain:"ventas-id-43ff8.firebaseapp.com",
-  databaseURL:"https://ventas-id-43ff8-default-rtdb.firebaseio.com",
-  projectId:"ventas-id-43ff8",
-  storageBucket:"ventas-id-43ff8.firebasestorage.app",
-  messagingSenderId:"898228544993",
-  appId:"1:898228544993:web:06658053096e51cdfa5ea0"
-};
-firebase.initializeApp(FB);
-/* Firebase centralizado en firebase-config.js */
+// Centralizado y cargado desde firebase-config.js
 
 // ── STATE ─────────────────────────────────────────────────────────────────
 let NID='', EID='', EMP={};

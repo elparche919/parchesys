@@ -38,6 +38,13 @@ negocioID = NEGOCIO_ID;
 if (!localStorage.getItem('food_session_' + NEGOCIO_ID)) {
     if (!window.location.pathname.includes('login') &&
         !window.location.pathname.endsWith('index.html')) {
-        window.location.href = 'index.html';
+        if (window.location.protocol === 'file:') {
+            // En local (WebView / Android), redirigir a login.html
+            var currentFile = window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1);
+            window.top.location.href = 'login.html?redirect=' + encodeURIComponent(currentFile);
+        } else {
+            window.top.location.href = 'index.html';
+        }
     }
 }
+
