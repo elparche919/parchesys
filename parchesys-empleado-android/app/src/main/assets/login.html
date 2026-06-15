@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PARCHE SYS – Acceso POS (Tablet) (Bajo Licencia de MODUS FOOD)</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --m-blue: #1B4E8B;
+      --m-blue-mid: #2563AA;
+      --m-blue-light: #EBF2FB;
+      --m-amber: #E8820C;
+      --m-bg: #F5F7FB;
+      --m-surface: #FFFFFF;
+      --m-border: #CBD5E8;
+      --m-text: #0F2240;
+      --m-muted: #4A6080;
+      --m-red: #C0190F;
+    }
+    
+    body {
+      margin: 0;
+      background: var(--m-bg);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: var(--m-text);
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    
+    .login-container {
+      background: var(--m-surface);
+      padding: 32px 24px;
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(27,78,139,0.08);
+      border: 1.5px solid var(--m-border);
+      border-top: 4px solid var(--m-blue);
+      text-align: center;
+      width: 100%;
+      max-width: 380px;
+      box-sizing: border-box;
+    }
+    
+    .logo-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 32px;
+      color: var(--m-blue);
+      margin-bottom: 4px;
+      letter-spacing: -0.5px;
+    }
+    
+    .logo-subtitle {
+      font-size: 13px;
+      color: var(--m-muted);
+      margin-bottom: 28px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .form-group {
+      text-align: left;
+      margin-bottom: 18px;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--m-muted);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    
+    .input-wrapper {
+      position: relative;
+    }
+    
+    .input-wrapper i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--m-muted);
+      font-size: 14px;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 12px 14px 12px 40px;
+      background: var(--m-surface);
+      border: 1.5px solid var(--m-border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14px;
+      color: var(--m-text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
+    }
+    
+    .form-input:focus {
+      border-color: var(--m-blue);
+      box-shadow: 0 0 0 3px rgba(27,78,139,0.12);
+    }
+    
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: var(--m-blue);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: background-color 0.15s, transform 0.1s;
+      box-shadow: 0 4px 12px rgba(27,78,139,0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .btn-submit:hover {
+      background: var(--m-blue-mid);
+    }
+    
+    .btn-submit:active {
+      transform: scale(0.98);
+      box-shadow: none;
+    }
+    
+    .btn-submit:disabled {
+      background: var(--m-muted);
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .error-box {
+      background: #FEE2E2;
+      border: 1px solid #FECACA;
+      color: var(--m-red);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: none;
+      text-align: left;
+    }
+    
+    .error-box i {
+      margin-right: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <img src="LOGOPARCHESYS.png" alt="PARCHE SYS Logo" style="max-height: 80px; margin-bottom: 16px; object-fit: contain;">
+    <div class="logo-title">PARCHE SYS</div>
+    <div class="logo-subtitle">Acceso POS Tablet · Bajo Licencia de MODUS FOOD</div>
+    
+    <div id="connStatus" style="font-size: 11px; font-weight: 700; color: #f59e0b; margin: 8px 0 14px 0; text-align: center; display: none;">
+      <i class="fa-solid fa-wifi fa-fade"></i> Esperando conexión con base de datos...
+    </div>
+    
+    <div class="error-box" id="errorBox">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span id="errorMessage">PIN incorrecto</span>
+    </div>
+    
+    <div class="form-group" style="margin-bottom: 24px;">
+      <label class="form-label">PIN del Empleado</label>
+      <div class="input-wrapper">
+        <i class="fa-solid fa-key"></i>
+        <input type="password" id="pin" class="form-input" placeholder="••••" maxlength="6" inputmode="numeric" required autofocus />
+      </div>
+    </div>
+    
+    <button class="btn-submit" id="enterBtn">
+      <i class="fa-solid fa-right-to-bracket"></i>
+      <span>Ingresar al POS</span>
+    </button>
+  </div>
+
+  <script src="firebase-app-compat.js"></script>
+  <script src="firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    // Firebase configurado a través de firebase-config.js
+    
+    // Focus PIN input on load
+    window.addEventListener('load', () => {
+      const pinField = document.getElementById('pin');
+      if (pinField) pinField.focus();
+    });
+    
+    // Enter key handler
+    document.getElementById('pin').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        doLogin();
+      }
+    });
+    
+    document.getElementById('enterBtn').addEventListener('click', doLogin);
+    
+    function showError(msg) {
+      const errorBox = document.getElementById('errorBox');
+      const errorMessage = document.getElementById('errorMessage');
+      errorMessage.textContent = msg;
+      errorBox.style.display = 'block';
+    }
+    
+    function hideError() {
+      document.getElementById('errorBox').style.display = 'none';
+    }
+    
+    function doLogin() {
+      try {
+        const pin = document.getElementById('pin').value.trim();
+        const btn = document.getElementById('enterBtn');
+
+        if (!pin) {
+          showError('Por favor, ingresa tu PIN');
+          return;
+        }
+
+        hideError();
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i><span>Verificando...</span>';
+
+        if (typeof db === 'undefined' || !db) {
+          throw new Error('Servicio de base de datos no disponible. Verifica conexión.');
+        }
+
+        // Negocio único: verificar PIN directamente en el nodo fijo "elparche"
+        db.ref('negocios/' + NEGOCIO_ID + '/empleados').once('value').then(empSnap => {
+          let foundEmp = null;
+
+          if (empSnap.exists()) {
+            empSnap.forEach(e => {
+              const emp = e.val();
+              const empPin = String(emp.pin || emp.pin_app || '').trim();
+              if (empPin === pin && !foundEmp) {
+                foundEmp = { key: e.key, data: emp };
+              }
+            });
+          }
+
+          if (!foundEmp) {
+            throw new Error('PIN incorrecto');
+          }
+
+          const emp = foundEmp.data;
+          const meseroId = emp.nombre || foundEmp.key;
+
+          // Crear sesión para pasar el validador de firebase-config.js
+          const ses = {
+            tipo: (emp.rol === 'propietario' || emp.rol === 'admin') ? 'admin' : 'empleado',
+            nombre: emp.nombre || 'Usuario',
+            rol: emp.rol || 'empleado',
+            dui: emp.dui || '',
+            puesto: emp.puesto || '',
+            empKey: foundEmp.key,
+            timestamp: Date.now(),
+            modulos: emp.modulos_custom || emp.modulos_permitidos || emp.modulos || {}
+          };
+
+          localStorage.setItem('food_session_' + NEGOCIO_ID, JSON.stringify(ses));
+          localStorage.setItem('food_operador_' + NEGOCIO_ID, JSON.stringify(ses));
+          localStorage.setItem('meseroId', meseroId);
+          localStorage.setItem('mesero', meseroId);
+          localStorage.setItem('modus_emp', JSON.stringify(emp));
+
+          var params = new URLSearchParams(window.location.search);
+          var isElectron = navigator.userAgent.toLowerCase().includes('electron') || (typeof window !== 'undefined' && window.process && window.process.versions && window.process.versions.electron);
+          var isAndroid = !!window.AndroidBridge;
+          var defaultRedirect = isElectron ? 'pos-food.html' : 'pos-food-tablet.html';
+          var redirectPage = params.get('redirect') || defaultRedirect;
+          btn.innerHTML = '<i class="fa-solid fa-circle-check"></i><span>¡Ingreso exitoso!</span>';
+          setTimeout(() => { window.location.href = redirectPage; }, 600);
+
+        }).catch(err => {
+          showError(err.message || 'Error de conexión');
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Ingresar al POS</span>';
+        });
+      } catch (err) {
+        showError(err.message || 'Error de base de datos');
+        const btn = document.getElementById('enterBtn');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i><span>Ingresar al POS</span>';
+        }
+      }
+    }
+
+    // Listen for database connection status
+    if (typeof db !== 'undefined' && db) {
+      db.ref('.info/connected').on('value', function(snap) {
+        var connDiv = document.getElementById('connStatus');
+        if (!connDiv) return;
+        if (snap.val() === true) {
+          connDiv.style.display = 'none';
+        } else {
+          connDiv.style.display = 'block';
+          connDiv.innerHTML = '<i class="fa-solid fa-wifi fa-fade"></i> Esperando conexión con base de datos...';
+          connDiv.style.color = '#f59e0b';
+        }
+      });
+    }
+  </script>
+</body>
+</html>

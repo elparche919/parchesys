@@ -1,4 +1,4 @@
-package com.example.parchesys_inventario
+package com.example.parchesys_asistencia
 
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -23,10 +23,6 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
 import android.os.Build
 import java.util.UUID
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 
 class MainActivity : FragmentActivity() {
     private lateinit var webView: WebView
@@ -94,29 +90,12 @@ class MainActivity : FragmentActivity() {
         webView.addJavascriptInterface(AndroidBridge(), "AndroidBridge")
         
         // Load local assets HTML file
-        webView.loadUrl("file:///android_asset/inventario-tablet.html?tablet=true")
+        webView.loadUrl("file:///android_asset/PARCHESYS-APP.html")
         
         setContentView(webView)
         
-        // Initialize Notification Channel
-        createNotificationChannel()
-        
         // Request runtime permissions (GPS location and Camera) at startup
         checkAndRequestPermissions()
-    }
-    
-    private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = "Alertas de Inventario"
-            val descriptionText = "Notificaciones de stock bajo y alertas de inventario"
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val channel = NotificationChannel("inventario_channel", name, importance).apply {
-                description = descriptionText
-            }
-            val notificationManager: NotificationManager =
-                getSystemService(android.content.Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
-        }
     }
     
     private fun checkAndRequestPermissions() {
@@ -129,11 +108,6 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             permissionsList.add(Manifest.permission.BLUETOOTH_CONNECT)
             permissionsList.add(Manifest.permission.BLUETOOTH_SCAN)
-        }
-
-        // Request Notification permission on Android 13+ (API 33+)
-        if (Build.VERSION.SDK_INT >= 33) {
-            permissionsList.add("android.permission.POST_NOTIFICATIONS")
         }
 
         val listPermissionsNeeded = ArrayList<String>()
@@ -416,29 +390,6 @@ class MainActivity : FragmentActivity() {
                         }
                     }
                 }.start()
-            }
-        }
-
-        @SuppressLint("MissingPermission")
-        @JavascriptInterface
-        fun showNativeNotification(title: String, message: String) {
-            runOnUiThread {
-                try {
-                    val builder = NotificationCompat.Builder(this@MainActivity, "inventario_channel")
-                        .setSmallIcon(android.R.drawable.ic_dialog_alert)
-                        .setContentTitle(title)
-                        .setContentText(message)
-                        .setPriority(NotificationCompat.PRIORITY_HIGH)
-                        .setDefaults(NotificationCompat.DEFAULT_ALL)
-                        .setAutoCancel(true)
-
-                    with(NotificationManagerCompat.from(this@MainActivity)) {
-                        notify(System.currentTimeMillis().toInt(), builder.build())
-                    }
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    Toast.makeText(this@MainActivity, "Error de notificación: " + e.message, Toast.LENGTH_SHORT).show()
-                }
             }
         }
     }
