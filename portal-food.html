@@ -2946,16 +2946,69 @@
       // Gastos
       let gastos = [], totalGastos = 0, gastosPorCat = {};
       gSnap.forEach(c => {
-        const g = { _key:c.key, ...c.val() };
+        const g = { _key:c.key, origen: 'gastos', ...c.val() };
+        const diaG = g.fecha ? g.fecha.substring(0, 10) : '';
+        if (diaG && (diaG < fechaInicio || diaG > fechaFin)) return;
         gastos.push(g);
         totalGastos += parseFloat(g.monto||0);
         gastosPorCat[g.categoria] = (gastosPorCat[g.categoria]||0) + parseFloat(g.monto||0);
+      });
+
+      // Egresos manuales del Portal y Egresos de Caja POS (finanzas_food)
+      fSnap.forEach(c => {
+        if (c.key === 'movimientos_caja') {
+          c.forEach(subC => {
+            const subVal = subC.val() || {};
+            const fechaVal = subVal.fecha ? subVal.fecha.substring(0,7) : '';
+            const tipoVal = (subVal.tipo || '').toLowerCase();
+            if (fechaVal === mes && tipoVal === 'egreso') {
+              const diaG = subVal.fecha ? subVal.fecha.substring(0, 10) : '';
+              if (diaG && (diaG < fechaInicio || diaG > fechaFin)) return;
+              const g = {
+                _key: subC.key,
+                origen: 'finanzas_caja',
+                fecha: diaG,
+                categoria: 'Caja POS',
+                descripcion: subVal.concepto || 'Egreso de Caja POS',
+                proveedor: subVal.cajero || 'Cajero',
+                monto: parseFloat(subVal.monto || 0),
+                ts: subVal.timestamp || Date.now()
+              };
+              gastos.push(g);
+              totalGastos += g.monto;
+              gastosPorCat[g.categoria] = (gastosPorCat[g.categoria]||0) + g.monto;
+            }
+          });
+        } else {
+          const val = c.val() || {};
+          const fechaVal = val.fecha ? val.fecha.substring(0,7) : '';
+          const tipoVal = (val.tipo || '').toUpperCase();
+          if (fechaVal === mes && tipoVal !== 'INGRESO') {
+            const diaG = val.fecha ? val.fecha.substring(0, 10) : '';
+            if (diaG && (diaG < fechaInicio || diaG > fechaFin)) return;
+            const g = {
+              _key: c.key,
+              origen: 'finanzas_portal',
+              fecha: diaG,
+              categoria: 'Finanzas Portal',
+              descripcion: val.ref || 'Egreso Portal',
+              proveedor: 'Portal',
+              monto: parseFloat(val.monto || 0),
+              ts: val.ts || Date.now()
+            };
+            gastos.push(g);
+            totalGastos += g.monto;
+            gastosPorCat[g.categoria] = (gastosPorCat[g.categoria]||0) + g.monto;
+          }
+        }
       });
 
       // Merma
       let mermas = [], totalMerma = 0, mermaPorMotivo = {};
       mSnap.forEach(c => {
         const m = { _key:c.key, ...c.val() };
+        const diaM = m.fecha ? m.fecha.substring(0, 10) : '';
+        if (diaM && (diaM < fechaInicio || diaM > fechaFin)) return;
         mermas.push(m);
         totalMerma += parseFloat(m.costo||0);
         mermaPorMotivo[m.motivo] = (mermaPorMotivo[m.motivo]||0) + parseFloat(m.costo||0);
