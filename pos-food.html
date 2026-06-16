@@ -5040,9 +5040,14 @@ function procesarOrden(tipoAccion){
 
     if (tieneNuevoFood) {
       v.estado_cocina = 'pendiente';
+    } else if (!existeEnCocina) {
+      v.estado_cocina = 'entregado';
     }
+
     if (tieneNuevoBar) {
       v.estado_bar = 'pendiente';
+    } else if (!existeEnCocina) {
+      v.estado_bar = 'entregado';
     }
 
     var cocinaOrderUpdate = {
@@ -5055,9 +5060,14 @@ function procesarOrden(tipoAccion){
 
     if (tieneNuevoFood) {
       cocinaOrderUpdate.estado_cocina = 'pendiente';
+    } else if (!existeEnCocina) {
+      cocinaOrderUpdate.estado_cocina = 'entregado';
     }
+
     if (tieneNuevoBar) {
       cocinaOrderUpdate.estado_bar = 'pendiente';
+    } else if (!existeEnCocina) {
+      cocinaOrderUpdate.estado_bar = 'entregado';
     }
 
     const btnCocina = document.querySelector('.send-kitchen-btn');
