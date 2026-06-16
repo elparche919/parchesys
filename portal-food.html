@@ -2180,12 +2180,21 @@
       });
 
       fSnap.forEach(c => {
-        const f = c.val();
-        if (!(f.fecha||'').startsWith(mes)) return;
-        const monto = parseFloat(f.monto || 0);
-        // Solo sumamos egresos manuales de caja; los INGRESO son capital externo,
-        // no ventas del POS, para evitar doble conteo con /ventas
-        if (f.tipo !== 'INGRESO') totalEgresos += monto;
+        if (c.key === 'movimientos_caja') {
+          c.forEach(subC => {
+            const subVal = subC.val() || {};
+            const fechaVal = subVal.fecha ? subVal.fecha.substring(0,7) : '';
+            const tipoVal = (subVal.tipo || '').toLowerCase();
+            if (fechaVal === mes && tipoVal === 'egreso') {
+              totalEgresos += parseFloat(subVal.monto || 0);
+            }
+          });
+        } else {
+          const f = c.val() || {};
+          if (!(f.fecha||'').startsWith(mes)) return;
+          const monto = parseFloat(f.monto || 0);
+          if (f.tipo !== 'INGRESO') totalEgresos += monto;
+        }
       });
 
       // También sumar gastos y merma al egreso
@@ -2270,28 +2279,113 @@
     }
 
     async function cargarGastos(mes) {
-      const snap = await db.ref(`negocios/${negocioID}/gastos`).orderByChild('mes').equalTo(mes).once('value');
+      const [gSnap, fSnap] = await Promise.all([
+        db.ref(`negocios/${negocioID}/gastos`).orderByChild('mes').equalTo(mes).once('value'),
+        db.ref(`negocios/${negocioID}/finanzas_food`).once('value')
+      ]);
+      
       let total = 0, catsMap = {}, rows = [];
-      snap.forEach(c => { const g = Object.assign({_key:c.key}, c.val()); rows.push(g); total += parseFloat(g.monto||0); catsMap[g.categoria] = (catsMap[g.categoria]||0)+parseFloat(g.monto||0); });
+      
+      // 1. Gastos Fijos
+      gSnap.forEach(c => {
+        const g = Object.assign({_key:c.key, origen: 'gastos'}, c.val());
+        rows.push(g);
+        total += parseFloat(g.monto||0);
+        catsMap[g.categoria] = (catsMap[g.categoria]||0)+parseFloat(g.monto||0);
+      });
+      
+      // 2. Egresos manuales del Portal y Egresos de Caja POS
+      fSnap.forEach(c => {
+        if (c.key === 'movimientos_caja') {
+          c.forEach(subC => {
+            const subVal = subC.val() || {};
+            const fechaVal = subVal.fecha ? subVal.fecha.substring(0,7) : '';
+            const tipoVal = (subVal.tipo || '').toLowerCase();
+            if (fechaVal === mes && tipoVal === 'egreso') {
+              const g = {
+                _key: subC.key,
+                origen: 'finanzas_caja',
+                fecha: subVal.fecha ? subVal.fecha.substring(0, 10) : '',
+                categoria: 'Caja POS',
+                descripcion: subVal.concepto || 'Egreso de Caja POS',
+                proveedor: subVal.cajero || 'Cajero',
+                monto: parseFloat(subVal.monto || 0),
+                ts: subVal.timestamp || Date.now()
+              };
+              rows.push(g);
+              total += g.monto;
+              catsMap[g.categoria] = (catsMap[g.categoria]||0) + g.monto;
+            }
+          });
+        } else {
+          const val = c.val() || {};
+          const fechaVal = val.fecha ? val.fecha.substring(0,7) : '';
+          const tipoVal = (val.tipo || '').toUpperCase();
+          if (fechaVal === mes && tipoVal !== 'INGRESO') {
+            const g = {
+              _key: c.key,
+              origen: 'finanzas_portal',
+              fecha: val.fecha ? val.fecha.substring(0, 10) : '',
+              categoria: 'Finanzas Portal',
+              descripcion: val.ref || 'Egreso Portal',
+              proveedor: 'Portal',
+              monto: parseFloat(val.monto || 0),
+              ts: val.ts || Date.now()
+            };
+            rows.push(g);
+            total += g.monto;
+            catsMap[g.categoria] = (catsMap[g.categoria]||0) + g.monto;
+          }
+        }
+      });
+      
       rows.sort((a,b) => (b.ts||0)-(a.ts||0));
       document.getElementById('g-total').textContent = '$'+total.toFixed(2);
       document.getElementById('g-count').textContent = rows.length;
       const topCat = Object.entries(catsMap).sort((a,b)=>b[1]-a[1])[0];
       document.getElementById('g-cat-top').textContent = topCat ? topCat[0] : '—';
+      
       document.getElementById('tbl-gastos').querySelector('tbody').innerHTML =
-        rows.map(g => `<tr>
-          <td>${g.fecha||'—'}</td>
-          <td><span style="background:rgba(56,189,248,.15);color:var(--m-blue);padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800">${g.categoria}</span></td>
-          <td style="font-weight:700">${g.descripcion}</td>
-          <td style="color:var(--m-muted)">${g.proveedor||'—'}</td>
-          <td align="right" style="font-weight:900;color:#dc2626">$${parseFloat(g.monto||0).toFixed(2)}</td>
-          <td><button onclick="eliminarGasto('${g._key}')" style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px"><i class="fa-solid fa-trash"></i></button></td>
-        </tr>`).join('') || '<tr><td colspan="6" align="center" style="color:var(--m-muted);padding:30px">Sin gastos registrados</td></tr>';
+        rows.map(g => {
+          let deleteBtn = '';
+          if (g.origen === 'gastos') {
+            deleteBtn = `<button onclick="eliminarGasto('${g._key}')" style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px"><i class="fa-solid fa-trash"></i></button>`;
+          } else if (g.origen === 'finanzas_portal') {
+            deleteBtn = `<button onclick="eliminarFinanzaGasto('${g._key}')" style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px" title="Eliminar del flujo financiero"><i class="fa-solid fa-trash"></i></button>`;
+          } else {
+            deleteBtn = `<span style="font-size:10px;color:var(--m-muted)" title="Gestionado en cierres de caja"><i class="fa-solid fa-lock"></i> POS</span>`;
+          }
+          
+          let badgeColor = 'rgba(56,189,248,.15)';
+          let textColor = 'var(--m-blue)';
+          if (g.categoria === 'Caja POS') {
+            badgeColor = 'rgba(245,158,11,.15)';
+            textColor = 'var(--m-warning)';
+          } else if (g.categoria === 'Finanzas Portal') {
+            badgeColor = 'rgba(16,185,129,.15)';
+            textColor = 'var(--m-green)';
+          }
+          
+          return `<tr>
+            <td>${g.fecha||'—'}</td>
+            <td><span style="background:${badgeColor};color:${textColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800">${g.categoria}</span></td>
+            <td style="font-weight:700">${g.descripcion}</td>
+            <td style="color:var(--m-muted)">${g.proveedor||'—'}</td>
+            <td align="right" style="font-weight:900;color:#dc2626">$${g.monto.toFixed(2)}</td>
+            <td>${deleteBtn}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="6" align="center" style="color:var(--m-muted);padding:30px">Sin gastos registrados para este mes</td></tr>';
     }
 
     async function eliminarGasto(key) {
       if (!confirm('¿Eliminar este gasto?')) return;
       await db.ref(`negocios/${negocioID}/gastos/${key}`).remove();
+      cargarGastos(document.getElementById('rep-mes').value);
+    }
+
+    async function eliminarFinanzaGasto(key) {
+      if (!confirm('¿Eliminar este movimiento financiero?')) return;
+      await db.ref(`negocios/${negocioID}/finanzas_food/${key}`).remove();
       cargarGastos(document.getElementById('rep-mes').value);
     }
 
@@ -2702,8 +2796,19 @@
       const totalIngresos = ventaMesa + ventaLlevar + ventaDelivery + propinas;
       let otrosEgresos = 0;
       fSnapCierre.forEach(c => {
-        const f = c.val();
-        if ((f.fecha||'').startsWith(mes) && f.tipo !== 'INGRESO') otrosEgresos += parseFloat(f.monto||0);
+        if (c.key === 'movimientos_caja') {
+          c.forEach(subC => {
+            const subVal = subC.val() || {};
+            const fechaVal = subVal.fecha ? subVal.fecha.substring(0,7) : '';
+            const tipoVal = (subVal.tipo || '').toLowerCase();
+            if (fechaVal === mes && tipoVal === 'egreso') {
+              otrosEgresos += parseFloat(subVal.monto || 0);
+            }
+          });
+        } else {
+          const f = c.val() || {};
+          if ((f.fecha||'').startsWith(mes) && f.tipo !== 'INGRESO') otrosEgresos += parseFloat(f.monto||0);
+        }
       });
       const totalEgresos  = gastosFijos + mermaTotal + totalDesc + otrosEgresos;
       const neto = totalIngresos - totalEgresos;
@@ -3730,9 +3835,20 @@
 
       let otrosEgresos = 0;
       fSnap.forEach(c => {
-        const f = c.val();
-        const fechaF = (f.fecha||'').substring(0,7);
-        if (fechaF === mes && f.tipo === 'GASTO') otrosEgresos += parseFloat(f.monto||0);
+        if (c.key === 'movimientos_caja') {
+          c.forEach(subC => {
+            const subVal = subC.val() || {};
+            const fechaVal = subVal.fecha ? subVal.fecha.substring(0,7) : '';
+            const tipoVal = (subVal.tipo || '').toLowerCase();
+            if (fechaVal === mes && tipoVal === 'egreso') {
+              otrosEgresos += parseFloat(subVal.monto || 0);
+            }
+          });
+        } else {
+          const f = c.val() || {};
+          const fechaF = (f.fecha||'').substring(0,7);
+          if (fechaF === mes && (f.tipo === 'GASTO' || f.tipo === 'EGRESO' || f.tipo === 'RETIRO')) otrosEgresos += parseFloat(f.monto||0);
+        }
       });
 
       const totalEgresos = totalGastosAdmin + totalMerma + otrosEgresos;
