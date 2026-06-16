@@ -5050,8 +5050,28 @@ function procesarOrden(tipoAccion){
       v.estado_bar = 'entregado';
     }
 
+    var cocinaItems = [];
+    if (existeEnCocina && results[1].val() && results[1].val().items) {
+      cocinaItems = results[1].val().items;
+    }
+
+    var cocinaPedido = pedido.map(function(item, idx) {
+      var copy = Object.assign({}, item);
+      if (cocinaItems[idx] && cocinaItems[idx].desc === item.desc) {
+        if (cocinaItems[idx].listo !== undefined) {
+          copy.listo = cocinaItems[idx].listo;
+        }
+      } else {
+        var found = cocinaItems.find(function(ci) { return ci && ci.desc === item.desc; });
+        if (found && found.listo !== undefined) {
+          copy.listo = found.listo;
+        }
+      }
+      return copy;
+    });
+
     var cocinaOrderUpdate = {
-      orden:ORDEN, items:pedido,
+      orden:ORDEN, items:cocinaPedido,
       estado:tipoAccion==='guardar'?'pendiente':'pagado',
       tipo:CANAL, mesa_num:mesa_num, cliente:cliente,
       mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
@@ -6673,16 +6693,17 @@ function confirmarMovCaja() {
       var ingresosSum = (_cajaSesion.ingresos_efectivo || []).reduce(function(a,i){return a+(i.monto||0);},0);
       var egresosSum  = (_cajaSesion.egresos_efectivo  || []).reduce(function(a,e){return a+(e.monto||0);},0);
       _cajaSesion.monto_esperado = (_cajaSesion.monto_inicial||0) + (_cajaSesion.ventas_efectivo||0) + ingresosSum - egresosSum;
-      saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').update({
-        ingresos_efectivo: _cajaSesion.ingresos_efectivo,
-        egresos_efectivo: _cajaSesion.egresos_efectivo,
+      var updatePayload = {
         monto_esperado: _cajaSesion.monto_esperado
-      }));
-      saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).update({
-        ingresos_efectivo: _cajaSesion.ingresos_efectivo,
-        egresos_efectivo: _cajaSesion.egresos_efectivo,
-        monto_esperado: _cajaSesion.monto_esperado
-      }));
+      };
+      if (_cajaSesion.ingresos_efectivo !== undefined) {
+        updatePayload.ingresos_efectivo = _cajaSesion.ingresos_efectivo;
+      }
+      if (_cajaSesion.egresos_efectivo !== undefined) {
+        updatePayload.egresos_efectivo = _cajaSesion.egresos_efectivo;
+      }
+      saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').update(updatePayload));
+      saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).update(updatePayload));
       localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
     }
 

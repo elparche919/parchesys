@@ -656,6 +656,7 @@ function renderBoard(){
   // Filtrar órdenes que contengan al menos un producto que no sea bebida
   entries = entries.filter(function(e) {
     var items = e[1].items || [];
+    // Debe tener al menos un producto de cocina (no bebida)
     return items.some(function(it) {
       return !_esBarCat(it.cat);
     });
