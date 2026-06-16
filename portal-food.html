@@ -589,10 +589,34 @@
 
       <!-- ══ TAB: VENTAS POR MESERO ══ -->
       <div class="rep-panel" id="rep-tab-meseros" style="display:none">
-        <div style="margin-bottom:18px">
-          <div style="font-size:16px;font-weight:900">Ventas por Mesero</div>
-          <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Rendimiento individual por servidor — período seleccionado</div>
+        <!-- Cabecera + sub-tabs de granularidad -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+          <div>
+            <div style="font-size:16px;font-weight:900">Ventas por Mesero</div>
+            <div style="font-size:12px;color:var(--m-muted);margin-top:3px" id="meseros-periodo-lbl">Rendimiento individual por servidor — período seleccionado</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <!-- Selector de semana (visible solo en modo semana) -->
+            <input type="week" id="meseros-semana" class="f-inp" style="width:170px;display:none" onchange="cargarMeserosPorGranularidad()">
+            <!-- Selector de día (visible solo en modo día) -->
+            <input type="date" id="meseros-dia" class="f-inp" style="width:150px;display:none" onchange="cargarMeserosPorGranularidad()">
+            <!-- Mini-tabs -->
+            <div style="display:flex;border:1px solid var(--m-border);border-radius:8px;overflow:hidden">
+              <button id="mtab-mes"    onclick="switchMeseroGranularidad('mes')"    style="padding:8px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:#334155;color:#ffffff;transition:.15s">Mes</button>
+              <button id="mtab-semana" onclick="switchMeseroGranularidad('semana')" style="padding:8px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:transparent;color:var(--m-muted);transition:.15s">Semana</button>
+              <button id="mtab-dia"    onclick="switchMeseroGranularidad('dia')"    style="padding:8px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:transparent;color:var(--m-muted);transition:.15s">Día</button>
+            </div>
+          </div>
         </div>
+
+        <!-- Total del período -->
+        <div id="meseros-total-bar" style="display:none;background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+          <div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--m-muted);letter-spacing:.06em">Total período</div><div style="font-size:20px;font-weight:900;color:#16a34a" id="meseros-gran-total">$0.00</div></div>
+          <div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--m-muted);letter-spacing:.06em">Órdenes</div><div style="font-size:20px;font-weight:900" id="meseros-gran-ordenes">0</div></div>
+          <div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--m-muted);letter-spacing:.06em">Ticket prom.</div><div style="font-size:20px;font-weight:900;color:var(--m-blue)" id="meseros-gran-ticket">$0.00</div></div>
+          <div><div style="font-size:9px;font-weight:800;text-transform:uppercase;color:var(--m-muted);letter-spacing:.06em">Meseros activos</div><div style="font-size:20px;font-weight:900;color:#fbbf24" id="meseros-gran-activos">0</div></div>
+        </div>
+
         <div id="meseros-ranking" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:24px"></div>
         <div class="tbl-card">
           <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border)"><i class="fa-solid fa-table"></i> Detalle por Mesero</div>
@@ -2074,7 +2098,7 @@
       const mes = document.getElementById('rep-mes').value;
       if (!mes) return;
       if (tab === 'egresos')  { cargarGastos(mes); cargarMerma(mes); }
-      if (tab === 'meseros')  cargarMeseros(mes);
+      if (tab === 'meseros')  cargarMeserosPorGranularidad();
       if (tab === 'corte')    cargarHistorialCortes();
       if (tab === 'cierre')   calcularCierre();
       if (tab === 'metas')    cargarMetas(mes);
@@ -2121,8 +2145,9 @@
         const f = c.val();
         if (!(f.fecha||'').startsWith(mes)) return;
         const monto = parseFloat(f.monto || 0);
-        if (f.tipo === 'INGRESO') totalIngresos += monto;
-        else totalEgresos += monto;
+        // Solo sumamos egresos manuales de caja; los INGRESO son capital externo,
+        // no ventas del POS, para evitar doble conteo con /ventas
+        if (f.tipo !== 'INGRESO') totalEgresos += monto;
       });
 
       // También sumar gastos y merma al egreso
@@ -2132,7 +2157,7 @@
       ]);
       gSnap.forEach(c => { totalEgresos += parseFloat(c.val().monto || 0); });
       mSnap.forEach(c => { totalEgresos += parseFloat(c.val().costo || 0); });
-      totalEgresos += totalDescuentos;
+      // totalDescuentos ya está descontado en v.total (precio final del POS) — no restar dos veces
 
       const balance = totalIngresos - totalEgresos;
 
@@ -2284,7 +2309,74 @@
     }
 
     /* ── VENTAS POR MESERO / CAJERO ── */
-    async function cargarMeseros(mes) {
+    /* ── GRANULARIDAD DE MESEROS: switches y helpers ── */
+    window._meseroGranularidad = 'mes';
+
+    function switchMeseroGranularidad(modo) {
+      window._meseroGranularidad = modo;
+      // Estilos de mini-tabs
+      ['mes','semana','dia'].forEach(m => {
+        const btn = document.getElementById('mtab-'+m);
+        btn.style.background = m === modo ? '#334155' : 'transparent';
+        btn.style.color      = m === modo ? '#ffffff' : 'var(--m-muted)';
+      });
+      // Mostrar/ocultar selectores
+      document.getElementById('meseros-semana').style.display = modo === 'semana' ? '' : 'none';
+      document.getElementById('meseros-dia').style.display    = modo === 'dia'    ? '' : 'none';
+      cargarMeserosPorGranularidad();
+    }
+
+    function cargarMeserosPorGranularidad() {
+      const modo = window._meseroGranularidad || 'mes';
+      const mes  = document.getElementById('rep-mes').value;
+      if (!mes) return;
+
+      if (modo === 'mes') {
+        // Rango completo del mes
+        const [anio, mesNum] = mes.split('-').map(Number);
+        const ultimoDia = new Date(anio, mesNum, 0).getDate();
+        cargarMeseros(`${mes}-01`, `${mes}-${String(ultimoDia).padStart(2,'0')}`, `Mes ${mes}`);
+
+      } else if (modo === 'semana') {
+        const valSem = document.getElementById('meseros-semana').value; // "2025-W24"
+        if (!valSem) {
+          // Inicializar con la semana actual si el input está vacío
+          const hoy = new Date();
+          const iso = hoy.toISOString().substring(0,10);
+          // Calcular semana ISO
+          const d = new Date(Date.UTC(hoy.getFullYear(), hoy.getMonth(), hoy.getDate()));
+          const day = d.getUTCDay() || 7;
+          d.setUTCDate(d.getUTCDate() + 4 - day);
+          const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+          const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+          document.getElementById('meseros-semana').value = `${hoy.getFullYear()}-W${String(weekNum).padStart(2,'0')}`;
+          cargarMeserosPorGranularidad();
+          return;
+        }
+        // Parsear "YYYY-Www" → lunes y domingo de esa semana
+        const [yr, wPart] = valSem.split('-W');
+        const week = parseInt(wPart);
+        const jan4 = new Date(Date.UTC(parseInt(yr), 0, 4));
+        const lunes = new Date(jan4);
+        lunes.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay()||7) - 1) + (week - 1) * 7);
+        const domingo = new Date(lunes);
+        domingo.setUTCDate(lunes.getUTCDate() + 6);
+        const fmt = d => d.toISOString().substring(0,10);
+        cargarMeseros(fmt(lunes), fmt(domingo), `Semana ${week} / ${yr}`);
+
+      } else if (modo === 'dia') {
+        const dia = document.getElementById('meseros-dia').value;
+        if (!dia) {
+          document.getElementById('meseros-dia').value = new Date().toISOString().substring(0,10);
+          cargarMeserosPorGranularidad();
+          return;
+        }
+        cargarMeseros(dia, dia, `Día ${dia}`);
+      }
+    }
+
+    /* ── CARGA CORE DE MESEROS — acepta rango ISO fechaInicio..fechaFin ── */
+    async function cargarMeseros(fechaInicio, fechaFin, labelPeriodo) {
       const snap = await db.ref(`negocios/${negocioID}/ventas`).once('value');
       const mMap = {};
       var empleadosSnap = window._foodEmpleados || {};
@@ -2303,13 +2395,24 @@
         return normalizar(v.cajero) || normalizar(v.mesero) || normalizar(v.tomada_por) || 'Sin asignar';
       }
 
-      // Acumular SOLO ventas pagadas del mes
+      // Helper: fecha ISO de una venta (YYYY-MM-DD)
+      function fechaVenta(v) {
+        if (v.fecha_iso) return v.fecha_iso.substring(0,10);
+        const raw = v.fecha || '';
+        if (raw.includes('/')) {
+          const p = raw.split('/');
+          if (p.length === 3) return `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+        }
+        return raw.substring(0,10);
+      }
+
+      // Acumular SOLO ventas pagadas dentro del rango
       const clavesProcesadas = new Set();
       snap.forEach(c => {
         const v = c.val();
-        if (v.estado !== 'pagado') return;                              // ← solo pagadas
-        const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
-        if (fechaV !== mes) return;
+        if (v.estado !== 'pagado') return;
+        const fv = fechaVenta(v);
+        if (fv < fechaInicio || fv > fechaFin) return;
         const nombre = resolverNombreOp(v);
         if (!mMap[nombre]) mMap[nombre] = { nombre, ordenes:0, total:0, descs:0, propinas:0, conDesc:0, canceladas:0 };
         mMap[nombre].ordenes++;
@@ -2320,24 +2423,24 @@
         clavesProcesadas.add(c.key);
       });
 
-      // Auditoría: contar canceladas del mismo mes por mesero
+      // Auditoría: canceladas dentro del mismo rango
       snap.forEach(c => {
         const v = c.val();
         if (v.estado !== 'cancelado' && v.estado !== 'anulado') return;
-        const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
-        if (fechaV !== mes) return;
+        const fv = fechaVenta(v);
+        if (fv < fechaInicio || fv > fechaFin) return;
         const nombre = resolverNombreOp(v);
         if (!mMap[nombre]) mMap[nombre] = { nombre, ordenes:0, total:0, descs:0, propinas:0, conDesc:0, canceladas:0 };
         mMap[nombre].canceladas++;
       });
 
-      // También revisar pedidos (POS) solo si ventas está vacío para ese mes
+      // Fallback a /pedidos si ventas está vacío para este rango
       if (clavesProcesadas.size === 0) {
         const pedSnap = await db.ref(`negocios/${negocioID}/pedidos`).once('value');
         pedSnap.forEach(c => {
           const v = c.val();
-          const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
-          if (fechaV !== mes) return;
+          const fv = fechaVenta(v);
+          if (fv < fechaInicio || fv > fechaFin) return;
           const nombre = resolverNombreOp(v);
           if (!mMap[nombre]) mMap[nombre] = { nombre, ordenes:0, total:0, descs:0, propinas:0, conDesc:0, canceladas:0 };
           if (v.estado === 'pagado') {
@@ -2352,12 +2455,30 @@
         });
       }
 
-      // Filtrar entradas sin órdenes reales (datos basura)
+      // Filtrar entradas sin órdenes reales
       const arr = Object.values(mMap)
         .filter(m => m.ordenes > 0)
         .sort((a,b) => b.total - a.total);
 
       const maxTotal = arr[0]?.total || 1;
+
+      // Actualizar label de período
+      if (labelPeriodo) {
+        const lbl = document.getElementById('meseros-periodo-lbl');
+        if (lbl) lbl.textContent = `Rendimiento individual — ${labelPeriodo}`;
+      }
+
+      // Barra de totales del período
+      const granTotal    = arr.reduce((s,m) => s + m.total, 0);
+      const granOrdenes  = arr.reduce((s,m) => s + m.ordenes, 0);
+      const totalBar = document.getElementById('meseros-total-bar');
+      if (totalBar) {
+        totalBar.style.display = arr.length ? 'flex' : 'none';
+        document.getElementById('meseros-gran-total').textContent   = '$' + granTotal.toFixed(2);
+        document.getElementById('meseros-gran-ordenes').textContent = granOrdenes;
+        document.getElementById('meseros-gran-ticket').textContent  = '$' + (granOrdenes > 0 ? (granTotal/granOrdenes).toFixed(2) : '0.00');
+        document.getElementById('meseros-gran-activos').textContent = arr.length;
+      }
 
       // Ranking cards
       document.getElementById('meseros-ranking').innerHTML = arr.slice(0,6).map((m,i) => `
@@ -2374,10 +2495,8 @@
           <div class="bar-track" style="margin-top:4px"><div class="bar-fill" style="width:${(m.total/maxTotal*100).toFixed(1)}%;background:${i===0?'#fbbf24':'#38bdf8'}"></div></div>
         </div>`).join('') || '<div style="color:var(--m-muted);grid-column:1/-1;text-align:center;padding:30px">Sin datos pagados para este período</div>';
 
-      // Tabla completa
-      document.getElementById('tbl-meseros').querySelector('tbody').innerHTML =
-        arr.map((m,i) => {
-          // Badge de auditoría
+      // Tabla completa con total al pie
+      const filas = arr.map((m,i) => {
           let audit = '';
           if (m.canceladas > 0 && m.conDesc > 0)
             audit = `<span style="font-size:9px;font-weight:800;background:rgba(251,113,133,.15);color:#fb7185;padding:2px 7px;border-radius:10px;margin-right:3px">⚠ ${m.canceladas} cancel.</span><span style="font-size:9px;font-weight:800;background:rgba(249,115,22,.15);color:#f97316;padding:2px 7px;border-radius:10px">${m.conDesc} desc.</span>`;
@@ -2398,7 +2517,22 @@
             <td align="center">${audit}</td>
             <td align="right" style="font-weight:900;color:#16a34a">$${m.total.toFixed(2)}</td>
           </tr>`;
-        }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin datos pagados para este mes</td></tr>';
+        }).join('');
+
+      const totalDesc  = arr.reduce((s,m) => s + m.descs, 0);
+      const totalProps = arr.reduce((s,m) => s + m.propinas, 0);
+      const filaPie = arr.length ? `<tr style="background:#1f242e;font-weight:900">
+        <td colspan="2" style="font-weight:900;color:var(--m-muted);text-transform:uppercase;font-size:10px;letter-spacing:.06em">TOTAL</td>
+        <td align="center" style="font-weight:900">${granOrdenes}</td>
+        <td align="center" style="color:var(--m-blue)">$${(granOrdenes > 0 ? granTotal/granOrdenes : 0).toFixed(2)}</td>
+        <td align="right" style="color:#f97316;font-weight:900">${totalDesc>0?'-$'+totalDesc.toFixed(2):'—'}</td>
+        <td align="right" style="color:#a78bfa;font-weight:900">${totalProps>0?'$'+totalProps.toFixed(2):'—'}</td>
+        <td></td>
+        <td align="right" style="font-weight:900;color:#16a34a;font-size:15px">$${granTotal.toFixed(2)}</td>
+      </tr>` : '';
+
+      document.getElementById('tbl-meseros').querySelector('tbody').innerHTML =
+        (filas + filaPie) || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin datos pagados para este período</td></tr>';
     }
 
     /* ── CORTE DE CAJA ── */
@@ -2409,7 +2543,18 @@
       let efec=0, tarj=0, transf=0, desc=0;
       snap.forEach(c => {
         const v = c.val();
-        const fv = v.fecha_iso ? v.fecha_iso.substring(0,10) : (v.fecha||'').split('/').reverse().join('-');
+        let fv = '';
+        if (v.fecha_iso) {
+          fv = v.fecha_iso.substring(0,10);
+        } else {
+          const raw = v.fecha || '';
+          if (raw.includes('/')) {
+            const p = raw.split('/');
+            if (p.length === 3) fv = `${p[2].substring(0,4)}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          } else if (raw.includes('-')) {
+            fv = raw.substring(0,10);
+          }
+        }
         if (fv !== fecha) return;
         const monto = parseFloat(v.total||0);
         const fp = (v.forma_pago||'efectivo').toLowerCase();
@@ -2483,10 +2628,11 @@
       const mes = document.getElementById('rep-mes').value;
       if (!mes) return;
 
-      const [vSnap, gSnap, mSnap] = await Promise.all([
+      const [vSnap, gSnap, mSnap, fSnapCierre] = await Promise.all([
         db.ref(`negocios/${negocioID}/ventas`).once('value'),
         db.ref(`negocios/${negocioID}/gastos`).orderByChild('mes').equalTo(mes).once('value'),
-        db.ref(`negocios/${negocioID}/merma`).orderByChild('mes').equalTo(mes).once('value')
+        db.ref(`negocios/${negocioID}/merma`).orderByChild('mes').equalTo(mes).once('value'),
+        db.ref(`negocios/${negocioID}/finanzas_food`).once('value')
       ]);
 
       let ventaMesa=0, ventaLlevar=0, ventaDelivery=0, propinas=0, totalDesc=0;
@@ -2516,7 +2662,11 @@
       mSnap.forEach(c => { mermaTotal += parseFloat(c.val().costo||0); });
 
       const totalIngresos = ventaMesa + ventaLlevar + ventaDelivery + propinas;
-      const otrosEgresos  = 0;
+      let otrosEgresos = 0;
+      fSnapCierre.forEach(c => {
+        const f = c.val();
+        if ((f.fecha||'').startsWith(mes) && f.tipo !== 'INGRESO') otrosEgresos += parseFloat(f.monto||0);
+      });
       const totalEgresos  = gastosFijos + mermaTotal + totalDesc + otrosEgresos;
       const neto = totalIngresos - totalEgresos;
       const margen = totalIngresos > 0 ? (neto/totalIngresos*100) : 0;
@@ -2622,7 +2772,7 @@
         totalPropinas   += parseFloat(v.propina||0);
         ventaPorDia[diaV] = (ventaPorDia[diaV]||0) + monto;
         const canal = (v.canal||v.tipo_orden||'mesa').toLowerCase();
-        if (canal.includes('llevar')||canal.includes('llevar')) ventaPorCanal.llevar += monto;
+        if (canal.includes('llevar') || canal.includes('para_llevar')) ventaPorCanal.llevar += monto;
         else if (canal.includes('delivery')) ventaPorCanal.delivery += monto;
         else ventaPorCanal.mesa += monto;
         // Productos
@@ -2630,10 +2780,20 @@
           const n = it.desc||it.nombre||'Sin nombre';
           if (!prodsMap[n]) prodsMap[n] = { n, q:0, v:0 };
           prodsMap[n].q += (it.cant||1);
-          prodsMap[n].v += parseFloat(it.precio||0) * (it.cant||1);
+          prodsMap[n].v += parseFloat(it.sub || ((it.cant||1) * (it.precio||0)));
         });
-        // Empleados
-        const emp = v.cajero || v.mesero || v.tomada_por || 'Sin asignar';
+        // Empleados — misma jerarquía que resolverNombreOp en cargarMeseros
+        var _emps = window._foodEmpleados || {};
+        var empNombre = 'Sin asignar';
+        if (v.emp_key    && _emps[v.emp_key])    empNombre = _emps[v.emp_key].nombre;
+        else if (v.cajero_key && _emps[v.cajero_key]) empNombre = _emps[v.cajero_key].nombre;
+        else {
+          var raw = v.cajero || v.mesero || v.tomada_por || '';
+          raw = raw.trim();
+          if (raw && raw !== 'Sin asignar' && raw !== 'IGNORADA')
+            empNombre = raw.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+        }
+        const emp = empNombre;
         if (!empleadosMap[emp]) empleadosMap[emp] = { nombre:emp, ordenes:0, total:0, descuentos:0 };
         empleadosMap[emp].ordenes++;
         empleadosMap[emp].total += monto;
