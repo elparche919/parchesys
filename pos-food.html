@@ -4963,13 +4963,13 @@ function procesarOrden(tipoAccion){
     // Calcular diferencias de stock y actualizar Firebase
     ajustarStockPorDiferencia(prevItems, pedido);
     
-    ejecutarGuardado(ts, existeEnCocina, orderSnap, results[1]);
+    ejecutarGuardado(ts, existeEnCocina, orderSnap, results[1], prevItems);
   }).catch(function(err){
     console.error(err);
-    ejecutarGuardado(Date.now(), true, null, null);
+    ejecutarGuardado(Date.now(), true, null, null, []);
   });
 
-  function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap){
+  function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap, prevItems){
     // Determinar si hay ítems nuevos de cocina y bar basado en cantidades respecto a Firebase
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
@@ -4987,25 +4987,33 @@ function procesarOrden(tipoAccion){
     }
 
     // Cuenta la cantidad de un ítem en un arreglo para comparar adiciones
-    function contarItem(arr, item) {
-      return arr.reduce(function(acc, curr) {
-        if (curr.nombre === item.nombre && curr.desc === item.desc) {
-          return acc + curr.cant;
+    function getTotalItems(arr) {
+      var totals = {};
+      (arr || []).forEach(function(item) {
+        var desc = item.desc || "";
+        var key = item.nombre + '|' + desc;
+        if (!totals[key]) {
+          totals[key] = { cant: 0, cat: item.cat };
         }
-        return acc;
-      }, 0);
+        totals[key].cant += item.cant;
+      });
+      return totals;
     }
 
-    pedido.forEach(function(i) {
-      var prevQty = contarItem(prevItems, i);
-      if (i.cant > prevQty) {
-        if (_esBarCatLocal(i.cat)) {
+    var currentTotals = getTotalItems(pedido);
+    var prevTotals = getTotalItems(prevItems);
+
+    for (var key in currentTotals) {
+      var currItem = currentTotals[key];
+      var prevQty = prevTotals[key] ? prevTotals[key].cant : 0;
+      if (currItem.cant > prevQty) {
+        if (_esBarCatLocal(currItem.cat)) {
           tieneNuevoBar = true;
         } else {
           tieneNuevoFood = true;
         }
       }
-    });
+    }
 
     // Marcar todos los ítems actuales como enviados
     pedido = pedido.map(function(item) {
@@ -5093,13 +5101,13 @@ function procesarOrden(tipoAccion){
     v.items = cocinaPedido; // Keep pedidos items synchronized with KDS ready statuses
 
     var kdsTimestamp = ts;
-    // Reiniciar contador de KDS Cocina si la orden ya estaba entregada y se agrega algo nuevo
-    if (tieneNuevoFood && estCocinaExistente === 'entregado') {
+    if (cocSnap && cocSnap.exists() && cocSnap.val().timestamp) {
+      kdsTimestamp = cocSnap.val().timestamp;
+    }
+    
+    // Reiniciar contador de KDS si se agrega algo nuevo
+    if (tieneNuevoFood || tieneNuevoBar || !orderSnap || !orderSnap.exists()) {
       kdsTimestamp = Date.now();
-    } else if (tieneNuevoBar && estBarExistente === 'entregado') {
-      kdsTimestamp = Date.now();
-    } else if (!orderSnap || !orderSnap.exists()) {
-      kdsTimestamp = Date.now(); // nueva orden
     }
 
     var cocinaOrderUpdate = {
@@ -5111,13 +5119,21 @@ function procesarOrden(tipoAccion){
     };
 
     if (tieneNuevoFood) {
-      cocinaOrderUpdate.estado_cocina = 'pendiente';
+      if (estCocinaExistente === 'entregado') {
+        cocinaOrderUpdate.estado_cocina = 'pendiente';
+      } else {
+        cocinaOrderUpdate.estado_cocina = estCocinaExistente;
+      }
     } else {
       cocinaOrderUpdate.estado_cocina = estCocinaExistente;
     }
 
     if (tieneNuevoBar) {
-      cocinaOrderUpdate.estado_bar = 'pendiente';
+      if (estBarExistente === 'entregado') {
+        cocinaOrderUpdate.estado_bar = 'pendiente';
+      } else {
+        cocinaOrderUpdate.estado_bar = estBarExistente;
+      }
     } else {
       cocinaOrderUpdate.estado_bar = estBarExistente;
     }
