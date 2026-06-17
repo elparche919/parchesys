@@ -5038,16 +5038,19 @@ function procesarOrden(tipoAccion){
       caja_num:_cajaActual
     };
 
+    var estCocinaExistente = (existeEnCocina && results[1].val()) ? (results[1].val().estado_cocina || 'pendiente') : 'entregado';
+    var estBarExistente = (existeEnCocina && results[1].val()) ? (results[1].val().estado_bar || 'pendiente') : 'entregado';
+
     if (tieneNuevoFood) {
       v.estado_cocina = 'pendiente';
-    } else if (!existeEnCocina) {
-      v.estado_cocina = 'entregado';
+    } else {
+      v.estado_cocina = estCocinaExistente;
     }
 
     if (tieneNuevoBar) {
       v.estado_bar = 'pendiente';
-    } else if (!existeEnCocina) {
-      v.estado_bar = 'entregado';
+    } else {
+      v.estado_bar = estBarExistente;
     }
 
     var cocinaItems = [];
@@ -5072,32 +5075,8 @@ function procesarOrden(tipoAccion){
 
     v.items = cocinaPedido; // Keep pedidos items synchronized with KDS ready statuses
 
-    var todosComidaAnterioresListos = true;
-    var tieneComidaAnterior = false;
-    var todasBebidasAnterioresListas = true;
-    var tieneBebidaAnterior = false;
-
-    cocinaItems.forEach(function(ci) {
-      if (ci) {
-        if (_esBarCatLocal(ci.cat)) {
-          tieneBebidaAnterior = true;
-          if (!ci.listo) {
-            todasBebidasAnterioresListas = false;
-          }
-        } else {
-          tieneComidaAnterior = true;
-          if (!ci.listo) {
-            todosComidaAnterioresListos = false;
-          }
-        }
-      }
-    });
-
     var kdsTimestamp = ts;
-    var resetCocina = tieneNuevoFood && (!tieneComidaAnterior || todosComidaAnterioresListos);
-    var resetBar = tieneNuevoBar && (!tieneBebidaAnterior || todasBebidasAnterioresListas);
-
-    if (resetCocina || resetBar) {
+    if (tieneNuevoFood || tieneNuevoBar) {
       kdsTimestamp = Date.now();
     }
 
@@ -5111,14 +5090,14 @@ function procesarOrden(tipoAccion){
 
     if (tieneNuevoFood) {
       cocinaOrderUpdate.estado_cocina = 'pendiente';
-    } else if (!existeEnCocina) {
-      cocinaOrderUpdate.estado_cocina = 'entregado';
+    } else {
+      cocinaOrderUpdate.estado_cocina = estCocinaExistente;
     }
 
     if (tieneNuevoBar) {
       cocinaOrderUpdate.estado_bar = 'pendiente';
-    } else if (!existeEnCocina) {
-      cocinaOrderUpdate.estado_bar = 'entregado';
+    } else {
+      cocinaOrderUpdate.estado_bar = estBarExistente;
     }
 
     const btnCocina = document.querySelector('.send-kitchen-btn');
