@@ -7,11 +7,21 @@
 <title>PARCHE SYS · Gestión de Empleados (Bajo Licencia de PARCHE SYS)</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js">
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js">
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js">
+
+</script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js">
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js">
+
+</script>
 <script>
 (function(){
   emailjs.init({publicKey:'3SbfCH_BEHPJI6oLq'});
@@ -48,8 +58,12 @@
     }
   };
 })();
+
+
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
+
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root {
@@ -313,7 +327,9 @@ textarea.fi{resize:vertical;min-height:72px}
     .stats{grid-template-columns:repeat(2,1fr)!important}
   }
 </style>
-<script src="modus-return.js"></script>
+<script src="modus-return.js">
+
+</script>
 </head>
 <body>
 
@@ -365,6 +381,7 @@ textarea.fi{resize:vertical;min-height:72px}
     <div class="tab-group-items" id="items-asistencia">
       <div class="tab-item" onclick="showTab('asistencia');closeGroups()" id="tab-btn-asistencia">⏰ Asistencia Diaria</div>
       <div class="tab-item" onclick="showTab('asistencia-gps');closeGroups()" id="tab-btn-asistencia-gps">📍 Asistencia GPS</div>
+      <div class="tab-item" onclick="showTab('historial');closeGroups()" id="tab-btn-historial">📅 Historial Semanal</div>
       <div class="tab-item" onclick="showTab('turnos');closeGroups()" id="tab-btn-turnos">📅 Turnos</div>
     </div>
   </div>
@@ -889,10 +906,8 @@ textarea.fi{resize:vertical;min-height:72px}
     <div class="g2">
       <div class="fg"><label class="fl">Tipo de turno</label>
         <select class="fi" id="turno-tipo">
-          <option value="mañana">Mañana (6:00-14:00)</option>
-          <option value="tarde">Tarde (14:00-22:00)</option>
-          <option value="normal">Normal (8:00-17:00)</option>
-          <option value="noche">Noche (22:00-6:00)</option>
+          <option value="tarde1">Tarde 1 (2:00 PM - 10:00 PM)</option>
+          <option value="tarde2">Tarde 2 (3:00 PM - 11:00 PM)</option>
           <option value="personalizado">Personalizado</option>
         </select>
       </div>
@@ -901,6 +916,18 @@ textarea.fi{resize:vertical;min-height:72px}
     <div class="g2" id="turno-custom" style="display:none">
       <div class="fg"><label class="fl">Hora Inicio</label><input class="fi" id="turno-h-in" type="time"></div>
       <div class="fg"><label class="fl">Hora Fin</label><input class="fi" id="turno-h-out" type="time"></div>
+    </div>
+    <div class="fg" id="turno-quick" style="margin-top:10px; display:none;">
+      <label class="fl">Asignación rápida (Copiar a la misma semana):</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;">
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="1"> Lun</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="2"> Mar</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="3"> Mié</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="4"> Jue</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="5"> Vie</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="6"> Sáb</label>
+        <label style="font-size:11px;color:var(--m-text);"><input type="checkbox" class="chk-dia" value="0"> Dom</label>
+      </div>
     </div>
     <div style="display:flex;gap:8px;margin-top:4px">
       <button class="btn btn-ghost" style="flex:1" onclick="cerrar('modal-turno')">Cancelar</button>
@@ -1036,6 +1063,38 @@ textarea.fi{resize:vertical;min-height:72px}
   </table></div>
 </div>
 
+
+<!-- HISTORIAL SEMANAL -->
+<div class="page" id="page-historial">
+  <div class="bar">
+    <div style="font-size:13px;font-weight:800">Historial de Marcajes</div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <select id="historial-emp-select" class="fi" style="width:160px;font-size:12px" onchange="renderHistorial()">
+        <option value="ALL">Todos los empleados</option>
+      </select>
+      <input type="date" class="fi" id="historial-start" style="width:120px;font-size:12px" onchange="renderHistorial()">
+      <input type="date" class="fi" id="historial-end" style="width:120px;font-size:12px" onchange="renderHistorial()">
+      <button class="btn btn-primary btn-sm" onclick="renderHistorial()">Actualizar</button>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Empleado</th>
+          <th>Entrada</th>
+          <th>Salida</th>
+          <th>Horas Calculadas</th>
+        </tr>
+      </thead>
+      <tbody id="tb-historial-semanal">
+        <tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Seleccione fechas y empleado</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <!-- Modal Nueva Tarea -->
 <div class="overlay" id="modal-tarea-admin">
   <div class="modal" style="max-width:460px">
@@ -1116,7 +1175,9 @@ textarea.fi{resize:vertical;min-height:72px}
 <div id="toast"></div>
 
 <!-- Shared Config -->
-<script src="firebase-config.js"></script>
+<script src="firebase-config.js">
+
+</script>
 <script>
 // ── ESTADO GLOBAL ──
 // negocioID and db are already inherited from firebase-config.js
@@ -1201,6 +1262,7 @@ function init(){
     renderPortalSelector();
     actualizarStats();
     llenarSelectoresEmp();
+    if(typeof llenarSelectorHistorial==="function") llenarSelectorHistorial();
   });
 
   db.ref(`negocios/${negocioID}/asistencia_hoy`).on('value',s=>{
@@ -1439,6 +1501,8 @@ function abrirFotoModal(src, nombre) {
 }
 
 // ── RENDER ASISTENCIA ──
+
+
 function renderAsistencia(){
   const list=document.getElementById('asist-list');
   const tb=document.getElementById('tb-asistencia');
@@ -1447,10 +1511,11 @@ function renderAsistencia(){
 
   // Stats asistencia
   const st=document.getElementById('asist-stats');
-  const presentes=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='presente').length;
-  const tardanza=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='tardanza').length;
-  const ausentes=emps.filter(([id])=>(asistenciaHoy[id]||{}).estado==='ausente').length;
-  const sinR=emps.filter(([id])=>!(asistenciaHoy[id]||{}).estado).length;
+  const getEstadoReal = (a) => a.estado || (a.hora_entrada ? 'presente' : '');
+  const presentes=emps.filter(([id])=>getEstadoReal(asistenciaHoy[id]||{})==='presente').length;
+  const tardanza=emps.filter(([id])=>getEstadoReal(asistenciaHoy[id]||{})==='tardanza').length;
+  const ausentes=emps.filter(([id])=>getEstadoReal(asistenciaHoy[id]||{})==='ausente').length;
+  const sinR=emps.filter(([id])=>!getEstadoReal(asistenciaHoy[id]||{})).length;
   st.innerHTML=[
     {v:presentes,l:'Presentes',c:'#10b981',bg:'#dcfce7'},
     {v:tardanza,l:'Tardanzas',c:'#f59e0b',bg:'#fef9c3'},
@@ -1512,26 +1577,64 @@ function renderAsistencia(){
   // Tabla historial
   tb.innerHTML=emps.map(([id,e])=>{
     const a=asistenciaHoy[id]||{};
-    const horas=a.hora_entrada&&a.hora_salida?calcHoras(a.hora_entrada,a.hora_salida):'—';
-    const badgeEst=a.estado==='presente'?'b-green':a.estado==='tardanza'?'b-yellow':a.estado==='ausente'?'b-red':'b-gray';
+    const estadoReal = a.estado || (a.hora_entrada ? 'presente' : '');
+    const horas=a.hora_entrada&&a.hora_salida?calcDetalleGanancia(id,a.hora_entrada,a.hora_salida).str:'-';
+    const badgeEst=estadoReal==='presente'?'b-green':estadoReal==='tardanza'?'b-yellow':estadoReal==='ausente'?'b-red':'b-gray';
     return `<tr>
-      <td><div style="font-weight:700">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.puesto||''}</div></td>
-      <td style="font-weight:700;color:#10b981">${a.hora_entrada||'—'}</td>
-      <td style="font-weight:700;color:#1B4E8B">${a.hora_salida||'—'}</td>
-      <td><span class="badge ${badgeEst}">${a.estado||'sin registro'}</span></td>
+      <td><div style="font-weight:700">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.puesto||""}</div></td>
+      <td style="font-weight:700;color:#10b981">${a.hora_entrada||"-"}</td>
+      <td style="font-weight:700;color:#1B4E8B">${a.hora_salida||"-"}</td>
+      <td><span class="badge ${badgeEst}">${estadoReal||"sin registro"}</span></td>
       <td style="font-weight:700">${horas}</td>
-      <td style="font-size:10px;color:#64748b">${a.tardanza?'⚠️ '+a.minutos_tarde+'min tarde':''}</td>
+      <td style="font-size:10px;color:#64748b">${a.tardanza?'⏳ '+a.minutos_tarde+'min tarde':''}</td>
     </tr>`;
   }).join('');
 }
 
-function calcHoras(hin,hout){
-  try{
-    const [hh1,mm1]=hin.split(':').map(Number);
-    const [hh2,mm2]=hout.split(':').map(Number);
-    const diff=(hh2*60+mm2)-(hh1*60+mm1);
-    return diff>0?`${Math.floor(diff/60)}h ${diff%60}m`:'—';
-  }catch{return '—';}
+function calcHoras(hin,hout){ return '-'; }
+
+function parseTime(tStr) {
+  if(!tStr) return {h:0,m:0};
+  const parts = tStr.split(':');
+  let h = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  const tLow = tStr.toLowerCase();
+  if (tLow.includes('p') && h < 12) h += 12;
+  if (tLow.includes('a') && h === 12) h = 0;
+  return {h,m};
+}
+function calcDetalleGanancia(id, hin, hout){
+    try{
+        if(!hin || !hout) return {str: '-', baseMin: 0, extraMin: 0, extraGanancia: 0};
+        const emp = empleados[id]||{};
+        let valorHoraExtra = parseFloat(emp.valor_hora_extra || 0);
+        if(!valorHoraExtra && emp.salario_mensual) {
+            let baseHora = parseFloat(emp.salario_mensual) / 30 / 8;
+            valorHoraExtra = baseHora * 2; 
+        }
+        
+        const t1 = parseTime(hin);
+        const t2 = parseTime(hout);
+        let diff=(t2.h*60+t2.m)-(t1.h*60+t1.m);
+        if(diff < 0) diff += 24*60; 
+        
+        let baseMin = 0;
+        let extraMin = 0;
+        if(diff <= 480) { 
+            baseMin = diff;
+        } else {
+            baseMin = 480;
+            extraMin = diff - 480;
+        }
+        
+        let extraGanancia = (extraMin * (valorHoraExtra / 60));
+        
+        let str = diff>0 ? `${Math.floor(diff/60)}h ${diff%60}m` : '-';
+        if(extraMin > 0) {
+            str += ` (+${Math.floor(extraMin/60)}h ${extraMin%60}m extra = $${extraGanancia.toFixed(2)})`;
+        }
+        return {str, baseMin, extraMin, extraGanancia};
+    }catch(e){return {str: '-', baseMin: 0, extraMin: 0, extraGanancia: 0};}
 }
 
 function marcarAsistencia(id,est){
@@ -1798,45 +1901,60 @@ async function renderPlanilla(){
     let sal = 0;
     let hex = 0; // valor en $ de horas extra
 
+    let horasRegularesTrabajadas = 0;
+    let horasExtraTrabajadas = 0;
+    
+    // Calcular desde marcajes diarios
+    for(let i=0; i<fechas.length; i++) {
+      const f = fechas[i];
+      const marca = asistDatos[f][id];
+      if (marca) {
+        let he = marca.hora_entrada || marca.entrada_hora;
+        let hs = marca.hora_salida || marca.salida_hora;
+        
+        // Si hay entrada pero no salida, buscar salida en la mañana del dia siguiente (turno de noche)
+        if (he && !hs && i < fechas.length - 1) {
+             const nextMarca = asistDatos[fechas[i+1]][id];
+             if (nextMarca && (nextMarca.hora_salida || nextMarca.salida_hora) && !(nextMarca.hora_entrada || nextMarca.entrada_hora)) {
+                  hs = nextMarca.hora_salida || nextMarca.salida_hora;
+             }
+        }
+        
+        if (he && hs) {
+            const t1 = parseTime(he);
+            const t2 = parseTime(hs);
+            let diffMin = (t2.h*60+t2.m) - (t1.h*60+t1.m);
+            if (diffMin < 0) diffMin += 24*60;
+            
+            if (diffMin > 0) {
+              const hrs = diffMin / 60;
+              if (hrs > 8) {
+                horasRegularesTrabajadas += 8;
+                horasExtraTrabajadas += (hrs - 8);
+              } else {
+                horasRegularesTrabajadas += hrs;
+              }
+            }
+        }
+      }
+    }
+    
+    const extrasAprob = horasExtraAprobadas[id] || 0;
+    horasExtraTrabajadas += extrasAprob;
+
     if (e.tipo === 'Por hora') {
       const vHora = parseFloat(e.valor_hora) || 0;
       const vHoraExtra = parseFloat(e.valor_hora_extra) || 0;
-      
-      let horasRegularesTrabajadas = 0;
-      let horasExtraTrabajadas = 0;
-      
-      // Calcular desde marcajes diarios
-      fechas.forEach(f => {
-        const marca = asistDatos[f][id];
-        if (marca && marca.hora_entrada && marca.hora_salida) {
-          const [h1, m1] = marca.hora_entrada.split(':').map(Number);
-          const [h2, m2] = marca.hora_salida.split(':').map(Number);
-          let diffMin = (h2*60+m2) - (h1*60+m1);
-          if (diffMin > 0) {
-            const hrs = diffMin / 60;
-            if (hrs > 8) {
-              horasRegularesTrabajadas += 8;
-              horasExtraTrabajadas += (hrs - 8);
-            } else {
-              horasRegularesTrabajadas += hrs;
-            }
-          }
-        }
-      });
-      
-      // Sumar horas extras aprobadas
-      const extrasAprob = horasExtraAprobadas[id] || 0;
-      horasExtraTrabajadas += extrasAprob;
       
       sal = horasRegularesTrabajadas * vHora;
       hex = horasExtraTrabajadas * vHoraExtra;
     } else {
       sal = parseFloat(e.salario) || 0;
-      // Para mensuales, hex es el valor de las horas extras aprobadas
-      const vHoraExtra = (sal / 30 / 8) * 1.5; // Aproximación si no tiene tarifa explícita
+      // Para mensuales, hex es el valor de las horas extras ganadas + aprobadas
+      const vHoraExtra = (sal / 30 / 8) * 2; // Por defecto el doble si no tiene tarifa explicita
       const vH = parseFloat(e.valor_hora_extra) || vHoraExtra;
-      const extrasAprob = horasExtraAprobadas[id] || 0;
-      hex = extrasAprob * vH;
+      
+      hex = horasExtraTrabajadas * vH;
     }
 
     const bono=0;
@@ -2407,6 +2525,7 @@ function onChangeFechaTurno(){
 
 function abrirModalTurno(empId){
   llenarSelectoresEmp();
+    if(typeof llenarSelectorHistorial==="function") llenarSelectorHistorial();
   document.getElementById('turno-edit-key').value='';
   document.getElementById('modal-turno-title').textContent='📅 Asignar Turno';
   document.getElementById('btn-turno-lbl').textContent='Asignar';
@@ -2414,10 +2533,12 @@ function abrirModalTurno(empId){
   // Default: hoy
   document.getElementById('turno-fecha').value=isoFecha(new Date());
   onChangeFechaTurno();
-  document.getElementById('turno-tipo').value='normal';
+  document.getElementById('turno-tipo').value='tarde1';
   document.getElementById('turno-custom').style.display='none';
-  document.getElementById('turno-h-in').value='08:00';
-  document.getElementById('turno-h-out').value='17:00';
+  document.getElementById('turno-h-in').value='14:00';
+  document.getElementById('turno-h-out').value='22:00';
+  if(document.getElementById('turno-quick')) document.getElementById('turno-quick').style.display = 'block';
+  document.querySelectorAll('.chk-dia').forEach(chk => chk.checked = false);
   document.getElementById('turno-nota').value='';
   if(empId)document.getElementById('turno-emp').value=empId;
   document.getElementById('modal-turno').classList.add('open');
@@ -2427,6 +2548,7 @@ function editarTurno(key){
   const t=turnos[key];
   if(!t)return;
   llenarSelectoresEmp();
+    if(typeof llenarSelectorHistorial==="function") llenarSelectorHistorial();
   document.getElementById('turno-edit-key').value=key;
   document.getElementById('modal-turno-title').textContent = '✏️ Editar Turno';
   document.getElementById('btn-turno-lbl').textContent='Guardar cambios';
@@ -2434,7 +2556,8 @@ function editarTurno(key){
   document.getElementById('turno-emp').value=t.emp_id||'';
   document.getElementById('turno-fecha').value=t.fecha||isoFecha(new Date());
   onChangeFechaTurno();
-  document.getElementById('turno-tipo').value=t.tipo||'normal';
+  document.getElementById('turno-tipo').value=t.tipo||'tarde1';
+  if(document.getElementById('turno-quick')) document.getElementById('turno-quick').style.display = 'none';
   document.getElementById('turno-h-in').value=t.hora_in||'';
   document.getElementById('turno-h-out').value=t.hora_out||'';
   document.getElementById('turno-nota').value=t.nota||'';
@@ -3124,6 +3247,8 @@ function guardarVacaciones(){
     toast('Vacaciones actualizadas','ok');
   });
 }
+
+
 </script>
 
 <!-- ══ MODUS NOTIF — módulo bidireccional push ════════════════════
@@ -3266,6 +3391,105 @@ document.addEventListener('DOMContentLoaded',function(){
     }catch(e){console.warn('[MODUS Notif] init empleados error:',e);}
   },1500);
 });
-</script>
+
+
+
+// --- HISTORIAL SEMANAL ---
+function llenarSelectorHistorial() {
+  const sel = document.getElementById('historial-emp-select');
+  if(!sel) return;
+  const curr = sel.value;
+  sel.innerHTML = '<option value="ALL">Todos los empleados</option>';
+  Object.entries(empleados).forEach(([id,e])=>{
+    const opt = document.createElement('option');
+    opt.value = id;
+    opt.textContent = e.nombre;
+    sel.appendChild(opt);
+  });
+  if(Object.keys(empleados).includes(curr)) sel.value = curr;
+}
+
+async function renderHistorial() {
+  const sel = document.getElementById('historial-emp-select');
+  if (!sel) return; // Si no hay selector, no renderizar
+  const empId = sel.value;
+  const startD = document.getElementById('historial-start').value;
+  const endD = document.getElementById('historial-end').value;
+  const tb = document.getElementById('tb-historial-semanal');
+  
+  if(!startD || !endD) {
+    if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Por favor define un rango.</td></tr>';
+    return;
+  }
+  
+  if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Cargando historial...</td></tr>';
+  
+  try {
+    const dStart = new Date(startD+'T12:00:00');
+    const dEnd = new Date(endD+'T12:00:00');
+    const fechas = [];
+    while(dStart <= dEnd) {
+      fechas.push(dStart.toISOString().split('T')[0]);
+      dStart.setDate(dStart.getDate()+1);
+    }
+
+    const asistPromises = fechas.map(f => db.ref(`negocios/${negocioID}/asistencia_gps/${f}`).once('value'));
+    const snaps = await Promise.all(asistPromises);
+    
+    let html = '';
+    let marcajesEncontrados = 0;
+    
+    snaps.forEach((snap, idx) => {
+      const fecha = fechas[idx];
+      const diaAsistencias = snap.val() || {};
+      
+      Object.entries(diaAsistencias).forEach(([id_emp, marca]) => {
+        if(empId !== 'ALL' && empId !== id_emp) return;
+        
+        const emp = empleados[id_emp] || {nombre: 'Desconocido', puesto: ''};
+        // Soporta tanto hora_entrada como entrada_hora
+        const he = marca.hora_entrada || marca.entrada_hora;
+        const hs = marca.hora_salida || marca.salida_hora;
+        
+        const horasObj = (he && hs) ? calcDetalleGanancia(id_emp, he, hs) : {str: '-'};
+        
+        html += `<tr>
+          <td style="font-weight:700;color:#64748b">${fecha}</td>
+          <td><div style="font-weight:700">${emp.nombre}</div><div style="font-size:10px;color:#94a3b8">${emp.puesto||""}</div></td>
+          <td style="font-weight:700;color:#10b981">${he||'-'}</td>
+          <td style="font-weight:700;color:#1B4E8B">${hs||'-'}</td>
+          <td style="font-weight:700">${horasObj.str}</td>
+        </tr>`;
+        marcajesEncontrados++;
+      });
+    });
+    
+    if(marcajesEncontrados === 0) {
+      if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">No se encontraron marcajes en el rango seleccionado.</td></tr>';
+    } else {
+      if (tb) tb.innerHTML = html;
+    }
+  } catch (err) {
+    if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;padding:20px;">Error al cargar datos.</td></tr>';
+    console.error(err);
+  }
+}
+
+// Inicializar fechas
+document.addEventListener('DOMContentLoaded', ()=>{
+  setTimeout(()=>{
+    const hoy = new Date();
+    const ed = document.getElementById('historial-end');
+    if(ed) ed.value = hoy.toISOString().split('T')[0];
+    const semanaAtras = new Date(hoy.getTime() - 6*24*60*60*1000);
+    const sd = document.getElementById('historial-start');
+    if(sd) sd.value = semanaAtras.toISOString().split('T')[0];
+    llenarSelectorHistorial();
+  }, 1000);
+});
+\n</script>
+
+
+
 </body>
 </html>
