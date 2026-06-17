@@ -500,7 +500,7 @@ const db=firebase.database();
 const GPS_CONFIG = {
   lat: 13.346586,    // Coordenadas reales de El Parche
   lng: -88.394068,   // Coordenadas reales de El Parche
-  radio: 30,       // metros
+  radio: 150,       // metros
   // Si el negocio tiene coordenadas en Firebase se sobreescribe automáticamente
 };
 
@@ -704,49 +704,54 @@ function verificarGPS(esReintento){
       
       const tieneRegistro = (EMP.gps_lat !== undefined && EMP.gps_lng !== undefined && EMP.gps_lat !== null && EMP.gps_lng !== null);
       
-      if(!tieneRegistro){
-        // Registrar ubicación actual por primera vez en Firebase
-        db.ref('negocios/'+NID+'/empleados/'+EID).update({
-          gps_lat: lat,
-          gps_lng: lng
-        }).then(() => {
-          console.log("Coordenadas iniciales guardadas en Firebase:", lat, lng);
-        }).catch(err => {
-          console.error("Error al registrar ubicación en Firebase:", err);
-        });
-
-        // Actualizar datos locales de EMP
-        EMP.gps_lat = lat;
-        EMP.gps_lng = lng;
-        localStorage.setItem('modus_emp', JSON.stringify({NID, EID, EMP}));
-
-        // Actualizar configuración GPS local
-        GPS_CONFIG.lat = lat;
-        GPS_CONFIG.lng = lng;
-
+      // Puntos de referencia autorizados (El Parche)
+      const PUNTOS_REFERENCIA = [
+        { lat: 13.3464399, lng: -88.3940886 },
+        { lat: 13.3466458, lng: -88.3940106 }
+      ];
+      const radioPermitido = 150; // metros
+      
+      let dist = Infinity;
+      let puntoRef = PUNTOS_REFERENCIA[0];
+      for (const p of PUNTOS_REFERENCIA) {
+        const d = haversineM(lat, lng, p.lat, p.lng);
+        if (d < dist) {
+          dist = d;
+          puntoRef = p;
+        }
+      }
+      gpsDist = dist;
+      
+      if (dist <= radioPermitido) {
         gpsOk = true;
-        setGPSStatus('ok', 'Ubicación registrada', '0m');
-        toast('Ubicación inicial de asistencia registrada', 'ok');
+        setGPSStatus('ok', 'Ubicación verificada', Math.round(dist) + 'm');
+        
+        // Si no tiene registro en Firebase, guardarlo por primera vez
+        if (!tieneRegistro) {
+          db.ref('negocios/'+NID+'/empleados/'+EID).update({
+            gps_lat: lat,
+            gps_lng: lng
+          }).then(() => {
+            console.log("Coordenadas iniciales guardadas en Firebase:", lat, lng);
+          }).catch(err => {
+            console.error("Error al registrar ubicación en Firebase:", err);
+          });
+
+          EMP.gps_lat = lat;
+          EMP.gps_lng = lng;
+          localStorage.setItem('modus_emp', JSON.stringify({NID, EID, EMP}));
+        }
+        
         mostrarApp();
       } else {
-        // Validación subsecuente
-        const dist = haversineM(lat, lng, GPS_CONFIG.lat, GPS_CONFIG.lng);
-        gpsDist = dist;
-        
-        if(dist <= GPS_CONFIG.radio){
-          gpsOk = true;
-          setGPSStatus('ok', 'Ubicación verificada', Math.round(dist) + 'm');
-          mostrarApp();
-        } else {
-          gpsOk = false;
-          bloquearPorGPS(
-            `Tu ubicación actual está a <b>${Math.round(dist)}m</b> de tu ubicación autorizada.<br>` +
-            `El límite máximo permitido es de <b>${GPS_CONFIG.radio}m</b>.<br>` +
-            `Coordenadas de referencia: ${GPS_CONFIG.lat.toFixed(6)}, ${GPS_CONFIG.lng.toFixed(6)}<br>` +
-            `Asegúrate de estar en el establecimiento y tener activo el GPS del dispositivo.`,
-            Math.round(dist) + 'm'
-          );
-        }
+        gpsOk = false;
+        bloquearPorGPS(
+          `Tu ubicación actual está a <b>${Math.round(dist)}m</b> de la zona de trabajo autorizada.<br>` +
+          `El límite máximo permitido es de <b>${radioPermitido}m</b> al contorno del establecimiento.<br>` +
+          `Coordenadas de referencia: ${puntoRef.lat.toFixed(7)}, ${puntoRef.lng.toFixed(7)}<br>` +
+          `Asegúrate de estar en el establecimiento y tener activo el GPS del dispositivo.`,
+          Math.round(dist) + 'm'
+        );
       }
     },
     error => {
