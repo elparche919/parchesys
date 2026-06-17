@@ -4970,7 +4970,7 @@ function procesarOrden(tipoAccion){
   });
 
   function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap){
-    // Determinar si hay ítems nuevos de cocina y bar
+    // Determinar si hay ítems nuevos de cocina y bar basado en cantidades respecto a Firebase
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
 
@@ -4986,8 +4986,19 @@ function procesarOrden(tipoAccion){
       return false;
     }
 
+    // Cuenta la cantidad de un ítem en un arreglo para comparar adiciones
+    function contarItem(arr, item) {
+      return arr.reduce(function(acc, curr) {
+        if (curr.nombre === item.nombre && curr.desc === item.desc) {
+          return acc + curr.cant;
+        }
+        return acc;
+      }, 0);
+    }
+
     pedido.forEach(function(i) {
-      if (!i.enviado) {
+      var prevQty = contarItem(prevItems, i);
+      if (i.cant > prevQty) {
         if (_esBarCatLocal(i.cat)) {
           tieneNuevoBar = true;
         } else {
@@ -5041,6 +5052,12 @@ function procesarOrden(tipoAccion){
     var estCocinaExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
     var estBarExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
 
+    // Si la orden no existía antes (completamente nueva), los estados por defecto deben ser entregado a menos que haya nuevos.
+    if (!orderSnap || !orderSnap.exists()) {
+      estCocinaExistente = 'entregado';
+      estBarExistente = 'entregado';
+    }
+
     if (tieneNuevoFood) {
       v.estado_cocina = 'pendiente';
     } else {
@@ -5076,8 +5093,13 @@ function procesarOrden(tipoAccion){
     v.items = cocinaPedido; // Keep pedidos items synchronized with KDS ready statuses
 
     var kdsTimestamp = ts;
-    if (tieneNuevoFood || tieneNuevoBar) {
+    // Reiniciar contador de KDS Cocina si la orden ya estaba entregada y se agrega algo nuevo
+    if (tieneNuevoFood && estCocinaExistente === 'entregado') {
       kdsTimestamp = Date.now();
+    } else if (tieneNuevoBar && estBarExistente === 'entregado') {
+      kdsTimestamp = Date.now();
+    } else if (!orderSnap || !orderSnap.exists()) {
+      kdsTimestamp = Date.now(); // nueva orden
     }
 
     var cocinaOrderUpdate = {
