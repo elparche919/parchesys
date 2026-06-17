@@ -5083,16 +5083,35 @@ function procesarOrden(tipoAccion){
       cocinaItems = cocSnap.val().items;
     }
 
+    var pool = (cocinaItems || []).slice();
     var cocinaPedido = pedido.map(function(item, idx) {
       var copy = Object.assign({}, item);
-      if (cocinaItems[idx] && cocinaItems[idx].desc === item.desc) {
-        if (cocinaItems[idx].listo !== undefined) {
-          copy.listo = cocinaItems[idx].listo;
-        }
+      var iDesc = item.nombre || item.desc || '';
+      
+      // Intentar encontrar el item exacto en el mismo indice
+      if (pool[idx] && pool[idx].desc === iDesc && pool[idx].cant === copy.cant) {
+        if (pool[idx].listo !== undefined) copy.listo = pool[idx].listo;
+        pool[idx] = null; // consumido
       } else {
-        var found = cocinaItems.find(function(ci) { return ci && ci.desc === item.desc; });
-        if (found && found.listo !== undefined) {
-          copy.listo = found.listo;
+        // Buscar el primero que coincida y no haya sido consumido (misma cantidad)
+        var foundIdx = pool.findIndex(function(ci) { 
+          return ci && ci.desc === iDesc && ci.cant === copy.cant; 
+        });
+        if (foundIdx === -1) {
+          // Si no hay de la misma cantidad, buscar por descripcion
+          foundIdx = pool.findIndex(function(ci) { 
+            return ci && ci.desc === iDesc; 
+          });
+        }
+        
+        if (foundIdx !== -1) {
+          // Si la cantidad no aumentó, heredamos el estado listo
+          if (copy.cant <= pool[foundIdx].cant) {
+            if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
+          } else {
+            copy.listo = false; // Aumentó la cantidad, por lo tanto no está listo
+          }
+          pool[foundIdx] = null; // consumido
         }
       }
       return copy;
