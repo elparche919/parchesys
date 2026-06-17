@@ -4963,13 +4963,13 @@ function procesarOrden(tipoAccion){
     // Calcular diferencias de stock y actualizar Firebase
     ajustarStockPorDiferencia(prevItems, pedido);
     
-    ejecutarGuardado(ts, existeEnCocina);
+    ejecutarGuardado(ts, existeEnCocina, orderSnap, results[1]);
   }).catch(function(err){
     console.error(err);
-    ejecutarGuardado(Date.now(), true);
+    ejecutarGuardado(Date.now(), true, null, null);
   });
 
-  function ejecutarGuardado(ts, existeEnCocina){
+  function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap){
     // Determinar si hay ítems nuevos de cocina y bar
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
@@ -5038,8 +5038,8 @@ function procesarOrden(tipoAccion){
       caja_num:_cajaActual
     };
 
-    var estCocinaExistente = (existeEnCocina && results[1].val()) ? (results[1].val().estado_cocina || 'pendiente') : 'entregado';
-    var estBarExistente = (existeEnCocina && results[1].val()) ? (results[1].val().estado_bar || 'pendiente') : 'entregado';
+    var estCocinaExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
+    var estBarExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
 
     if (tieneNuevoFood) {
       v.estado_cocina = 'pendiente';
@@ -5054,8 +5054,8 @@ function procesarOrden(tipoAccion){
     }
 
     var cocinaItems = [];
-    if (existeEnCocina && results[1].val() && results[1].val().items) {
-      cocinaItems = results[1].val().items;
+    if (existeEnCocina && cocSnap && cocSnap.val() && cocSnap.val().items) {
+      cocinaItems = cocSnap.val().items;
     }
 
     var cocinaPedido = pedido.map(function(item, idx) {
