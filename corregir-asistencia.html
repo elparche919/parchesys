@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MODUS · Corrección de Asistencia</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --a:#ea580c;--al:rgba(234,88,12,0.12);--am:rgba(234,88,12,0.22);
+  --bg:#0f1115;--surface:#1a1d24;--text:#f8fafc;--muted:#94a3b8;--bd:#2a2e37;
+  --g:#10b981;--gl:rgba(16,185,129,0.12);
+  --r:#ef4444;--rl:rgba(239,68,68,0.12);
+  --y:#f59e0b;--yl:rgba(245,158,11,0.12);
+  --font:'DM Sans',sans-serif;
+}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+
+/* TOPBAR */
+.tb{background:var(--surface);border-bottom:1px solid var(--bd);padding:10px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:50;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.tb-icon{width:38px;height:38px;background:linear-gradient(135deg,var(--a),#c2410c);border-radius:12px;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:900;color:var(--text)}
+.tb-sub{font-size:10px;font-weight:600;color:var(--muted);margin-top:1px}
+.tb-back{width:36px;height:36px;background:var(--al);border:1.5px solid var(--am);border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--a);font-size:13px;cursor:pointer;text-decoration:none;transition:.15s;flex-shrink:0}
+.tb-back:hover{background:var(--a);color:white}
+.spacer{flex:1}
+
+/* MAIN */
+.main{padding:20px;max-width:900px;margin:0 auto}
+
+/* CONTROLS */
+.ctrl-card{background:var(--surface);border-radius:16px;border:1px solid var(--bd);padding:18px;margin-bottom:18px}
+.ctrl-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.fg{display:flex;flex-direction:column;gap:5px}
+.fl{font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--muted);text-transform:uppercase}
+.fi{padding:9px 12px;border:1.5px solid var(--bd);border-radius:10px;font-size:13px;font-weight:600;font-family:var(--font);outline:none;background:#0f1115;color:var(--text);transition:.15s;min-width:160px}
+.fi:focus{border-color:var(--a);background:#0a0c0e;box-shadow:0 0 0 3px rgba(234,88,12,.1)}
+.btn{padding:9px 16px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;border:none;font-family:var(--font);transition:.14s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn-primary{background:var(--a);color:white;box-shadow:0 4px 12px rgba(234,88,12,.3)}
+.btn-primary:hover{background:#c2410c}
+.btn-ghost{background:rgba(255,255,255,.05);color:var(--text);border:1.5px solid var(--bd)}
+.btn-ghost:hover{border-color:var(--am);color:var(--a)}
+.badge-mode{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:20px;font-size:10px;font-weight:800}
+.badge-hoy{background:var(--gl);color:var(--g);border:1px solid rgba(16,185,129,.3)}
+.badge-hist{background:var(--yl);color:var(--y);border:1px solid rgba(245,158,11,.3)}
+
+/* TABLE */
+.tbl-wrap{background:var(--surface);border-radius:16px;border:1px solid var(--bd);overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.tbl-hdr{padding:14px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.tbl-title{font-size:13px;font-weight:800}
+table{width:100%;border-collapse:collapse}
+thead th{background:#151820;padding:10px 14px;font-size:9px;font-weight:800;letter-spacing:.15em;color:var(--muted);text-transform:uppercase;text-align:left;border-bottom:1px solid var(--bd)}
+tbody td{padding:11px 14px;font-size:12px;border-bottom:1px solid var(--bd);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,.02)}
+.emp-name{font-weight:800;font-size:13px;color:var(--text)}
+.emp-puesto{font-size:10px;color:var(--muted);margin-top:1px}
+.avatar{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:white;flex-shrink:0;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.emp-cell{display:flex;align-items:center;gap:10px}
+
+/* TIME INPUTS inline */
+.time-cell{display:flex;align-items:center;gap:6px}
+.ti{padding:6px 10px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;font-weight:700;font-family:var(--font);outline:none;background:#0f1115;color:var(--text);width:96px;transition:.15s}
+.ti:focus{border-color:var(--a);box-shadow:0 0 0 3px rgba(234,88,12,.1)}
+.ti-clear{width:24px;height:24px;border-radius:6px;background:var(--rl);border:none;cursor:pointer;color:var(--r);font-size:12px;display:flex;align-items:center;justify-content:center;transition:.14s;flex-shrink:0}
+.ti-clear:hover{background:var(--r);color:white}
+
+/* STATUS BADGE */
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.b-green{background:var(--gl);color:#4ade80}
+.b-yellow{background:var(--yl);color:#fbbf24}
+.b-red{background:var(--rl);color:#fb7185}
+.b-gray{background:rgba(255,255,255,.07);color:var(--muted)}
+
+/* SAVE BTN per row */
+.save-btn{padding:5px 12px;border-radius:7px;font-size:10px;font-weight:800;cursor:pointer;border:none;font-family:var(--font);background:var(--al);color:var(--a);border:1px solid var(--am);transition:.14s;white-space:nowrap}
+.save-btn:hover{background:var(--a);color:white}
+.save-btn.saved{background:var(--gl);color:var(--g);border-color:rgba(16,185,129,.3)}
+.save-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* EMPTY / LOADING */
+.empty{text-align:center;padding:40px;color:var(--muted);font-size:12px;font-weight:600}
+.spin{display:inline-block;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--surface);border:1px solid var(--bd);border-radius:12px;padding:12px 20px;font-size:12px;font-weight:700;z-index:9999;transform:translateY(60px);opacity:0;transition:all .3s;box-shadow:0 8px 28px rgba(0,0,0,.4);color:var(--text)}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.ok{border-color:rgba(16,185,129,.3);color:#10b981;background:rgba(16,185,129,.06)}
+#toast.err{border-color:rgba(239,68,68,.3);color:#ef4444;background:rgba(239,68,68,.06)}
+
+/* NOTA */
+.nota{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:10px;padding:10px 14px;font-size:11px;color:#fbbf24;font-weight:600;display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;line-height:1.5}
+
+@media(max-width:700px){
+  .ctrl-row{flex-direction:column;align-items:stretch}
+  .fi{min-width:unset}
+  .time-cell{flex-wrap:wrap}
+  table{font-size:11px}
+  thead th{padding:8px 10px}
+  tbody td{padding:9px 10px}
+  .ti{width:82px}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="tb">
+  <a href="empleados.html" class="tb-back" id="btn-back"><i class="fa-solid fa-arrow-left"></i></a>
+  <div class="tb-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
+  <div>
+    <div class="tb-title">Corrección de Asistencia</div>
+    <div class="tb-sub" id="lbl-negocio">Cargando...</div>
+  </div>
+  <div class="spacer"></div>
+  <span id="badge-modo" class="badge-mode badge-hoy"><i class="fa-solid fa-calendar-day"></i> Modo: Hoy</span>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- NOTA -->
+  <div class="nota">
+    <i class="fa-solid fa-triangle-exclamation" style="margin-top:1px;flex-shrink:0"></i>
+    <div>Aquí puedes corregir manualmente la hora de entrada o salida de cualquier empleado sin modificar ninguna otra lógica del sistema (fotos, biometría, coordenadas, etc.). Solo se actualizan los campos de hora.</div>
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="ctrl-card">
+    <div class="ctrl-row">
+      <div class="fg">
+        <label class="fl">Fecha a corregir</label>
+        <input type="date" class="fi" id="fecha-sel" onchange="onFechaChange()">
+      </div>
+      <div class="fg" style="flex:1;min-width:160px">
+        <label class="fl">Buscar empleado</label>
+        <input type="text" class="fi" id="buscar-emp" placeholder="Nombre o puesto..." oninput="filtrarTabla()">
+      </div>
+      <button class="btn btn-ghost" onclick="recargar()"><i class="fa-solid fa-rotate"></i> Recargar</button>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="tbl-wrap">
+    <div class="tbl-hdr">
+      <div class="tbl-title" id="tbl-titulo">Asistencia de Hoy</div>
+      <div style="font-size:10px;color:var(--muted);font-weight:600">Edita los campos y presiona <strong style="color:var(--a)">Guardar</strong> en cada fila</div>
+    </div>
+    <div id="tabla-container">
+      <div class="empty"><i class="fa-solid fa-circle-notch spin"></i> Cargando empleados...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase config -->
+<script src="firebase-config.js"></script>
+<script>
+// ── GUARD ──
+if(typeof negocioID === 'undefined' || !negocioID){
+  // Intento recuperar desde URL
+  const _p = new URLSearchParams(window.location.search);
+  if(_p.get('negocio')){
+    window.negocioID = _p.get('negocio');
+  } else {
+    alert('No se detectó el negocio. Redirigiendo...');
+    window.location.href = 'index.html';
+  }
+}
+
+// ── ESTADO ──
+let _empleados = {};
+let _registros = {};   // { emp_id: { hora_entrada, hora_salida, ...resto } }
+let _fechaSel = '';
+let _esHoy = true;
+const _hoy = new Date().toISOString().split('T')[0];
+
+// ── INIT ──
+document.addEventListener('DOMContentLoaded', () => {
+  // Fecha selector → hoy por defecto
+  const fd = document.getElementById('fecha-sel');
+  fd.value = _hoy;
+  fd.max = _hoy; // No permitir fechas futuras
+  _fechaSel = _hoy;
+  _esHoy = true;
+
+  // Back link
+  const bl = document.getElementById('btn-back');
+  if(bl) bl.href = 'empleados.html?negocio=' + negocioID;
+
+  // Nombre negocio
+  db.ref(`negocios/${negocioID}/info`).once('value', s => {
+    const inf = s.val() || {};
+    document.getElementById('lbl-negocio').textContent = (inf.nombre || negocioID) + ' · RR.HH.';
+  });
+
+  // Cargar empleados y luego asistencia
+  db.ref(`negocios/${negocioID}/empleados`).on('value', s => {
+    _empleados = s.val() || {};
+    cargarAsistencia();
+  });
+});
+
+function onFechaChange(){
+  const fd = document.getElementById('fecha-sel');
+  _fechaSel = fd.value || _hoy;
+  _esHoy = (_fechaSel === _hoy);
+  document.getElementById('badge-modo').className = 'badge-mode badge-mode ' + (_esHoy ? 'badge-hoy' : 'badge-hist');
+  document.getElementById('badge-modo').innerHTML = _esHoy
+    ? '<i class="fa-solid fa-calendar-day"></i> Modo: Hoy'
+    : '<i class="fa-solid fa-calendar"></i> Modo: Histórico';
+  cargarAsistencia();
+}
+
+function recargar(){
+  _registros = {};
+  document.getElementById('tabla-container').innerHTML = '<div class="empty"><i class="fa-solid fa-circle-notch spin"></i> Recargando...</div>';
+  cargarAsistencia();
+}
+
+async function cargarAsistencia(){
+  if(!Object.keys(_empleados).length){
+    document.getElementById('tabla-container').innerHTML = '<div class="empty">No hay empleados registrados.</div>';
+    return;
+  }
+
+  // Actualizar título
+  const fechaLabel = _esHoy ? 'Hoy — ' + new Date().toLocaleDateString('es-SV', {weekday:'long',day:'numeric',month:'long',year:'numeric'}) : _fechaSel;
+  document.getElementById('tbl-titulo').textContent = 'Asistencia · ' + fechaLabel;
+
+  try {
+    let snap;
+    if(_esHoy){
+      // Usa asistencia_hoy (tiempo real)
+      snap = await db.ref(`negocios/${negocioID}/asistencia_hoy`).once('value');
+    } else {
+      // Usa asistencia_gps/{fecha}
+      snap = await db.ref(`negocios/${negocioID}/asistencia_gps/${_fechaSel}`).once('value');
+    }
+    _registros = snap.val() || {};
+  } catch(e){
+    _registros = {};
+  }
+
+  renderTabla();
+}
+
+function filtrarTabla(){
+  renderTabla();
+}
+
+function renderTabla(){
+  const q = (document.getElementById('buscar-emp').value || '').toLowerCase().trim();
+  const emps = Object.entries(_empleados).filter(([id,e]) => {
+    if(!q) return true;
+    return (e.nombre||'').toLowerCase().includes(q) || (e.puesto||'').toLowerCase().includes(q);
+  });
+
+  if(!emps.length){
+    document.getElementById('tabla-container').innerHTML = '<div class="empty">Sin resultados.</div>';
+    return;
+  }
+
+  let html = `<table>
+    <thead>
+      <tr>
+        <th>Empleado</th>
+        <th>Horario</th>
+        <th>Hora Entrada</th>
+        <th>Hora Salida</th>
+        <th>Estado actual</th>
+        <th style="text-align:center">Acción</th>
+      </tr>
+    </thead>
+    <tbody id="tb-body">`;
+
+  emps.forEach(([id, e]) => {
+    const reg = _registros[id] || {};
+    // Soporta ambas variantes de campo que existen en el sistema
+    const he = reg.hora_entrada || reg.entrada_hora || '';
+    const hs = reg.hora_salida  || reg.salida_hora  || '';
+    const est = reg.estado || (he ? 'presente' : '');
+    const color = est==='presente'?'var(--g)':est==='tardanza'?'var(--y)':est==='ausente'?'var(--r)':'var(--muted)';
+    const badgeCls = est==='presente'?'b-green':est==='tardanza'?'b-yellow':est==='ausente'?'b-red':'b-gray';
+    const badgeLbl = est==='presente'?'✅ Presente':est==='tardanza'?'⚠️ Tardanza':est==='ausente'?'❌ Ausente':'⬜ Sin registro';
+    const avatar = e.foto_url
+      ? `<img src="${e.foto_url}">`
+      : e.nombre.charAt(0);
+    const avatarStyle = e.foto_url ? '' : `background:${e.color||'#ea580c'}`;
+
+    html += `
+      <tr id="row-${id}" data-id="${id}">
+        <td>
+          <div class="emp-cell">
+            <div class="avatar" style="${avatarStyle}">${avatar}</div>
+            <div>
+              <div class="emp-name">${e.nombre||'—'}</div>
+              <div class="emp-puesto">${e.puesto||'—'}</div>
+            </div>
+          </div>
+        </td>
+        <td style="color:var(--muted);font-size:11px;font-weight:700">${e.hora_in||'08:00'} – ${e.hora_out||'17:00'}</td>
+        <td>
+          <div class="time-cell">
+            <input type="time" class="ti" id="he-${id}" value="${he}" placeholder="--:--">
+            ${he ? `<button class="ti-clear" title="Limpiar entrada" onclick="limpiarCampo('he-${id}','${id}','entrada')"><i class="fa-solid fa-xmark"></i></button>` : ''}
+          </div>
+        </td>
+        <td>
+          <div class="time-cell">
+            <input type="time" class="ti" id="hs-${id}" value="${hs}" placeholder="--:--">
+            ${hs ? `<button class="ti-clear" title="Limpiar salida" onclick="limpiarCampo('hs-${id}','${id}','salida')"><i class="fa-solid fa-xmark"></i></button>` : ''}
+          </div>
+        </td>
+        <td><span class="badge ${badgeCls}">${badgeLbl}</span></td>
+        <td style="text-align:center">
+          <button class="save-btn" id="save-${id}" onclick="guardarFila('${id}')">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar
+          </button>
+        </td>
+      </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tabla-container').innerHTML = html;
+}
+
+function limpiarCampo(inputId, empId, tipo){
+  const el = document.getElementById(inputId);
+  if(el) el.value = '';
+  // Re-render solo esa fila visualmente para quitar el botón X
+  renderTabla();
+}
+
+async function guardarFila(empId){
+  const heEl = document.getElementById(`he-${empId}`);
+  const hsEl = document.getElementById(`hs-${empId}`);
+  const saveBtn = document.getElementById(`save-${empId}`);
+
+  if(!heEl){return;}
+
+  const heVal = heEl.value.trim();   // "HH:MM" o ""
+  const hsVal = hsEl ? hsEl.value.trim() : '';
+
+  // Validar formato básico
+  if(heVal && !/^\d{2}:\d{2}$/.test(heVal)){
+    toast('⚠️ Formato de hora inválido (usa HH:MM)', 'err'); return;
+  }
+  if(hsVal && !/^\d{2}:\d{2}$/.test(hsVal)){
+    toast('⚠️ Formato de hora salida inválido', 'err'); return;
+  }
+  // Validar que salida no sea antes de entrada
+  if(heVal && hsVal){
+    const [hh,hm] = heVal.split(':').map(Number);
+    const [sh,sm] = hsVal.split(':').map(Number);
+    if(sh*60+sm < hh*60+hm){
+      toast('⚠️ La hora de salida no puede ser antes de la entrada', 'err'); return;
+    }
+  }
+
+  saveBtn.disabled = true;
+  saveBtn.innerHTML = '<i class="fa-solid fa-circle-notch spin"></i> Guardando...';
+
+  // Calcular estado y tardanza basado en el horario del empleado
+  const emp = _empleados[empId] || {};
+  let estado = _registros[empId]?.estado || '';
+  let tardanza = false;
+  let minutos_tarde = 0;
+
+  if(heVal){
+    estado = 'presente';
+    if(emp.hora_in){
+      const [lh,lm] = emp.hora_in.split(':').map(Number);
+      const [eh,em] = heVal.split(':').map(Number);
+      const limMin = lh*60 + lm + 10; // 10 min de gracia
+      const entMin = eh*60 + em;
+      if(entMin > limMin){
+        estado = 'tardanza';
+        tardanza = true;
+        minutos_tarde = entMin - (lh*60+lm);
+      }
+    }
+  } else if(!heVal && !hsVal){
+    // Si se borran ambas horas, no tocamos el estado (puede ser ausente ya marcado)
+    // pero sí limpiamos
+  }
+
+  // Construir el objeto de actualización — SOLO los campos de hora + recalculados
+  const update = {};
+
+  // Soporta ambos nombres de campo según la ruta
+  if(_esHoy){
+    // asistencia_hoy usa: hora_entrada, hora_salida
+    update.hora_entrada = heVal || null;
+    update.hora_salida  = hsVal || null;
+    if(heVal){
+      update.estado = estado;
+      update.tardanza = tardanza;
+      update.minutos_tarde = minutos_tarde;
+      update.corregido_admin = true;
+      update.fecha_correccion = new Date().toISOString();
+    }
+  } else {
+    // asistencia_gps usa: hora_entrada / hora_salida (también soporta entrada_hora/salida_hora)
+    update.hora_entrada = heVal || null;
+    update.hora_salida  = hsVal || null;
+    if(heVal){
+      update.estado = estado;
+      update.tardanza = tardanza;
+      update.minutos_tarde = minutos_tarde;
+      update.corregido_admin = true;
+      update.fecha_correccion = new Date().toISOString();
+    }
+  }
+
+  // Eliminar nulls para no sobrescribir con null campos que Firebase ignora
+  Object.keys(update).forEach(k => { if(update[k] === null) delete update[k]; });
+
+  // Si se limpiaron los campos, hacer set de "" en lugar de delete para que queden limpios
+  if(!heVal) update.hora_entrada = '';
+  if(!hsVal) update.hora_salida = '';
+
+  try {
+    const path = _esHoy
+      ? `negocios/${negocioID}/asistencia_hoy/${empId}`
+      : `negocios/${negocioID}/asistencia_gps/${_fechaSel}/${empId}`;
+
+    await db.ref(path).update(update);
+
+    // Actualizar estado local
+    if(!_registros[empId]) _registros[empId] = {};
+    Object.assign(_registros[empId], update);
+
+    saveBtn.disabled = false;
+    saveBtn.classList.add('saved');
+    saveBtn.innerHTML = '<i class="fa-solid fa-check"></i> Guardado';
+    setTimeout(() => {
+      saveBtn.classList.remove('saved');
+      saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar';
+      renderTabla(); // re-render para mostrar botones X actualizados
+    }, 2000);
+
+    const nomEmp = (_empleados[empId]||{}).nombre || empId;
+    const msg = `✅ ${nomEmp}: ${heVal||'—'} → ${hsVal||'—'} guardado`;
+    toast(msg, 'ok');
+
+    // Log en Firebase para auditoría (no interfiere con nada)
+    db.ref(`negocios/${negocioID}/log_correcciones_asistencia`).push({
+      emp_id: empId,
+      emp_nombre: nomEmp,
+      fecha: _fechaSel,
+      hora_entrada_nueva: heVal || '',
+      hora_salida_nueva: hsVal || '',
+      estado_nuevo: estado,
+      corregido_en: new Date().toISOString()
+    }).catch(()=>{});
+
+  } catch(err){
+    console.error('[MODUS Corrección]', err);
+    saveBtn.disabled = false;
+    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Guardar';
+    toast('❌ Error al guardar: ' + (err.message||'desconocido'), 'err');
+  }
+}
+
+// ── TOAST ──
+let _tTimer;
+function toast(msg, tipo='ok'){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + tipo;
+  clearTimeout(_tTimer);
+  _tTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+</script>
+</body>
+</html>
