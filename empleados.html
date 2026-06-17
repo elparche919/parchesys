@@ -1666,10 +1666,10 @@ function marcarTodosEntrada(){
 }
 
 // ── RENDER TURNOS ──
-const TURNO_HORARIOS={mañana:'6-14h',tarde:'14-22h',normal:'8-17h',noche:'22-6h',personalizado:'Custom'};
+const TURNO_HORARIOS={tarde1:'2-10 PM',tarde2:'3-11 PM',personalizado:'Custom'};
 const TURNO_HORAS={
-  mañana:{i:'06:00',o:'14:00'},tarde:{i:'14:00',o:'22:00'},
-  normal:{i:'08:00',o:'17:00'},noche:{i:'22:00',o:'06:00'}
+  tarde1:{i:'14:00',o:'22:00'},
+  tarde2:{i:'15:00',o:'23:00'}
 };
 function horasTurnoAdmin(t){
   if(t.hora_in&&t.hora_out)return t.hora_in+'-'+t.hora_out;
@@ -1834,10 +1834,13 @@ function renderTurnos(){
       <td><div style="font-weight:700;font-size:12px">${e.nombre}</div><div style="font-size:10px;color:#94a3b8">${e.puesto||''}</div></td>
       ${days.map(fecha=>{
         const iso=isoFecha(fecha);
-        const entry=Object.entries(turnos).find(([,t])=>t.emp_id===id&&t.fecha===iso);
-        if(!entry)return '<td style="text-align:center;color:#cbd5e1">—</td>';
-        const[tid,t]=entry;
-        return `<td style="text-align:center"><span style="background:var(--al);color:var(--a);padding:2px 6px;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;display:inline-block" onclick="editarTurno('${tid}')">${formatHorasAMPM(t.hora_in,t.hora_out)}</span></td>`;
+        const entries=Object.entries(turnos).filter(([,t])=>t.emp_id===id&&t.fecha===iso);
+        if(!entries.length)return '<td style="text-align:center;color:#cbd5e1">—</td>';
+        return `<td style="text-align:center">${entries.map(([tid,t])=>{
+          const bgColor=t.tipo==='tarde1'?'#dbeafe':t.tipo==='tarde2'?'#fce7f3':'var(--al)';
+          const txColor=t.tipo==='tarde1'?'#1e40af':t.tipo==='tarde2'?'#9d174d':'var(--a)';
+          return `<span style="background:${bgColor};color:${txColor};padding:2px 6px;border-radius:6px;font-size:9px;font-weight:700;cursor:pointer;display:inline-block;margin:1px" onclick="editarTurno('${tid}')" title="${t.tipo==='tarde1'?'Tarde 1':'Tarde 2'}">${formatHorasAMPM(t.hora_in,t.hora_out)}</span>`;
+        }).join('')}</td>`;
       }).join('')}
       <td><button class="btn btn-ghost btn-sm" onclick="abrirModalTurno('${id}')">+</button></td>
     </tr>`).join('');
@@ -2589,25 +2592,66 @@ function guardarTurno(){
   if(!fecha){toast('Selecciona una fecha','err');return;}
   const hora_in=tipo==='personalizado'?document.getElementById('turno-h-in').value:(TURNO_HORAS[tipo]||{i:''}).i;
   const hora_out=tipo==='personalizado'?document.getElementById('turno-h-out').value:(TURNO_HORAS[tipo]||{o:''}).o;
+  if(!hora_in||!hora_out){toast('Horario inválido','err');return;}
   const fechaObj=new Date(fecha+'T12:00:00');
+  const nota=document.getElementById('turno-nota').value;
   const data={
     emp_id:empId,
     emp_nombre:(empleados[empId]||{}).nombre||'',
     emp_dui:(empleados[empId]||{}).dui||'',
-    fecha,                           // "2025-03-23" — clave principal
+    fecha,
     dia:DIAS_SEMANA[fechaObj.getDay()],
     mes:fechaObj.getMonth(),
     anio:fechaObj.getFullYear(),
     tipo,hora_in,hora_out,
-    nota:document.getElementById('turno-nota').value
+    nota
   };
-  const ref=editKey
-    ?db.ref(`negocios/${negocioID}/turnos_emp/${editKey}`)
-    :db.ref(`negocios/${negocioID}/turnos_emp`).push();
-  (editKey?ref.update(data):ref.set(data)).then(()=>{
-    toast(editKey?'✅ Turno actualizado':'✅ Turno asignado','ok');
-    cerrar('modal-turno');
-  });
+
+  if(editKey){
+    // Editando turno existente
+    db.ref(`negocios/${negocioID}/turnos_emp/${editKey}`).update(data).then(()=>{
+      toast('✅ Turno actualizado','ok');
+      cerrar('modal-turno');
+    });
+  } else {
+    // Nuevo turno + asignación rápida a otros días
+    const batch={};
+    const mainKey=db.ref(`negocios/${negocioID}/turnos_emp`).push().key;
+    batch[mainKey]=data;
+
+    // Procesar checkboxes de asignación rápida
+    const diasChecked=[];
+    document.querySelectorAll('.chk-dia:checked').forEach(chk=>diasChecked.push(parseInt(chk.value)));
+    if(diasChecked.length){
+      const days=getSemanaSelDays(); // Lun-Dom de la semana
+      diasChecked.forEach(dayNum=>{
+        const targetDay=days.find(d=>d.getDay()===dayNum);
+        if(!targetDay)return;
+        const targetIso=isoFecha(targetDay);
+        if(targetIso===fecha)return; // Ya se guardó arriba
+        // Verificar duplicado
+        const yaExiste=Object.values(turnos).some(t=>t.emp_id===empId&&t.fecha===targetIso&&t.tipo===tipo);
+        if(yaExiste)return;
+        const k=db.ref(`negocios/${negocioID}/turnos_emp`).push().key;
+        const targetFechaObj=new Date(targetIso+'T12:00:00');
+        batch[k]={
+          emp_id:empId,
+          emp_nombre:(empleados[empId]||{}).nombre||'',
+          emp_dui:(empleados[empId]||{}).dui||'',
+          fecha:targetIso,
+          dia:DIAS_SEMANA[targetFechaObj.getDay()],
+          mes:targetFechaObj.getMonth(),
+          anio:targetFechaObj.getFullYear(),
+          tipo,hora_in,hora_out,nota
+        };
+      });
+    }
+    db.ref(`negocios/${negocioID}/turnos_emp`).update(batch).then(()=>{
+      const count=Object.keys(batch).length;
+      toast(`✅ ${count} turno${count>1?'s':''} asignado${count>1?'s':''}`, 'ok');
+      cerrar('modal-turno');
+    });
+  }
 }
 document.getElementById('turno-tipo').addEventListener('change',function(){
   const isCustom=this.value==='personalizado';
@@ -2708,26 +2752,36 @@ function llenarSelectoresEmp(ids=['turno-emp','perm-emp','notif-emp-sel','ta-emp
 }
 function cerrar(id){document.getElementById(id).classList.remove('open');}
 function generarTurnosAutomaticos(){
-  if(!confirm('Esto generará turno Normal (8am-5pm) de Lun a Vie para todos los empleados en la semana seleccionada. ¿Continuar?'))return;
+  if(!confirm('Esto generará los turnos Tarde 1 (2:00 PM - 10:00 PM) y Tarde 2 (3:00 PM - 11:00 PM) de Lun a Sáb para todos los empleados en la semana seleccionada. ¿Continuar?'))return;
   const emps=Object.keys(empleados);
   const days=getSemanaSelDays();
-  const diasLaborales=days.filter(d=>d.getDay()>=1&&d.getDay()<=5); // Lun-Vie
+  const diasLaborales=days.filter(d=>d.getDay()>=1&&d.getDay()<=6); // Lun-Sáb
+  const turnosAsignar=[
+    {tipo:'tarde1', hora_in:'14:00', hora_out:'22:00'},
+    {tipo:'tarde2', hora_in:'15:00', hora_out:'23:00'}
+  ];
   const batch={};
   emps.forEach(id=>{
     diasLaborales.forEach(fecha=>{
       const iso=isoFecha(fecha);
-      const key=db.ref(`negocios/${negocioID}/turnos_emp`).push().key;
-      batch[key]={
-        emp_id:id,emp_nombre:(empleados[id]||{}).nombre||'',
-        emp_dui:(empleados[id]||{}).dui||'',
-        fecha:iso,dia:DIAS_SEMANA[fecha.getDay()],
-        mes:fecha.getMonth(),anio:fecha.getFullYear(),
-        tipo:'normal',hora_in:'08:00',hora_out:'17:00',nota:''
-      };
+      turnosAsignar.forEach(turno=>{
+        // Verificar si ya existe este turno para este empleado en este día
+        const yaExiste=Object.values(turnos).some(t=>t.emp_id===id&&t.fecha===iso&&t.tipo===turno.tipo);
+        if(yaExiste)return; // No duplicar
+        const key=db.ref(`negocios/${negocioID}/turnos_emp`).push().key;
+        batch[key]={
+          emp_id:id,emp_nombre:(empleados[id]||{}).nombre||'',
+          emp_dui:(empleados[id]||{}).dui||'',
+          fecha:iso,dia:DIAS_SEMANA[fecha.getDay()],
+          mes:fecha.getMonth(),anio:fecha.getFullYear(),
+          tipo:turno.tipo,hora_in:turno.hora_in,hora_out:turno.hora_out,nota:'Auto-generado'
+        };
+      });
     });
   });
+  if(!Object.keys(batch).length){toast('ℹ️ Todos los turnos ya existen para esta semana','info');return;}
   db.ref(`negocios/${negocioID}/turnos_emp`).update(batch).then(()=>
-    toast('✅ Turnos generados para la semana seleccionada','ok')
+    toast('✅ Turnos generados para la semana seleccionada (Tarde 1 y Tarde 2)','ok')
   );
 }
 
