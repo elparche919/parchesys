@@ -725,6 +725,9 @@ function toggleCheck(orderId,itemIdx){
   db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
     listo: newVal
   });
+  db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items/'+itemIdx).update({
+    listo: newVal
+  });
   
   // Si se tachó (listo es true), notificar al mesero de inmediato
   if (newVal) {
@@ -747,12 +750,32 @@ function cambiarEstado(id,nestado){
   if(!o) return;
 
   if(nestado==='entregado'){
+    // BLOQUEAR despacho si hay platos de cocina sin tachar
+    var tienePendientes = (o.items || []).some(function(it, idx) {
+      var ck = id + '_' + idx;
+      var isOk = it.listo || _itemChecks[ck];
+      return !_esBarCat(it.cat) && !isOk;
+    });
+    if (tienePendientes) {
+      toast('⚠️ Hay platos de cocina sin marcar como listos', 'err');
+      alert('Debes marcar todos los platos de cocina como listos antes de entregar.');
+      return;
+    }
+
     var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
     var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
     
     // Verificamos si tiene artículos de bar y si el bar ya los entregó
     var tieneBar = (o.items || []).some(function(it) { return _esBarCat(it.cat); });
     var barEntregado = !tieneBar || o.estado_bar === 'entregado';
+
+    // Preparar actualizaciones para marcar todos los platos de cocina como listos
+    var updates = {};
+    (o.items || []).forEach(function(it, idx) {
+      if (!_esBarCat(it.cat)) {
+        updates['items/' + idx + '/listo'] = true;
+      }
+    });
 
     if (barEntregado) {
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
@@ -763,13 +786,12 @@ function cambiarEstado(id,nestado){
         ts_entrega:Date.now()
       }));
       db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:'entregado'});
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
       toast('Pedido entregado y limpiado de KDS','ok');
     } else {
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({
-        estado_cocina: 'entregado'
-      });
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_cocina:'entregado'});
+      updates['estado_cocina'] = 'entregado';
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
       toast('Parte de cocina entregada. Esperando al KDS Bar.','ok');
     }
   } else {

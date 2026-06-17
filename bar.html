@@ -221,6 +221,7 @@ function iniciar(){
 
   var firstLoad=true;
   db.ref('negocios/'+negocioID+'/cocina_orders').on('value',snap=>{
+    var prev = Object.assign({}, _orders);
     var prevCount=Object.keys(_orders).length;
     _orders={};
     snap.forEach(c=>{
@@ -235,7 +236,24 @@ function iniciar(){
     if(!firstLoad){
       if(newCount>prevCount){
         playNewOrderSound();
-        toast('🍹 ¡Nueva bebida para preparar!','ok');
+        toast('🍹 ¡Nueva comanda de bebidas!','ok');
+      } else {
+        // Detectar si se agregaron bebidas nuevas a órdenes existentes
+        var modified = false;
+        Object.entries(_orders).forEach(([id, o]) => {
+          var p = prev[id];
+          if (p) {
+            var prevDrinks = (p.items || []).filter(function(i) { return _esBarCat(i.cat); }).length;
+            var curDrinks = (o.items || []).filter(function(i) { return _esBarCat(i.cat); }).length;
+            if (curDrinks > prevDrinks) {
+              modified = true;
+            }
+          }
+        });
+        if (modified) {
+          playNewOrderSound();
+          toast('✏️ Bebida nueva agregada a orden existente', 'ok');
+        }
       }
     }
     firstLoad=false;
@@ -328,6 +346,9 @@ function toggleCheck(orderId,itemIdx){
   db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
     listo: newVal
   });
+  db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items/'+itemIdx).update({
+    listo: newVal
+  });
   
   if (newVal) {
     var mesero = o.tomada_por || o.mesero;
@@ -349,12 +370,32 @@ function cambiarEstado(id,nestado){
   if(!o) return;
 
   if(nestado==='entregado'){
+    // BLOQUEAR despacho si hay bebidas sin tachar
+    var tienePendientes = (o.items || []).some(function(it, idx) {
+      var ck = id + '_' + idx;
+      var isOk = it.listo || _itemChecks[ck];
+      return _esBarCat(it.cat) && !isOk;
+    });
+    if (tienePendientes) {
+      toast('⚠️ Hay bebidas sin marcar como listas', 'err');
+      alert('Debes marcar todas las bebidas como listas antes de despachar.');
+      return;
+    }
+
     var hora=new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
     var fecha=new Date().toLocaleDateString('es-SV',{year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
     
     // Verificamos si tiene cocina y si la cocina ya entregó
     var tieneCocina = (o.items || []).some(function(it) { return !_esBarCat(it.cat); });
     var cocinaEntregada = !tieneCocina || o.estado_cocina === 'entregado';
+
+    // Preparar actualizaciones para marcar todas las bebidas como listas
+    var updates = {};
+    (o.items || []).forEach(function(it, idx) {
+      if (_esBarCat(it.cat)) {
+        updates['items/' + idx + '/listo'] = true;
+      }
+    });
 
     if (cocinaEntregada) {
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
@@ -365,13 +406,12 @@ function cambiarEstado(id,nestado){
         ts_entrega:Date.now()
       }));
       db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado:'entregado'});
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
       toast('Bebidas entregadas y orden retirada de KDS','ok');
     } else {
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({
-        estado_bar: 'entregado'
-      });
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_bar:'entregado'});
+      updates['estado_bar'] = 'entregado';
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
+      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
       toast('Bebidas despachadas. Esperando al KDS Cocina.','ok');
     }
   } else {

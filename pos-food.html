@@ -5070,12 +5070,43 @@ function procesarOrden(tipoAccion){
       return copy;
     });
 
+    v.items = cocinaPedido; // Keep pedidos items synchronized with KDS ready statuses
+
+    var todosComidaAnterioresListos = true;
+    var tieneComidaAnterior = false;
+    var todasBebidasAnterioresListas = true;
+    var tieneBebidaAnterior = false;
+
+    cocinaItems.forEach(function(ci) {
+      if (ci) {
+        if (_esBarCatLocal(ci.cat)) {
+          tieneBebidaAnterior = true;
+          if (!ci.listo) {
+            todasBebidasAnterioresListas = false;
+          }
+        } else {
+          tieneComidaAnterior = true;
+          if (!ci.listo) {
+            todosComidaAnterioresListos = false;
+          }
+        }
+      }
+    });
+
+    var kdsTimestamp = ts;
+    var resetCocina = tieneNuevoFood && (!tieneComidaAnterior || todosComidaAnterioresListos);
+    var resetBar = tieneNuevoBar && (!tieneBebidaAnterior || todasBebidasAnterioresListas);
+
+    if (resetCocina || resetBar) {
+      kdsTimestamp = Date.now();
+    }
+
     var cocinaOrderUpdate = {
       orden:ORDEN, items:cocinaPedido,
       estado:tipoAccion==='guardar'?'pendiente':'pagado',
       tipo:CANAL, mesa_num:mesa_num, cliente:cliente,
       mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
-      nota_cocina:_notaCocina, timestamp:ts
+      nota_cocina:_notaCocina, timestamp:kdsTimestamp
     };
 
     if (tieneNuevoFood) {
