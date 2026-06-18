@@ -323,6 +323,23 @@
 
       <!-- ══ TAB: RESUMEN ══ -->
       <div class="rep-panel" id="rep-tab-resumen">
+
+        <!-- ── Granularity toolbar ── -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:12px;font-weight:800;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Vista:</span>
+            <div style="display:flex;border:1px solid var(--m-border);border-radius:8px;overflow:hidden">
+              <button id="rgran-mes"    onclick="switchResumenGran('mes')"    style="padding:7px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:#334155;color:#fff;transition:.15s">Mes</button>
+              <button id="rgran-semana" onclick="switchResumenGran('semana')" style="padding:7px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:transparent;color:var(--m-muted);transition:.15s">Semana</button>
+              <button id="rgran-dia"    onclick="switchResumenGran('dia')"    style="padding:7px 16px;font-size:12px;font-weight:800;border:none;cursor:pointer;background:transparent;color:var(--m-muted);transition:.15s">Día</button>
+            </div>
+            <input type="week" id="resumen-semana-inp" class="f-inp" style="width:170px;display:none" onchange="calcularReportesGranular()">
+            <input type="date" id="resumen-dia-inp"    class="f-inp" style="width:150px;display:none" onchange="calcularReportesGranular()">
+          </div>
+          <div id="resumen-periodo-lbl" style="font-size:12px;color:var(--m-muted)">Resumen mensual</div>
+        </div>
+
+        <!-- ── KPI Cards (shared for all granularities) ── -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px">
           <div class="rep-kpi green">
             <div class="rep-kpi-lbl">Ingresos (Ventas)</div>
@@ -341,45 +358,134 @@
             <div class="rep-kpi-val" id="rep-descuentos">$0.00</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
-          <div>
-            <div class="tbl-card">
-              <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
-                <span><i class="fa-solid fa-crown" style="color:#fbbf24"></i> Top Platillos</span>
-                <span style="font-size:11px;color:var(--m-muted)">por cantidad vendida</span>
-              </div>
-              <table id="rep-top-prods">
-                <thead><tr><th>Platillo</th><th style="text-align:center">Órdenes</th><th style="text-align:right">Recaudado</th></tr></thead>
-                <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted)">Selecciona un mes</td></tr></tbody>
-              </table>
+
+        <!-- ── Daily Calendar (visible only in MES mode) ── -->
+        <div id="resumen-calendario-wrap" style="margin-bottom:24px">
+          <div class="tbl-card">
+            <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
+              <span><i class="fa-solid fa-calendar-days" style="color:#38bdf8"></i> Desglose por Día <span style="font-size:11px;font-weight:500;color:var(--m-muted)">— haz clic en un día para ver detalle</span></span>
+              <span id="cal-mes-lbl" style="font-size:11px;color:var(--m-muted)"></span>
             </div>
-            <div class="tbl-card">
-              <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border)"><i class="fa-solid fa-percent" style="color:#f59e0b"></i> Descuentos del Período</div>
-              <table id="rep-tbl-descuentos">
-                <thead><tr><th>Orden</th><th>Motivo</th><th>DUI Supervisor</th><th style="text-align:right">Monto</th></tr></thead>
-                <tbody><tr><td colspan="4" align="center" style="color:var(--m-muted)">Sin datos</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:16px">
-            <div class="tbl-card" style="padding:20px;background:var(--m-blue);color:white">
-              <h3 style="font-size:14px;margin-bottom:14px;opacity:.8">Operación del Mes</h3>
-              <div style="display:flex;flex-direction:column;gap:12px">
-                <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Tickets Emitidos</div><div style="font-size:22px;font-weight:900" id="rep-total-tickets">0</div></div>
-                <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Ticket Promedio</div><div style="font-size:22px;font-weight:900" id="rep-avg-ticket">$0.00</div></div>
-                <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Canal Principal</div><div style="font-size:22px;font-weight:900" id="rep-main-channel">—</div></div>
-              </div>
-            </div>
-            <div class="tbl-card" style="padding:18px">
-              <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Distribución de Pago</h3>
-              <div id="rep-payment-dist" style="display:flex;flex-direction:column;gap:8px"></div>
-            </div>
-            <div class="tbl-card" style="padding:18px">
-              <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Balance Rápido</h3>
-              <div id="rep-balance-bars" style="display:flex;flex-direction:column;gap:8px"></div>
+            <div id="resumen-calendario" style="padding:14px 18px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;min-height:60px">
+              <div style="color:var(--m-muted);font-size:12px;grid-column:1/-1;text-align:center;padding:20px">Selecciona un mes para ver el calendario</div>
             </div>
           </div>
         </div>
+
+        <!-- ── Day Detail Panel (hidden by default) ── -->
+        <div id="resumen-dia-detalle" style="display:none;margin-bottom:24px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onclick="cerrarDetalleDia()" style="background:rgba(56,189,248,.15);border:1px solid rgba(56,189,248,.3);color:#38bdf8;border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:800">
+                <i class="fa-solid fa-arrow-left"></i> Volver al Mes
+              </button>
+              <div>
+                <div style="font-size:18px;font-weight:900" id="dia-detalle-titulo">—</div>
+                <div style="font-size:12px;color:var(--m-muted)" id="dia-detalle-sub">—</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button onclick="navDia(-1)" style="background:var(--m-surface);border:1px solid var(--m-border);color:var(--m-text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:800"><i class="fa-solid fa-chevron-left"></i> Día ant.</button>
+              <button onclick="navDia(1)"  style="background:var(--m-surface);border:1px solid var(--m-border);color:var(--m-text);border-radius:8px;padding:8px 14px;cursor:pointer;font-size:12px;font-weight:800">Día sig. <i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+          </div>
+
+          <!-- KPIs del día -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px">
+            <div class="rep-kpi green"><div class="rep-kpi-lbl">Ventas del Día</div><div class="rep-kpi-val" id="dd-ingresos">$0.00</div></div>
+            <div class="rep-kpi red"><div class="rep-kpi-lbl">Egresos del Día</div><div class="rep-kpi-val" id="dd-egresos">$0.00</div></div>
+            <div class="rep-kpi blue"><div class="rep-kpi-lbl">Balance</div><div class="rep-kpi-val" id="dd-balance">$0.00</div></div>
+            <div class="rep-kpi amber"><div class="rep-kpi-lbl">Tickets</div><div class="rep-kpi-val" id="dd-tickets">0</div></div>
+            <div class="rep-kpi" style="border-left:3px solid #a78bfa"><div class="rep-kpi-lbl">Ticket Promedio</div><div class="rep-kpi-val" id="dd-avg">$0.00</div></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:18px">
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <!-- Órdenes del día -->
+              <div class="tbl-card">
+                <div style="padding:12px 16px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between">
+                  <span><i class="fa-solid fa-receipt" style="color:#38bdf8"></i> Órdenes del Día</span>
+                  <span id="dd-ordenes-count" style="font-size:11px;color:var(--m-muted)"></span>
+                </div>
+                <table id="dd-tbl-ordenes">
+                  <thead><tr><th>Orden</th><th>Hora</th><th>Canal</th><th>Mesero</th><th>Pago</th><th style="text-align:center">Items</th><th style="text-align:right">Descuento</th><th style="text-align:right">Total</th></tr></thead>
+                  <tbody><tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin datos</td></tr></tbody>
+                </table>
+              </div>
+              <!-- Top platillos del día -->
+              <div class="tbl-card">
+                <div style="padding:12px 16px;font-weight:900;border-bottom:1px solid var(--m-border)">
+                  <i class="fa-solid fa-crown" style="color:#fbbf24"></i> Top Platillos del Día
+                </div>
+                <table id="dd-tbl-prods">
+                  <thead><tr><th>Platillo</th><th style="text-align:center">Cant.</th><th style="text-align:right">Recaudado</th></tr></thead>
+                  <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <!-- Distribución de pago del día -->
+              <div class="tbl-card" style="padding:18px">
+                <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Distribución de Pago</h3>
+                <div id="dd-payment-dist" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+              <!-- Canales del día -->
+              <div class="tbl-card" style="padding:18px">
+                <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Por Canal</h3>
+                <div id="dd-canales" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+              <!-- Comparativa vs promedio del mes -->
+              <div class="tbl-card" style="padding:18px">
+                <h3 style="font-size:13px;margin-bottom:10px;color:var(--m-muted)">vs. Promedio Diario del Mes</h3>
+                <div id="dd-vs-promedio" style="display:flex;flex-direction:column;gap:10px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── Main monthly content (hidden when day detail is shown) ── -->
+        <div id="resumen-mes-content">
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+            <div>
+              <div class="tbl-card">
+                <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
+                  <span><i class="fa-solid fa-crown" style="color:#fbbf24"></i> Top Platillos</span>
+                  <span style="font-size:11px;color:var(--m-muted)">por cantidad vendida</span>
+                </div>
+                <table id="rep-top-prods">
+                  <thead><tr><th>Platillo</th><th style="text-align:center">Órdenes</th><th style="text-align:right">Recaudado</th></tr></thead>
+                  <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted)">Selecciona un mes</td></tr></tbody>
+                </table>
+              </div>
+              <div class="tbl-card">
+                <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border)"><i class="fa-solid fa-percent" style="color:#f59e0b"></i> Descuentos del Período</div>
+                <table id="rep-tbl-descuentos">
+                  <thead><tr><th>Orden</th><th>Motivo</th><th>DUI Supervisor</th><th style="text-align:right">Monto</th></tr></thead>
+                  <tbody><tr><td colspan="4" align="center" style="color:var(--m-muted)">Sin datos</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <div class="tbl-card" style="padding:20px;background:var(--m-blue);color:white">
+                <h3 style="font-size:14px;margin-bottom:14px;opacity:.8" id="rep-op-titulo">Operación del Mes</h3>
+                <div style="display:flex;flex-direction:column;gap:12px">
+                  <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Tickets Emitidos</div><div style="font-size:22px;font-weight:900" id="rep-total-tickets">0</div></div>
+                  <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Ticket Promedio</div><div style="font-size:22px;font-weight:900" id="rep-avg-ticket">$0.00</div></div>
+                  <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Canal Principal</div><div style="font-size:22px;font-weight:900" id="rep-main-channel">—</div></div>
+                </div>
+              </div>
+              <div class="tbl-card" style="padding:18px">
+                <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Distribución de Pago</h3>
+                <div id="rep-payment-dist" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+              <div class="tbl-card" style="padding:18px">
+                <h3 style="font-size:13px;margin-bottom:12px;color:var(--m-muted)">Balance Rápido</h3>
+                <div id="rep-balance-bars" style="display:flex;flex-direction:column;gap:8px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <!-- ══ TAB: EGRESOS (Gastos + Merma fusionados) ══ -->
@@ -627,58 +733,99 @@
         </div>
       </div>
 
+
       <!-- ══ TAB: CORTE DE CAJA ══ -->
       <div class="rep-panel" id="rep-tab-corte" style="display:none">
+
+        <!-- Toolbar -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
           <div>
-            <div style="font-size:16px;font-weight:900">Corte de Caja</div>
-            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Cuadre diario — efectivo esperado vs contado físicamente</div>
+            <div style="font-size:16px;font-weight:900">Cierres de Caja</div>
+            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Historial de aperturas y cierres del POS — fuente: registros de cajas</div>
           </div>
-          <div style="display:flex;gap:10px;align-items:center">
-            <input type="date" id="corte-fecha" class="f-inp" style="width:160px">
-            <button class="btn-m" onclick="calcularCorte()"><i class="fa-solid fa-calculator"></i> Calcular</button>
-            <button class="btn-m-out" onclick="guardarCorte()"><i class="fa-solid fa-floppy-disk"></i> Guardar Corte</button>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-          <div>
-            <div class="tbl-card" style="padding:22px">
-              <h3 style="font-size:14px;font-weight:900;margin-bottom:16px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Sistema — Ventas del Día</h3>
-              <div style="display:flex;flex-direction:column;gap:12px">
-                <div style="display:flex;justify-content:space-between"><span>Ventas en Efectivo</span><span style="font-weight:900;color:#16a34a" id="corte-efec-sistema">$0.00</span></div>
-                <div style="display:flex;justify-content:space-between"><span>Ventas Tarjeta</span><span style="font-weight:900" id="corte-tarj-sistema">$0.00</span></div>
-                <div style="display:flex;justify-content:space-between"><span>Ventas Transferencia</span><span style="font-weight:900" id="corte-transf-sistema">$0.00</span></div>
-                <div style="display:flex;justify-content:space-between"><span>Descuentos Aplicados</span><span style="font-weight:900;color:#f59e0b" id="corte-desc-sistema">-$0.00</span></div>
-                <hr style="border-color:var(--m-border)">
-                <div style="display:flex;justify-content:space-between;font-size:16px"><span style="font-weight:900">Total Esperado</span><span style="font-weight:900;color:var(--m-blue)" id="corte-esperado">$0.00</span></div>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div class="tbl-card" style="padding:22px">
-              <h3 style="font-size:14px;font-weight:900;margin-bottom:16px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Físico — Conteo de Caja</h3>
-              <div style="display:flex;flex-direction:column;gap:12px">
-                <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Efectivo contado en caja ($)</label><input type="number" id="corte-contado-efec" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
-                <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Fondo de cambio inicial ($)</label><input type="number" id="corte-fondo" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
-                <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Observaciones</label><textarea id="corte-obs" class="f-inp" rows="2" style="margin-top:5px;resize:vertical" placeholder="Notas del cierre..."></textarea></div>
-                <hr style="border-color:var(--m-border)">
-                <div style="display:flex;justify-content:space-between;font-size:16px;align-items:center">
-                  <span style="font-weight:900">Diferencia</span>
-                  <span style="font-weight:900;font-size:20px" id="corte-diferencia">$0.00</span>
-                </div>
-                <div id="corte-estado-badge" style="text-align:center;padding:8px;border-radius:8px;font-size:12px;font-weight:800">Ingresa los datos para ver el estado</div>
-              </div>
-            </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <input type="date" id="corte-filtro-dia" class="f-inp" style="width:155px" placeholder="Filtrar por día" onchange="cargarHistorialCortes()">
+            <button class="btn-m-out" onclick="document.getElementById('corte-filtro-dia').value='';cargarHistorialCortes()">
+              <i class="fa-solid fa-calendar-xmark"></i> Todo el mes
+            </button>
           </div>
         </div>
-        <div class="tbl-card" style="margin-top:20px">
-          <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border)"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Cortes</div>
+
+        <!-- KPIs del período -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">
+          <div class="rep-kpi green"><div class="rep-kpi-lbl">Total Ventas</div><div class="rep-kpi-val" id="ck-ventas">$0.00</div></div>
+          <div class="rep-kpi blue"><div class="rep-kpi-lbl">Efectivo Esperado</div><div class="rep-kpi-val" id="ck-esperado">$0.00</div></div>
+          <div class="rep-kpi" style="border-left:3px solid #a78bfa"><div class="rep-kpi-lbl">Efectivo Contado</div><div class="rep-kpi-val" id="ck-real">$0.00</div></div>
+          <div class="rep-kpi" id="ck-diff-card"><div class="rep-kpi-lbl" id="ck-diff-lbl">Diferencia Neta</div><div class="rep-kpi-val" id="ck-diferencia">$0.00</div></div>
+        </div>
+
+        <!-- Tabla de cierres del POS -->
+        <div class="tbl-card" style="margin-bottom:24px">
+          <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
+            <span><i class="fa-solid fa-cash-register" style="color:#38bdf8"></i> Cierres de Caja del POS</span>
+            <span id="ck-count-lbl" style="font-size:11px;color:var(--m-muted)"></span>
+          </div>
           <table id="tbl-cortes">
-            <thead><tr><th>Fecha</th><th style="text-align:right">Esperado</th><th style="text-align:right">Contado</th><th style="text-align:right">Diferencia</th><th>Estado</th><th>Responsable</th></tr></thead>
-            <tbody><tr><td colspan="6" align="center" style="color:var(--m-muted);padding:20px">Sin cortes registrados</td></tr></tbody>
+            <thead><tr>
+              <th>Cajero</th>
+              <th>Apertura</th>
+              <th>Cierre</th>
+              <th style="text-align:right">Fondo Inicial</th>
+              <th style="text-align:right">Ventas Efec.</th>
+              <th style="text-align:right">Ventas Tarj.</th>
+              <th style="text-align:right">Total Ventas</th>
+              <th style="text-align:right">Esperado</th>
+              <th style="text-align:right">Contado</th>
+              <th style="text-align:right">Diferencia</th>
+              <th>Estado</th>
+            </tr></thead>
+            <tbody><tr><td colspan="11" align="center" style="color:var(--m-muted);padding:30px"><i class="fa-solid fa-spinner fa-spin"></i> Cargando cierres...</td></tr></tbody>
           </table>
         </div>
+
+        <!-- Calculadora rápida (conservada para uso manual) -->
+        <details style="margin-top:8px">
+          <summary style="cursor:pointer;font-size:13px;font-weight:800;color:var(--m-muted);padding:10px;border:1px solid var(--m-border);border-radius:8px;list-style:none;display:flex;align-items:center;gap:8px">
+            <i class="fa-solid fa-calculator" style="color:#38bdf8"></i> Calculadora Manual de Corte (avanzado)
+            <i class="fa-solid fa-chevron-down" style="margin-left:auto;font-size:10px"></i>
+          </summary>
+          <div style="padding:16px;border:1px solid var(--m-border);border-top:none;border-radius:0 0 8px 8px">
+            <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+              <input type="date" id="corte-fecha" class="f-inp" style="width:160px">
+              <button class="btn-m" onclick="calcularCorte()"><i class="fa-solid fa-calculator"></i> Calcular desde ventas</button>
+              <button class="btn-m-out" onclick="guardarCorte()"><i class="fa-solid fa-floppy-disk"></i> Guardar Corte Manual</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="tbl-card" style="padding:20px">
+                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Sistema — Ventas del Día</h3>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div style="display:flex;justify-content:space-between"><span>Ventas en Efectivo</span><span style="font-weight:900;color:#16a34a" id="corte-efec-sistema">$0.00</span></div>
+                  <div style="display:flex;justify-content:space-between"><span>Ventas Tarjeta</span><span style="font-weight:900" id="corte-tarj-sistema">$0.00</span></div>
+                  <div style="display:flex;justify-content:space-between"><span>Ventas Transferencia</span><span style="font-weight:900" id="corte-transf-sistema">$0.00</span></div>
+                  <div style="display:flex;justify-content:space-between"><span>Descuentos Aplicados</span><span style="font-weight:900;color:#f59e0b" id="corte-desc-sistema">-$0.00</span></div>
+                  <hr style="border-color:var(--m-border)">
+                  <div style="display:flex;justify-content:space-between;font-size:15px"><span style="font-weight:900">Total Esperado</span><span style="font-weight:900;color:var(--m-blue)" id="corte-esperado">$0.00</span></div>
+                </div>
+              </div>
+              <div class="tbl-card" style="padding:20px">
+                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Físico — Conteo Manual</h3>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Efectivo contado en caja ($)</label><input type="number" id="corte-contado-efec" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
+                  <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Fondo de cambio inicial ($)</label><input type="number" id="corte-fondo" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
+                  <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Observaciones</label><textarea id="corte-obs" class="f-inp" rows="2" style="margin-top:5px;resize:vertical" placeholder="Notas del cierre..."></textarea></div>
+                  <hr style="border-color:var(--m-border)">
+                  <div style="display:flex;justify-content:space-between;font-size:15px;align-items:center">
+                    <span style="font-weight:900">Diferencia</span>
+                    <span style="font-weight:900;font-size:18px" id="corte-diferencia">$0.00</span>
+                  </div>
+                  <div id="corte-estado-badge" style="text-align:center;padding:8px;border-radius:8px;font-size:12px;font-weight:800">Ingresa los datos para ver el estado</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
+
 
       <!-- ══ TAB: CIERRE DE MES ══ -->
       <div class="rep-panel" id="rep-tab-cierre" style="display:none">
@@ -1330,7 +1477,7 @@
       // ── SESIÓN DE OPERADOR (desde verificarPINFood en index.html) ──
       var opSession = null;
       try { opSession = JSON.parse(localStorage.getItem('food_operador_' + negocioID) || 'null'); } catch(e){}
-      var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+      var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
       if (isElectron) {
         // En Electron, forzar siempre la aplicación de permisos restringidos del portal (Menú, Inventario, Mapa de Mesas y DTE)
         aplicarPermisosFood({}, 'empleado');
@@ -1542,7 +1689,7 @@
 
     /* --- UI HELPERS --- */
     function salirDelPortal() {
-      var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+      var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
       if (isElectron) {
         location.href = 'pos-food.html?negocio=' + negocioID;
       } else {
@@ -2208,51 +2355,352 @@
 
       const balance = totalIngresos - totalEgresos;
 
-      // KPIs
-      document.getElementById('rep-ingresos').textContent   = '$' + totalIngresos.toFixed(2);
-      document.getElementById('rep-egresos').textContent    = '$' + totalEgresos.toFixed(2);
-      document.getElementById('rep-balance').textContent    = '$' + balance.toFixed(2);
-      document.getElementById('rep-balance').style.color    = balance >= 0 ? '#16a34a' : '#dc2626';
-      document.getElementById('rep-descuentos').textContent = '$' + totalDescuentos.toFixed(2);
-      document.getElementById('rep-total-tickets').textContent = tickets;
-      document.getElementById('rep-avg-ticket').textContent = '$' + (tickets > 0 ? (totalIngresos/tickets).toFixed(2) : '0.00');
-      const bestChan = Object.entries(channelsMap).sort((a,b) => b[1]-a[1])[0];
-      document.getElementById('rep-main-channel').textContent = bestChan ? bestChan[0].toUpperCase() : '—';
+      // KPIs y tablas — delegar al helper compartido
+      _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, descRows);
+      document.getElementById('rep-op-titulo').textContent = 'Operación del Mes';
+      document.getElementById('resumen-periodo-lbl').textContent = 'Resumen mensual';
 
-      // Top platillos
-      const topArr = Object.values(prodsMap).sort((a,b) => b.q - a.q).slice(0,10);
-      document.getElementById('rep-top-prods').querySelector('tbody').innerHTML =
-        topArr.map(p => `<tr><td style="font-weight:700">${p.n}</td><td align="center">${p.q}</td><td align="right" style="font-weight:800;color:#16a34a">$${p.v.toFixed(2)}</td></tr>`).join('')
-        || '<tr><td colspan="3" align="center" style="color:var(--m-muted)">Sin datos</td></tr>';
+      // Guardar datos globales para exportar y drill-down
+      window._repData = { mes, totalIngresos, totalEgresos, totalDescuentos, balance, tickets, prodsMap, paymentsMap, descRows };
+
+      // Construir mapa diario y renderizar calendario
+      renderCalendarioDias(vSnap, mes);
+    }
+
+    /* ════════════════════════════════════════════════════
+       GRANULARIDAD DEL RESUMEN (Mes / Semana / Día)
+    ════════════════════════════════════════════════════ */
+    let _resumenGran = 'mes';
+    let _diaActivo   = null; // 'YYYY-MM-DD'
+    let _diasConDatos = []; // cache de días con ventas en el mes activo
+
+    function switchResumenGran(gran) {
+      _resumenGran = gran;
+      ['mes','semana','dia'].forEach(g => {
+        const btn = document.getElementById('rgran-'+g);
+        btn.style.background = g === gran ? '#334155' : 'transparent';
+        btn.style.color      = g === gran ? '#fff'    : 'var(--m-muted)';
+      });
+      document.getElementById('resumen-semana-inp').style.display = gran === 'semana' ? '' : 'none';
+      document.getElementById('resumen-dia-inp').style.display    = gran === 'dia'    ? '' : 'none';
+      if (gran === 'dia') {
+        const hoy = new Date().toISOString().split('T')[0];
+        const inp = document.getElementById('resumen-dia-inp');
+        if (!inp.value) inp.value = hoy;
+        calcularReportesGranular();
+      } else if (gran === 'semana') {
+        calcularReportesGranular();
+      } else {
+        // Volver al modo mes: ocultar detalle, mostrar contenido mensual y recalcular
+        _resumenGran = 'mes';
+        _diaActivo = null;
+        document.getElementById('resumen-dia-detalle').style.display     = 'none';
+        document.getElementById('resumen-mes-content').style.display     = '';
+        document.getElementById('resumen-calendario-wrap').style.display = '';
+        calcularReportes();
+      }
+    }
+
+    async function calcularReportesGranular() {
+      if (_resumenGran === 'mes') { calcularReportes(); return; }
+      const mes = document.getElementById('rep-mes').value;
+      if (!mes) return;
+
+      let desde, hasta; // YYYY-MM-DD
+      if (_resumenGran === 'semana') {
+        const wVal = document.getElementById('resumen-semana-inp').value; // e.g. '2026-W24'
+        if (!wVal) return;
+        const [yr, wk] = wVal.split('-W').map(Number);
+        // Lunes de la semana ISO
+        const lunes = new Date(yr, 0, 1 + (wk-1)*7);
+        const day = lunes.getDay();
+        lunes.setDate(lunes.getDate() - (day === 0 ? 6 : day - 1));
+        desde = lunes.toISOString().split('T')[0];
+        const domingo = new Date(lunes); domingo.setDate(lunes.getDate() + 6);
+        hasta = domingo.toISOString().split('T')[0];
+        document.getElementById('resumen-periodo-lbl').textContent = `Semana: ${desde} → ${hasta}`;
+      } else { // dia
+        const dv = document.getElementById('resumen-dia-inp').value;
+        if (!dv) return;
+        desde = hasta = dv;
+        abrirDetalleDia(dv);
+        return;
+      }
+
+      const vSnap = await db.ref(`negocios/${negocioID}/ventas`).once('value');
+      let totalIngresos=0, totalEgresos=0, totalDescuentos=0, tickets=0;
+      let prodsMap={}, channelsMap={}, paymentsMap={};
+      vSnap.forEach(c => {
+        const v = c.val();
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
+        if (fechaV < desde || fechaV > hasta) return;
+        const monto = parseFloat(v.total||0);
+        totalIngresos += monto; tickets++;
+        const desc = parseFloat(v.descuento_monto||0);
+        if (desc > 0) totalDescuentos += desc;
+        (v.items||[]).forEach(it => {
+          const n = it.desc||it.nombre||'?';
+          if (!prodsMap[n]) prodsMap[n]={n,q:0,v:0};
+          prodsMap[n].q += (it.cant||1);
+          prodsMap[n].v += parseFloat(it.sub||(it.cant*it.precio)||0);
+        });
+        const chan = v.canal||'mesa';
+        channelsMap[chan] = (channelsMap[chan]||0)+1;
+        const pay = v.forma_pago||'efectivo';
+        paymentsMap[pay] = (paymentsMap[pay]||0)+monto;
+      });
+      _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, []);
+      document.getElementById('rep-op-titulo').textContent = _resumenGran === 'semana' ? 'Operación Semanal' : 'Operación del Período';
+    }
+
+    /* ─── Render Calendario de Días ─── */
+    function renderCalendarioDias(vSnap, mes) {
+      // Agrupar ventas por día
+      const diasMap = {}; // 'YYYY-MM-DD' => { ingresos, tickets }
+      vSnap.forEach(c => {
+        const v = c.val();
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
+        if (!fechaV.startsWith(mes)) return;
+        if (!diasMap[fechaV]) diasMap[fechaV] = { ingresos:0, tickets:0 };
+        diasMap[fechaV].ingresos += parseFloat(v.total||0);
+        diasMap[fechaV].tickets++;
+      });
+      _diasConDatos = Object.keys(diasMap);
+
+      const [yr, mo] = mes.split('-').map(Number);
+      const primerDia = new Date(yr, mo-1, 1);
+      const ultimoDia = new Date(yr, mo, 0);
+      const maxIng = Math.max(...Object.values(diasMap).map(d=>d.ingresos), 1);
+      const nombres = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+      document.getElementById('cal-mes-lbl').textContent = primerDia.toLocaleDateString('es', {month:'long', year:'numeric'});
+
+      let html = '';
+      // Cabeceras
+      nombres.forEach(n => { html += `<div style="font-size:10px;font-weight:900;color:var(--m-muted);text-align:center;padding:4px 0;text-transform:uppercase">${n}</div>`; });
+      // Celdas vacías antes del primer día
+      const startDow = primerDia.getDay(); // 0=Dom
+      for (let i=0; i<startDow; i++) html += '<div></div>';
+      // Días
+      for (let d=1; d <= ultimoDia.getDate(); d++) {
+        const fechaStr = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        const data = diasMap[fechaStr];
+        const pct  = data ? Math.max(8, Math.round(data.ingresos/maxIng*100)) : 0;
+        const esHoy = fechaStr === new Date().toISOString().split('T')[0];
+        const fondo = data
+          ? `linear-gradient(180deg, rgba(22,163,74,${(pct/100).toFixed(2)}) 0%, rgba(22,163,74,0.04) 100%)`
+          : 'rgba(255,255,255,0.02)';
+        const borde = esHoy ? '2px solid #38bdf8' : '1px solid var(--m-border)';
+        const cursor = data ? 'pointer' : 'default';
+        html += `<div onclick="${data ? `abrirDetalleDia('${fechaStr}')` : ''}" 
+          style="border:${borde};border-radius:8px;padding:6px 4px;text-align:center;cursor:${cursor};
+                 background:${fondo};transition:transform .15s,box-shadow .15s;
+                 ${data ? 'hover-opacity:.8' : 'opacity:.45'};"
+          onmouseover="${data ? `this.style.transform='scale(1.06)';this.style.boxShadow='0 4px 14px rgba(0,0,0,.3)'` : ''}"
+          onmouseout="this.style.transform='';this.style.boxShadow=''">
+          <div style="font-size:11px;font-weight:900;color:${esHoy?'#38bdf8':'var(--m-text)'}">${d}</div>
+          ${data
+            ? `<div style="font-size:9px;font-weight:700;color:#4ade80;margin-top:2px">$${data.ingresos.toFixed(0)}</div>
+               <div style="font-size:9px;color:var(--m-muted)">${data.tickets} tkt</div>`
+            : `<div style="font-size:9px;color:var(--m-muted);margin-top:2px">—</div>`
+          }
+        </div>`;
+      }
+      document.getElementById('resumen-calendario').innerHTML = html;
+    }
+
+    /* ─── Abrir detalle de un día ─── */
+    async function abrirDetalleDia(fecha) {
+      _diaActivo = fecha;
+      // Actualizar selector de día
+      document.getElementById('resumen-dia-inp').value = fecha;
+
+      // Mostrar panel de detalle, ocultar calendario y contenido mensual
+      document.getElementById('resumen-dia-detalle').style.display     = '';
+      document.getElementById('resumen-mes-content').style.display     = 'none';
+      document.getElementById('resumen-calendario-wrap').style.display = 'none';
+
+      // Título
+      const fechaObj = new Date(fecha + 'T12:00:00');
+      const diasSemana = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      document.getElementById('dia-detalle-titulo').textContent =
+        `${diasSemana[fechaObj.getDay()]} ${fechaObj.toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'})}`;
+      document.getElementById('dia-detalle-sub').textContent = 'Detalle completo de operación diaria';
+
+      const vSnap = await db.ref(`negocios/${negocioID}/ventas`).once('value');
+      let totalIng=0, totalDesc=0, tickets=0;
+      let prodsMap={}, paymentsMap={}, canalesMap={}, ordenes=[];
+      vSnap.forEach(c => {
+        const v = c.val();
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
+        if (fechaV !== fecha) return;
+        const monto = parseFloat(v.total||0);
+        totalIng += monto; tickets++;
+        const desc = parseFloat(v.descuento_monto||0);
+        if (desc>0) totalDesc += desc;
+        (v.items||[]).forEach(it => {
+          const n=it.desc||it.nombre||'?';
+          if(!prodsMap[n]) prodsMap[n]={n,q:0,v:0};
+          prodsMap[n].q += (it.cant||1);
+          prodsMap[n].v += parseFloat(it.sub||(it.cant*it.precio)||0);
+        });
+        const pay=v.forma_pago||'efectivo';
+        paymentsMap[pay]=(paymentsMap[pay]||0)+monto;
+        const chan=v.canal||'mesa';
+        canalesMap[chan]=(canalesMap[chan]||0)+1;
+        ordenes.push(v);
+      });
+      ordenes.sort((a,b) => (a.fecha_iso||a.fecha||'').localeCompare(b.fecha_iso||b.fecha||''));
+
+      // KPIs día
+      const avgTkt = tickets > 0 ? totalIng/tickets : 0;
+      document.getElementById('dd-ingresos').textContent = '$'+totalIng.toFixed(2);
+      document.getElementById('dd-egresos').textContent  = '$0.00';
+      document.getElementById('dd-balance').textContent  = '$'+totalIng.toFixed(2);
+      document.getElementById('dd-tickets').textContent  = tickets;
+      document.getElementById('dd-avg').textContent      = '$'+avgTkt.toFixed(2);
+      document.getElementById('dd-ordenes-count').textContent = `${ordenes.length} órdenes`;
+
+      // Tabla de órdenes
+      document.getElementById('dd-tbl-ordenes').querySelector('tbody').innerHTML =
+        ordenes.map(v => {
+          const hora = v.fecha_iso ? v.fecha_iso.substring(11,16) : (v.hora||'—');
+          const desc = parseFloat(v.descuento_monto||0);
+          return `<tr>
+            <td style="font-weight:800;font-family:monospace">${v.orden||'—'}</td>
+            <td style="color:var(--m-muted)">${hora}</td>
+            <td><span style="background:rgba(56,189,248,.15);color:#38bdf8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800">${(v.canal||'mesa').toUpperCase()}</span></td>
+            <td>${v.mesero||v.cajero||'—'}</td>
+            <td style="font-size:11px">${v.forma_pago||'efectivo'}</td>
+            <td align="center" style="color:var(--m-muted)">${(v.items||[]).length}</td>
+            <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'—'}</td>
+            <td align="right" style="font-weight:900;color:#16a34a">$${parseFloat(v.total||0).toFixed(2)}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin ventas en este día</td></tr>';
+
+      // Top platillos del día
+      const topArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q).slice(0,8);
+      document.getElementById('dd-tbl-prods').querySelector('tbody').innerHTML =
+        topArr.map((p,i) => `<tr>
+          <td><span style="font-size:10px;font-weight:900;color:var(--m-muted);margin-right:6px">#${i+1}</span>${p.n}</td>
+          <td align="center" style="font-weight:900">${p.q}</td>
+          <td align="right" style="font-weight:900;color:#16a34a">$${p.v.toFixed(2)}</td>
+        </tr>`).join('') || '<tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr>';
 
       // Distribución pago
-      const payTotal = Object.values(paymentsMap).reduce((a,b) => a+b, 0);
-      document.getElementById('rep-payment-dist').innerHTML = Object.entries(paymentsMap).map(([k,v]) => {
-        const pct = payTotal > 0 ? (v/payTotal*100).toFixed(1) : 0;
-        const colors = { efectivo:'#16a34a', tarjeta:'#38bdf8', transferencia:'#fbbf24' };
-        const c = colors[k] || '#94a3b8';
-        return `<div class="bar-wrap"><div class="bar-lbl"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>$${v.toFixed(2)} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${c}"></div></div></div>`;
+      const payTotal = Object.values(paymentsMap).reduce((a,b)=>a+b,0);
+      document.getElementById('dd-payment-dist').innerHTML = Object.entries(paymentsMap).map(([k,v]) => {
+        const pct = payTotal>0?(v/payTotal*100).toFixed(1):0;
+        const colors={efectivo:'#16a34a',tarjeta:'#38bdf8',transferencia:'#fbbf24'};
+        const col=colors[k]||'#94a3b8';
+        return `<div class="bar-wrap"><div class="bar-lbl"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>$${v.toFixed(2)} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
       }).join('') || '<div style="color:var(--m-muted);font-size:12px">Sin datos</div>';
 
-      // Balance bars
-      const maxVal = Math.max(totalIngresos, totalEgresos, 1);
-      document.getElementById('rep-balance-bars').innerHTML = [
-        { lbl:'Ingresos', val:totalIngresos, color:'#16a34a' },
-        { lbl:'Egresos',  val:totalEgresos,  color:'#dc2626' },
-        { lbl:'Balance',  val:Math.abs(balance), color: balance>=0?'#38bdf8':'#f59e0b' }
-      ].map(r => `<div class="bar-wrap"><div class="bar-lbl"><span>${r.lbl}</span><span style="color:${r.color}">$${r.val.toFixed(2)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(r.val/maxVal*100).toFixed(1)}%;background:${r.color}"></div></div></div>`).join('');
+      // Canales
+      const chanTotal = Object.values(canalesMap).reduce((a,b)=>a+b,0);
+      document.getElementById('dd-canales').innerHTML = Object.entries(canalesMap).map(([k,v]) => {
+        const pct = chanTotal>0?(v/chanTotal*100).toFixed(1):0;
+        const colors={mesa:'#38bdf8',llevar:'#fbbf24',delivery:'#f97316'};
+        const col=colors[k]||'#94a3b8';
+        return `<div class="bar-wrap"><div class="bar-lbl"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>${v} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+      }).join('') || '<div style="color:var(--m-muted);font-size:12px">Sin datos</div>';
 
-      // Tabla descuentos
+      // Comparativa vs promedio del mes
+      const mes = document.getElementById('rep-mes').value;
+      const repData = window._repData;
+      if (repData && repData.mes === mes) {
+        const diasOp = _diasConDatos.length || 1;
+        const promDia = repData.totalIngresos / diasOp;
+        const diff = totalIng - promDia;
+        const diffPct = promDia>0 ? (diff/promDia*100).toFixed(1) : 0;
+        const color = diff>=0 ? '#16a34a' : '#dc2626';
+        const icon  = diff>=0 ? 'fa-arrow-trend-up' : 'fa-arrow-trend-down';
+        document.getElementById('dd-vs-promedio').innerHTML = `
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12px">Promedio diario del mes</span><span style="font-weight:900">$${promDia.toFixed(2)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="font-size:12px">Ventas de este día</span><span style="font-weight:900;color:#16a34a">$${totalIng.toFixed(2)}</span></div>
+          <hr style="border-color:var(--m-border)">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;font-weight:700">Diferencia</span>
+            <span style="font-weight:900;color:${color}"><i class="fa-solid ${icon}"></i> ${diff>=0?'+':''}$${diff.toFixed(2)} (${diff>=0?'+':''}${diffPct}%)</span>
+          </div>`;
+      } else {
+        document.getElementById('dd-vs-promedio').innerHTML = '<div style="color:var(--m-muted);font-size:12px">Carga el mes para comparar</div>';
+      }
+    }
+
+    function cerrarDetalleDia() {
+      _diaActivo = null;
+      document.getElementById('resumen-dia-detalle').style.display     = 'none';
+      document.getElementById('resumen-mes-content').style.display     = '';
+      document.getElementById('resumen-calendario-wrap').style.display = '';
+      // Resetear estilos del toggle de granularidad sin llamar switchResumenGran (evitar recursión)
+      _resumenGran = 'mes';
+      ['mes','semana','dia'].forEach(g => {
+        const btn = document.getElementById('rgran-'+g);
+        if (btn) {
+          btn.style.background = g === 'mes' ? '#334155' : 'transparent';
+          btn.style.color      = g === 'mes' ? '#fff'    : 'var(--m-muted)';
+        }
+      });
+      document.getElementById('resumen-semana-inp').style.display = 'none';
+      document.getElementById('resumen-dia-inp').style.display    = 'none';
+    }
+
+    function navDia(delta) {
+      if (!_diaActivo) return;
+      const d = new Date(_diaActivo + 'T12:00:00');
+      d.setDate(d.getDate() + delta);
+      const nueva = d.toISOString().split('T')[0];
+      const mes = document.getElementById('rep-mes').value;
+      if (nueva.substring(0,7) !== mes) {
+        // Cambiar el mes si saltamos de mes
+        document.getElementById('rep-mes').value = nueva.substring(0,7);
+        calcularReportes().then(() => abrirDetalleDia(nueva));
+      } else {
+        abrirDetalleDia(nueva);
+      }
+    }
+
+    /* ─── Helper: actualizar KPIs del Resumen ─── */
+    function _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, descRows) {
+      const balance = totalIngresos - totalEgresos;
+      document.getElementById('rep-ingresos').textContent   = '$'+totalIngresos.toFixed(2);
+      document.getElementById('rep-egresos').textContent    = '$'+totalEgresos.toFixed(2);
+      document.getElementById('rep-balance').textContent    = '$'+balance.toFixed(2);
+      document.getElementById('rep-balance').style.color    = balance>=0?'#16a34a':'#dc2626';
+      document.getElementById('rep-descuentos').textContent = '$'+totalDescuentos.toFixed(2);
+      document.getElementById('rep-total-tickets').textContent = tickets;
+      document.getElementById('rep-avg-ticket').textContent = '$'+(tickets>0?(totalIngresos/tickets).toFixed(2):'0.00');
+      const bestChan = Object.entries(channelsMap).sort((a,b)=>b[1]-a[1])[0];
+      document.getElementById('rep-main-channel').textContent = bestChan ? bestChan[0].toUpperCase() : '—';
+
+      const topArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q).slice(0,10);
+      document.getElementById('rep-top-prods').querySelector('tbody').innerHTML =
+        topArr.map(p=>`<tr><td style="font-weight:700">${p.n}</td><td align="center">${p.q}</td><td align="right" style="font-weight:800;color:#16a34a">$${p.v.toFixed(2)}</td></tr>`).join('')
+        || '<tr><td colspan="3" align="center" style="color:var(--m-muted)">Sin datos</td></tr>';
+
+      const payTotal = Object.values(paymentsMap).reduce((a,b)=>a+b,0);
+      document.getElementById('rep-payment-dist').innerHTML = Object.entries(paymentsMap).map(([k,v]) => {
+        const pct=payTotal>0?(v/payTotal*100).toFixed(1):0;
+        const colors={efectivo:'#16a34a',tarjeta:'#38bdf8',transferencia:'#fbbf24'};
+        const col=colors[k]||'#94a3b8';
+        return `<div class="bar-wrap"><div class="bar-lbl"><span>${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>$${v.toFixed(2)} (${pct}%)</span></div><div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div></div>`;
+      }).join('')||'<div style="color:var(--m-muted);font-size:12px">Sin datos</div>';
+
+      const maxVal=Math.max(totalIngresos,totalEgresos,1);
+      document.getElementById('rep-balance-bars').innerHTML=[
+        {lbl:'Ingresos',val:totalIngresos,color:'#16a34a'},
+        {lbl:'Egresos', val:totalEgresos, color:'#dc2626'},
+        {lbl:'Balance', val:Math.abs(balance),color:balance>=0?'#38bdf8':'#f59e0b'}
+      ].map(r=>`<div class="bar-wrap"><div class="bar-lbl"><span>${r.lbl}</span><span style="color:${r.color}">$${r.val.toFixed(2)}</span></div><div class="bar-track"><div class="bar-fill" style="width:${(r.val/maxVal*100).toFixed(1)}%;background:${r.color}"></div></div></div>`).join('');
+
       document.getElementById('rep-tbl-descuentos').querySelector('tbody').innerHTML =
-        descRows.map(v => `<tr>
+        descRows.map(v=>`<tr>
           <td style="font-weight:700">${v.orden||'—'}</td>
           <td>${v.descuento_motivo||'—'}</td>
           <td style="font-family:monospace">${v.descuento_dui||'—'}</td>
           <td align="right" style="font-weight:900;color:#f59e0b">$${parseFloat(v.descuento_monto||0).toFixed(2)}</td>
         </tr>`).join('') || '<tr><td colspan="4" align="center" style="color:var(--m-muted)">Sin descuentos aplicados</td></tr>';
-
-      // Guardar datos globales para exportar
-      window._repData = { mes, totalIngresos, totalEgresos, totalDescuentos, balance, tickets, prodsMap, paymentsMap, descRows };
     }
 
     /* ── GASTOS FIJOS ── */
@@ -2739,20 +3187,120 @@
     }
 
     async function cargarHistorialCortes() {
-      const snap = await db.ref(`negocios/${negocioID}/cortes_caja`).orderByChild('ts').limitToLast(30).once('value');
-      const rows = [];
-      snap.forEach(c => rows.unshift(c.val()));
-      const colors = { cuadrado:'#16a34a', sobrante:'#fbbf24', faltante:'#dc2626' };
-      const labels = { cuadrado:'✅ Cuadrado', sobrante:'⬆ Sobrante', faltante:'⬇ Faltante' };
-      document.getElementById('tbl-cortes').querySelector('tbody').innerHTML =
-        rows.map(r => `<tr>
-          <td>${r.fecha}</td>
-          <td align="right">$${parseFloat(r.esperado||0).toFixed(2)}</td>
-          <td align="right">$${parseFloat(r.contado||0).toFixed(2)}</td>
-          <td align="right" style="font-weight:900;color:${colors[r.estado]||'#94a3b8'}">${(r.diferencia>=0?'+':'') + '$'+parseFloat(r.diferencia||0).toFixed(2)}</td>
-          <td><span style="font-size:11px;font-weight:800;color:${colors[r.estado]||'#94a3b8'}">${labels[r.estado]||r.estado}</span></td>
-          <td style="color:var(--m-muted)">${r.responsable||'—'}</td>
-        </tr>`).join('') || '<tr><td colspan="6" align="center" style="color:var(--m-muted);padding:20px">Sin cortes registrados</td></tr>';
+      const mes = document.getElementById('rep-mes').value;
+      const filtroDia = (document.getElementById('corte-filtro-dia')||{}).value || '';
+      const tbody = document.getElementById('tbl-cortes').querySelector('tbody');
+      tbody.innerHTML = '<tr><td colspan="11" align="center" style="color:var(--m-muted);padding:24px"><i class="fa-solid fa-spinner fa-spin"></i> Cargando cierres...</td></tr>';
+
+      const snap = await db.ref(`negocios/${negocioID}/cajas`).once('value');
+      const data = snap.val() || {};
+      const list = Object.values(data);
+
+      // Filtrar por mes seleccionado (o día si se especificó)
+      const filtered = list.filter(c => {
+        if (!c.fecha_apertura && !c.timestamp_apertura) return false;
+        const isoDate = (c.fecha_apertura || '').substring(0, 10);
+        let localDate = isoDate;
+        if (!localDate && c.timestamp_apertura) {
+          localDate = new Date(c.timestamp_apertura).toLocaleDateString('en-CA');
+        }
+        if (filtroDia) return localDate === filtroDia;
+        if (mes)       return localDate.startsWith(mes);
+        return true;
+      }).sort((a,b) => (b.timestamp_apertura||0) - (a.timestamp_apertura||0));
+
+      document.getElementById('ck-count-lbl').textContent = `${filtered.length} registro${filtered.length !== 1 ? 's' : ''}`;
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" align="center" style="color:var(--m-muted);padding:30px"><i class="fa-solid fa-folder-open" style="font-size:28px;opacity:.3;display:block;margin-bottom:8px"></i>Sin cierres registrados para este período</td></tr>';
+        ['ck-ventas','ck-esperado','ck-real','ck-diferencia'].forEach(id => { document.getElementById(id).textContent = '$0.00'; });
+        return;
+      }
+
+      const _fmtTime = iso => {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return '—'; }
+      };
+      const _fmtDate = iso => {
+        if (!iso) return '—';
+        try { return new Date(iso).toLocaleDateString('es-SV',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){ return '—'; }
+      };
+      const _fc = v => '$' + (parseFloat(v)||0).toFixed(2);
+
+      let totVentas=0, totEsperado=0, totReal=0, totDif=0;
+
+      tbody.innerHTML = filtered.map(c => {
+        const vEfec  = parseFloat(c.ventas_efectivo||0);
+        const vTarj  = parseFloat(c.ventas_tarjeta||0);
+        const vTransf= parseFloat(c.ventas_transferencia||0);
+        const totalV = vEfec + vTarj + vTransf;
+
+        let ingresosSum = 0;
+        if (c.ingresos_efectivo && c.ingresos_efectivo.length) {
+          c.ingresos_efectivo.forEach(i => { ingresosSum += parseFloat(i.monto)||0; });
+        }
+
+        const fondo    = parseFloat(c.monto_inicial||c.caja_inicial||0);
+        const esperado = fondo + vEfec + ingresosSum;
+        const real     = c.estado === 'cerrada' ? parseFloat(c.monto_real||0) : esperado;
+        const dif      = c.estado === 'cerrada' ? parseFloat(c.diferencia||0) : 0;
+
+        totVentas   += totalV;
+        totEsperado += esperado;
+        totReal     += real;
+        totDif      += dif;
+
+        // Fecha local a mostrar
+        let fechaDisplay = _fmtDate(c.fecha_apertura);
+        if (!c.fecha_apertura && c.timestamp_apertura) {
+          fechaDisplay = _fmtDate(new Date(c.timestamp_apertura).toISOString());
+        }
+
+        let badge = '';
+        if (c.estado === 'abierta') {
+          badge = '<span style="background:rgba(56,189,248,.15);color:#38bdf8;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:900">ABIERTA</span>';
+        } else if (dif > 0) {
+          badge = `<span style="background:rgba(251,191,36,.15);color:#fbbf24;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:900">⬆ SOBRANTE</span>`;
+        } else if (dif < 0) {
+          badge = `<span style="background:rgba(220,38,38,.15);color:#dc2626;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:900">⬇ FALTANTE</span>`;
+        } else {
+          badge = '<span style="background:rgba(22,163,74,.15);color:#16a34a;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:900">✅ CUADRADO</span>';
+        }
+
+        const difColor = dif > 0 ? '#fbbf24' : dif < 0 ? '#dc2626' : '#16a34a';
+
+        return `<tr>
+          <td style="font-weight:800">${c.usuario_apertura||c.cajero||'—'}</td>
+          <td style="color:var(--m-muted);font-size:11px">${fechaDisplay} ${_fmtTime(c.fecha_apertura)}</td>
+          <td style="color:var(--m-muted);font-size:11px">${c.estado==='cerrada'?_fmtTime(c.fecha_cierre):'—'}</td>
+          <td align="right">${_fc(fondo)}</td>
+          <td align="right" style="color:#16a34a">${_fc(vEfec)}</td>
+          <td align="right">${_fc(vTarj)}</td>
+          <td align="right" style="font-weight:800">${_fc(totalV)}</td>
+          <td align="right" style="color:#38bdf8">${_fc(esperado)}</td>
+          <td align="right">${c.estado==='cerrada'?_fc(real):'—'}</td>
+          <td align="right" style="font-weight:900;color:${difColor}">${c.estado==='cerrada'?(dif>=0?'+':'')+_fc(dif):'—'}</td>
+          <td>${badge}</td>
+        </tr>`;
+      }).join('');
+
+      // KPIs
+      document.getElementById('ck-ventas').textContent    = _fc(totVentas);
+      document.getElementById('ck-esperado').textContent  = _fc(totEsperado);
+      document.getElementById('ck-real').textContent      = _fc(totReal);
+      document.getElementById('ck-diferencia').textContent= (totDif>=0?'+':'')+_fc(totDif);
+      const diffCard = document.getElementById('ck-diff-card');
+      const diffLbl  = document.getElementById('ck-diff-lbl');
+      if (totDif > 0.01) {
+        diffCard.style.borderLeftColor='#fbbf24'; diffLbl.textContent='Sobrante Neto';
+        document.getElementById('ck-diferencia').style.color='#fbbf24';
+      } else if (totDif < -0.01) {
+        diffCard.style.borderLeftColor='#dc2626'; diffLbl.textContent='Faltante Neto';
+        document.getElementById('ck-diferencia').style.color='#dc2626';
+      } else {
+        diffCard.style.borderLeftColor='#16a34a'; diffLbl.textContent='Diferencia Neta';
+        document.getElementById('ck-diferencia').style.color='#16a34a';
+      }
     }
 
     /* ── CIERRE DE MES ── */
@@ -3628,7 +4176,7 @@
        PARCHE SYS — Permisos de módulos por empleado
     ══════════════════════════════════════════════════════════ */
     function aplicarPermisosFood(modulos, rol) {
-      var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+      var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
       if (isElectron) {
         // En Electron, forzar únicamente los módulos permitidos: menú, inventario, mapa de mesas y dte
         modulos = {
@@ -4008,7 +4556,15 @@
 
     // ── Restricciones de Electron (Parche de Módulos) ──
     document.addEventListener('DOMContentLoaded', () => {
-      var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
+      // Validar PIN de administrador si se ejecuta en la App de Administración
+      if (window.electronAPI && window.electronAPI.isAdminApp) {
+        if (sessionStorage.getItem('admin_authenticated') !== 'true') {
+          window.location.href = 'admin-lock.html';
+          return;
+        }
+      }
+
+      var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
       if (isElectron) {
         // 1. Ocultar enlaces de barra lateral restringidos
         var restrictedIds = [
