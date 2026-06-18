@@ -1086,10 +1086,11 @@ textarea.fi{resize:vertical;min-height:72px}
           <th>Entrada</th>
           <th>Salida</th>
           <th>Horas Calculadas</th>
+          <th>$ Extras</th>
         </tr>
       </thead>
       <tbody id="tb-historial-semanal">
-        <tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Seleccione fechas y empleado</td></tr>
+        <tr><td colspan="6" style="text-align:center;padding:24px;color:#94a3b8;font-size:11px">Seleccione fechas y empleado</td></tr>
       </tbody>
     </table>
   </div>
@@ -1965,16 +1966,18 @@ async function renderPlanilla(){
     return;
   }
 
-  // Iterar fechas
+  // Iterar fechas + 1 día extra para resolver turnos nocturnos del último día
   const dStart = new Date(startIso+'T12:00:00');
   const dEnd = new Date(endIso+'T12:00:00');
+  const dEndPlus1 = new Date(dEnd.getTime() + 86400000);
   const fechas = [];
-  while(dStart <= dEnd) {
-    fechas.push(dStart.toISOString().split('T')[0]);
-    dStart.setDate(dStart.getDate()+1);
+  const cur2 = new Date(dStart);
+  while(cur2 <= dEndPlus1) {
+    fechas.push(cur2.toISOString().split('T')[0]);
+    cur2.setDate(cur2.getDate()+1);
   }
 
-  // Fetch asistencia_gps for these dates
+  // Fetch asistencia_gps for these dates (incluyendo día extra)
   const asistPromises = fechas.map(f => db.ref(`negocios/${negocioID}/asistencia_gps/${f}`).once('value'));
   const snaps = await Promise.all(asistPromises);
   const asistDatos = {};
@@ -2000,35 +2003,51 @@ async function renderPlanilla(){
     let horasRegularesTrabajadas = 0;
     let horasExtraTrabajadas = 0;
     
-    // Calcular desde marcajes diarios
-    for(let i=0; i<fechas.length; i++) {
-      const f = fechas[i];
+    // Set de fechas ya consumidas como "continuación de turno nocturno"
+    // para no contarlas de nuevo como turno propio
+    const fechasConsumidas = new Set();
+    
+    // Calcular desde marcajes diarios (solo fechas del período, no el día extra)
+    const fechasPeriodo = fechas.slice(0, fechas.length - 1);
+    for(let i=0; i<fechasPeriodo.length; i++) {
+      const f = fechasPeriodo[i];
+      
+      // Si esta fecha fue consumida como salida nocturna de un turno anterior, saltar
+      if (fechasConsumidas.has(f)) continue;
+      
       const marca = asistDatos[f][id];
       if (marca) {
         let he = marca.hora_entrada || marca.entrada_hora;
-        let hs = marca.hora_salida || marca.salida_hora;
+        let hs = marca.hora_salida  || marca.salida_hora;
         
         // Si este registro tiene solo salida (sin entrada) es la continuación de un turno
         // nocturno del día anterior — ya fue contado cuando procesamos el día anterior.
         if (!he && hs) continue;
         
         // Si hay entrada pero no salida, buscar salida de madrugada en el día siguiente (turno nocturno)
+        // i < fechas.length - 1 porque fechas incluye el día extra al final
         if (he && !hs && i < fechas.length - 1) {
-             const nextMarca = asistDatos[fechas[i+1]][id];
-             // Solo tomar la salida del día siguiente si NO hay entrada nueva ese día
-             // (es decir, es continuación del turno anterior, no un nuevo turno)
+             const nextFecha = fechas[i+1];
+             const nextMarca = asistDatos[nextFecha]?.[id];
              if (nextMarca) {
                const nextHe = nextMarca.hora_entrada || nextMarca.entrada_hora;
-               const nextHs = nextMarca.hora_salida || nextMarca.salida_hora;
+               const nextHs = nextMarca.hora_salida  || nextMarca.salida_hora;
                if (nextHs && !nextHe) {
-                 // Caso clásico: el día siguiente tiene solo salida (sin nueva entrada)
+                 // Solo salida en el día siguiente → continuación limpia del turno
                  hs = nextHs;
+                 fechasConsumidas.add(nextFecha); // marcar como consumida
                } else if (nextHs && nextHe) {
-                 // El día siguiente tiene entrada Y salida: puede ser un turno nuevo.
-                 // Solo usar la salida como continuación si la hora es de madrugada (0-9)
-                 const hsH = parseInt((nextHs.split(':')[0]||'0'), 10);
-                 if (hsH >= 0 && hsH <= 9) {
+                 // Día siguiente tiene entrada Y salida.
+                 // Si la salida es de madrugada (0-9h), asumir que es la salida del turno actual
+                 // y que la entrada del día siguiente es un turno NUEVO posterior.
+                 const nextHsH = parseInt((nextHs.split(':')[0]||'99'), 10);
+                 if (nextHsH <= 9) {
                    hs = nextHs;
+                   // NO consumir nextFecha completo porque tiene su propia entrada (nuevo turno)
+                   // Solo tomar la salida; el procesamiento del día siguiente usará su entrada
+                   // y buscará su propia salida si la necesita.
+                   // Para evitar doble conteo, marcar como consumida.
+                   fechasConsumidas.add(nextFecha);
                  }
                }
              }
@@ -3573,70 +3592,107 @@ function llenarSelectorHistorial() {
 
 async function renderHistorial() {
   const sel = document.getElementById('historial-emp-select');
-  if (!sel) return; // Si no hay selector, no renderizar
+  if (!sel) return;
   const empId = sel.value;
   const startD = document.getElementById('historial-start').value;
   const endD = document.getElementById('historial-end').value;
   const tb = document.getElementById('tb-historial-semanal');
   
   if(!startD || !endD) {
-    if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Por favor define un rango.</td></tr>';
+    if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Por favor define un rango.</td></tr>';
     return;
   }
   
-  if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">Cargando historial...</td></tr>';
+  if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">Cargando historial...</td></tr>';
   
   try {
+    // Incluir un día extra al final para resolver turnos nocturnos que cruzan medianoche
     const dStart = new Date(startD+'T12:00:00');
-    const dEnd = new Date(endD+'T12:00:00');
+    const dEnd   = new Date(endD+'T12:00:00');
+    const dEndPlus1 = new Date(dEnd.getTime() + 86400000);
+    
     const fechas = [];
-    while(dStart <= dEnd) {
-      fechas.push(dStart.toISOString().split('T')[0]);
-      dStart.setDate(dStart.getDate()+1);
+    const cur = new Date(dStart);
+    while(cur <= dEndPlus1) {
+      fechas.push(cur.toISOString().split('T')[0]);
+      cur.setDate(cur.getDate()+1);
     }
 
-    const asistPromises = fechas.map(f => db.ref(`negocios/${negocioID}/asistencia_gps/${f}`).once('value'));
-    const snaps = await Promise.all(asistPromises);
+    // Fetch todos los días (incluyendo día extra)
+    const snaps = await Promise.all(
+      fechas.map(f => db.ref(`negocios/${negocioID}/asistencia_gps/${f}`).once('value'))
+    );
     
+    // Construir mapa fecha→{empId→marca}
+    const porFecha = {};
+    snaps.forEach((snap, idx) => { porFecha[fechas[idx]] = snap.val() || {}; });
+
+    // Solo iterar fechas dentro del rango pedido (no el día extra)
+    const fechasRango = fechas.slice(0, fechas.length - 1);
+
     let html = '';
     let marcajesEncontrados = 0;
     
-    snaps.forEach((snap, idx) => {
-      const fecha = fechas[idx];
-      const diaAsistencias = snap.val() || {};
+    fechasRango.forEach((fecha, idx) => {
+      const diaAsistencias = porFecha[fecha] || {};
       
       Object.entries(diaAsistencias).forEach(([id_emp, marca]) => {
         if(empId !== 'ALL' && empId !== id_emp) return;
         
-        const emp = empleados[id_emp] || {nombre: 'Desconocido', puesto: ''};
-        // Soporta tanto hora_entrada como entrada_hora
-        const he = marca.hora_entrada || marca.entrada_hora;
-        const hs = marca.hora_salida || marca.salida_hora;
+        const emp = empleados[id_emp] || {nombre: id_emp, puesto: ''};
+        let he = marca.hora_entrada || marca.entrada_hora;
+        let hs = marca.hora_salida  || marca.salida_hora;
         
-        // FILTRO: si solo hay salida (sin entrada) es un registro huérfano de un turno
-        // nocturno que cruzó medianoche — no mostrar como fila independiente
+        // Registro huérfano: solo tiene salida → es continuación de un turno nocturno
+        // del día anterior ya procesado. Omitir.
         if (!he && hs) return;
         
-        const horasObj = (he && hs) ? calcDetalleGanancia(id_emp, he, hs) : {str: '-'};
+        // Turno incompleto: tiene entrada pero no salida → buscar salida en día siguiente
+        if (he && !hs) {
+          const nextFecha = fechas[idx + 1]; // puede ser el día extra
+          if (nextFecha) {
+            const nextMarca = porFecha[nextFecha]?.[id_emp];
+            if (nextMarca) {
+              const nextHe = nextMarca.hora_entrada || nextMarca.entrada_hora;
+              const nextHs = nextMarca.hora_salida  || nextMarca.salida_hora;
+              if (nextHs && !nextHe) {
+                // Solo salida en el día siguiente → continuación del turno
+                hs = nextHs;
+              } else if (nextHs && nextHe) {
+                // Día siguiente tiene entrada Y salida: usar la salida solo si es madrugada (0–9h)
+                const hsH = parseInt((nextHs.split(':')[0]||'99'), 10);
+                if (hsH <= 9) hs = nextHs;
+              }
+            }
+          }
+        }
+
+        const horasObj = (he && hs) ? calcDetalleGanancia(id_emp, he, hs) : {str: '-', extraGanancia: 0};
         
-        html += `<tr>
+        // Color de fila según si tiene horas extra
+        const rowStyle = horasObj.extraMin > 0
+          ? 'background:rgba(234,88,12,0.06);'
+          : '';
+        
+        html += `<tr style="${rowStyle}">
           <td style="font-weight:700;color:#64748b">${fecha}</td>
           <td><div style="font-weight:700">${emp.nombre}</div><div style="font-size:10px;color:#94a3b8">${emp.puesto||""}</div></td>
           <td style="font-weight:700;color:#10b981">${he||'-'}</td>
-          <td style="font-weight:700;color:#1B4E8B">${hs||'-'}</td>
+          <td style="font-weight:700;color:#ea580c">${hs||'-'}</td>
           <td style="font-weight:700">${horasObj.str}</td>
+          <td style="font-weight:700;color:#059669">${horasObj.extraGanancia > 0 ? '$'+horasObj.extraGanancia.toFixed(2) : '—'}</td>
         </tr>`;
         marcajesEncontrados++;
       });
     });
     
     if(marcajesEncontrados === 0) {
-      if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px;">No se encontraron marcajes en el rango seleccionado.</td></tr>';
+      if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px;">No se encontraron marcajes en el rango seleccionado.</td></tr>';
     } else {
       if (tb) tb.innerHTML = html;
     }
   } catch (err) {
-    if (tb) tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:red;padding:20px;">Error al cargar datos.</td></tr>';
+    if (tb) tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:red;padding:20px;">Error al cargar datos.</td></tr>';
     console.error(err);
   }
 }
