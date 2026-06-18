@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>PARCHE SYS · Control de Asistencia</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -241,8 +243,8 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
   <div class="login-logo">PARCHE SYS</div>
   <div class="login-sub">Control de Asistencia</div>
   <div class="login-card">
-    <label class="login-lbl">Email de la empresa</label>
-    <input type="email" id="i-email" class="login-inp" placeholder="empresa@correo.com" autocomplete="email">
+    <label class="login-lbl">Email de acceso (empresa o personal)</label>
+    <input type="email" id="i-email" class="login-inp" placeholder="correo@ejemplo.com" autocomplete="email">
     <label class="login-lbl" style="margin-top:4px">PIN de acceso</label>
     <input type="password" id="i-pin" class="login-inp" placeholder="••••" maxlength="10" inputmode="numeric"
       onkeydown="if(event.key==='Enter')login()">
@@ -457,7 +459,7 @@ html,body{height:100%;background:var(--bg);color:var(--tx);font-family:var(--fon
       <div id="reg-placeholder" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#1a1d24;color:var(--gr);font-size:56px;">
         <i class="fa-solid fa-user" style="animation:pulse-icon 2s infinite ease-in-out;"></i>
       </div>
-      <video class="cam-video" id="reg-video" autoplay playsinline muted style="display:none;position:relative;z-index:2;"></video>
+      <video class="cam-video" id="reg-video" autoplay playsinline muted style="opacity:0;position:absolute;z-index:2;"></video>
       <div id="reg-scan-line" style="position:absolute;left:0;right:0;height:3px;background:var(--gr);box-shadow:0 0 8px var(--gr);top:0;display:none;z-index:3;animation:scan-anim 2s infinite linear;"></div>
     </div>
     <div class="bio-name" id="reg-emp-name">—</div>
@@ -583,18 +585,34 @@ function login(){
   btn.textContent='Verificando…';btn.disabled=true;
 
   function verificar(nid,onOk,onFail){
-    db.ref('negocios/'+nid+'/info').once('value',si=>{
-      const info=si.val()||{};
-      if((info.email||'').trim().toLowerCase()!==emailEmp){onFail('email');return;}
-      db.ref('negocios/'+nid+'/empleados').once('value',se=>{
-        const emps=se.val()||{};
+    db.ref('negocios/'+nid).once('value',sn=>{
+      const neg=sn.val()||{};
+      const info=neg.info||{};
+      const emps=neg.empleados||{};
+      
+      const bizEmail=(info.email||'').trim().toLowerCase();
+      
+      // 1. Caso: El correo ingresado es el de la empresa
+      if(bizEmail===emailEmp){
         let fEID=null;
         Object.entries(emps).forEach(([eid,emp])=>{
           if(fEID)return;
           if(pin===String(emp.pin_app||'1234')||pin==='0123456789')fEID=eid;
         });
-        if(fEID)onOk(nid,fEID);else onFail('creds');
+        if(fEID) onOk(nid,fEID); else onFail('creds');
+        return;
+      }
+      
+      // 2. Caso: El correo ingresado es el personal de un empleado
+      let fEID=null;
+      Object.entries(emps).forEach(([eid,emp])=>{
+        if(fEID)return;
+        const empEmail=(emp.email||'').trim().toLowerCase();
+        if(empEmail===emailEmp){
+          if(pin===String(emp.pin_app||'1234')||pin==='0123456789')fEID=eid;
+        }
       });
+      if(fEID) onOk(nid,fEID); else onFail('email_o_creds');
     });
   }
 
@@ -612,13 +630,13 @@ function login(){
   function loginFail(r){
     btn.textContent='Entrar';btn.disabled=false;
     err.style.display='block';
-    err.textContent=r==='email'?'No se encontró empresa con ese correo.':'PIN incorrecto para esta empresa.';
+    err.textContent=r==='email'?'No se encontró empresa o empleado con ese correo.':'PIN incorrecto.';
   }
 
   const savedNID=localStorage.getItem('negocioID');
   if(savedNID){
     verificar(savedNID,loginOk,r=>{
-      if(r==='creds'){loginFail('creds');}
+      if(r==='creds' || r==='email_o_creds'){loginFail('creds');}
       else{buscar();}
     });
     return;
@@ -629,13 +647,63 @@ function login(){
     db.ref('negocios').once('value',snap=>{
       btn.textContent='Entrar';btn.disabled=false;
       if(!snap.exists()){loginFail('conn');return;}
-      let tNID=null;
-      snap.forEach(neg=>{
-        const inf=neg.child('info').val()||{};
-        if((inf.email||'').trim().toLowerCase()===emailEmp)tNID=neg.key;
+      
+      let encontradoNID=null;
+      let encontradoEID=null;
+      
+      snap.forEach(negSnap=>{
+        if(encontradoNID) return;
+        const nid=negSnap.key;
+        const info=negSnap.child('info').val()||{};
+        const emps=negSnap.child('empleados').val()||{};
+        
+        const bizEmail=(info.email||'').trim().toLowerCase();
+        
+        // 1. Caso: El correo es el de la empresa
+        if(bizEmail===emailEmp){
+          Object.entries(emps).forEach(([eid,emp])=>{
+            if(encontradoNID) return;
+            const pinApp=String(emp.pin_app||'1234');
+            if(pin===pinApp||pin==='0123456789'){
+              encontradoNID=nid;
+              encontradoEID=eid;
+            }
+          });
+        } else {
+          // 2. Caso: El correo es el de un empleado
+          Object.entries(emps).forEach(([eid,emp])=>{
+            if(encontradoNID) return;
+            const empEmail=(emp.email||'').trim().toLowerCase();
+            if(empEmail===emailEmp){
+              const pinApp=String(emp.pin_app||'1234');
+              if(pin===pinApp||pin==='0123456789'){
+                encontradoNID=nid;
+                encontradoEID=eid;
+              }
+            }
+          });
+        }
       });
-      if(!tNID){loginFail('email');return;}
-      verificar(tNID,loginOk,()=>loginFail('creds'));
+      
+      if(encontradoNID && encontradoEID){
+        loginOk(encontradoNID, encontradoEID);
+      } else {
+        // Verificar si el correo existe en general para dar el mensaje de error correcto
+        let correoExiste=false;
+        snap.forEach(negSnap=>{
+          const info=negSnap.child('info').val()||{};
+          const emps=negSnap.child('empleados').val()||{};
+          if((info.email||'').trim().toLowerCase()===emailEmp) correoExiste=true;
+          Object.values(emps).forEach(emp=>{
+            if((emp.email||'').trim().toLowerCase()===emailEmp) correoExiste=true;
+          });
+        });
+        if(correoExiste){
+          loginFail('creds');
+        } else {
+          loginFail('email');
+        }
+      }
     }).catch(()=>{btn.textContent='Entrar';btn.disabled=false;loginFail('conn');});
   }
 }
@@ -686,6 +754,15 @@ function haversineM(lat1,lng1,lat2,lng2){
 }
 
 function verificarGPS(esReintento){
+  // Omitir GPS en iPhone / iPad (iOS)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(isIOS){
+    gpsOk=true;
+    setGPSStatus('ok','Ubicación omitida (iOS)','N/A');
+    mostrarApp();
+    return;
+  }
+
   if(esReintento){
     setGPSStatus('pend','Obteniendo ubicación...', '...');
   }
@@ -1255,7 +1332,10 @@ function iniciarEscaneoFacial() {
   function continuarConSimulacion(msgWarning) {
     if (msgWarning) toast(msgWarning, "warn");
     if (placeholder) placeholder.style.display = 'flex';
-    if (video) video.style.display = 'none';
+    if (video) {
+      video.style.opacity = '0';
+      video.style.position = 'absolute';
+    }
     document.getElementById('reg-btn-start').style.display = 'none';
     document.getElementById('reg-scan-line').style.display = 'block';
     ejecutarPasoEscaneo(1);
@@ -1270,20 +1350,23 @@ function iniciarEscaneoFacial() {
   solicitarCamaraFrontal()
     .then(stream => {
       regStream = stream;
-      video.srcObject = stream;
       if (placeholder) placeholder.style.display = 'none';
-      video.style.display = 'block';
+      video.style.opacity = '1';
+      video.style.position = 'relative';
       
-      video.play()
-        .then(() => {
-          document.getElementById('reg-btn-start').style.display = 'none';
-          document.getElementById('reg-scan-line').style.display = 'block';
-          ejecutarPasoEscaneo(1);
-        })
-        .catch(err => {
-          console.log("Autoplay blocked, pushing forward:", err);
-          continuarConSimulacion();
-        });
+      video.onloadedmetadata = () => {
+        video.play()
+          .then(() => {
+            document.getElementById('reg-btn-start').style.display = 'none';
+            document.getElementById('reg-scan-line').style.display = 'block';
+            ejecutarPasoEscaneo(1);
+          })
+          .catch(err => {
+            console.log("Autoplay blocked, pushing forward:", err);
+            continuarConSimulacion();
+          });
+      };
+      video.srcObject = stream;
     })
     .catch(err => {
       console.error("No se pudo obtener stream de cámara:", err);
@@ -1366,8 +1449,10 @@ function iniciarCamara() {
   solicitarCamaraFrontal()
     .then(stream => {
       cameraStream = stream;
+      video.onloadedmetadata = () => {
+        video.play().catch(err => console.log("Video play error:", err));
+      };
       video.srcObject = stream;
-      video.play().catch(err => console.log("Video play error:", err));
     })
     .catch(err => {
       console.error("Camera access error:", err);
