@@ -1597,12 +1597,74 @@ function parseTime(tStr) {
   if(!tStr) return {h:0,m:0};
   const parts = tStr.split(':');
   let h = parseInt(parts[0], 10);
-  let m = parseInt(parts[1], 10);
+  let m = parseInt(parts[1], 10) || 0;
   const tLow = tStr.toLowerCase();
   if (tLow.includes('p') && h < 12) h += 12;
   if (tLow.includes('a') && h === 12) h = 0;
   return {h,m};
 }
+
+/**
+ * interpretarMinutosTurno(he, hs)
+ * 
+ * Regla de negocio: los turnos en este establecimiento son VESPERTINOS/NOCTURNOS.
+ * - Entradas entre 1:00 y 9:59 sin AM/PM explícito → se asumen PM (13–21h).
+ * - Si hora_salida < hora_entrada en minutos del día → el turno cruzó medianoche,
+ *   se añaden 24*60 minutos a la salida para calcular la diferencia real.
+ * - Límite máximo de un turno: 14 horas. Si el cálculo supera eso, se devuelve 0
+ *   para indicar un dato inválido/corrupto.
+ * 
+ * Devuelve minutos totales del turno (entrada→salida).
+ */
+function interpretarMinutosTurno(he, hs) {
+  if(!he || !hs) return 0;
+
+  // --- Parsear sin AM/PM primero ---
+  const teLow = he.toLowerCase();
+  const tsLow = hs.toLowerCase();
+
+  // Parseo básico
+  const pe = parseTime(he);
+  const ps = parseTime(hs);
+
+  // --- Corrección de entrada ambigua (sin a.m./p.m.) ---
+  // Si la hora es 1-9 y no tiene 'a' ni 'p' → asumir PM (turno vespertino)
+  const heHasAmPm = teLow.includes('a') || teLow.includes('p');
+  let heH = pe.h;
+  if (!heHasAmPm && heH >= 1 && heH <= 9) {
+    heH += 12; // 2:00 → 14:00, 3:00 → 15:00, etc.
+  }
+
+  // Salida: si tiene a.m./p.m. ya está parseada correctamente
+  // Si no tiene y es >= 10, se asume que es noche (22:00, 23:00 → sin ambigüedad)
+  // Si no tiene y es 1-9, podría ser 1:00 a.m. (madrugada) → dejar como está (1)
+  const hsHasAmPm = tsLow.includes('a') || tsLow.includes('p');
+  let hsH = ps.h;
+  // No tocar la salida: si son horas pequeñas (0-9) sin AM/PM en el contexto
+  // de un turno vespertino, son de madrugada (cruce de medianoche). Correcto.
+
+  // Minutos absolutos en el día
+  const minEntrada = heH * 60 + pe.m;
+  let minSalida = hsH * 60 + ps.m;
+
+  // Si la salida parece anterior a la entrada → cruzó medianoche
+  if (minSalida <= minEntrada) {
+    minSalida += 24 * 60;
+  }
+
+  const diff = minSalida - minEntrada;
+
+  // Sanidad: un turno no puede superar 14 horas
+  if (diff > 14 * 60 || diff <= 0) return 0;
+
+  return diff;
+}
+
+function calcularDiferenciaMinutos(he, hs) {
+  // Delega a la función con lógica de turno vespertino/nocturno
+  return interpretarMinutosTurno(he, hs);
+}
+
 function calcDetalleGanancia(id, hin, hout){
     try{
         if(!hin || !hout) return {str: '-', baseMin: 0, extraMin: 0, extraGanancia: 0};
@@ -1613,10 +1675,7 @@ function calcDetalleGanancia(id, hin, hout){
             valorHoraExtra = baseHora * 2; 
         }
         
-        const t1 = parseTime(hin);
-        const t2 = parseTime(hout);
-        let diff=(t2.h*60+t2.m)-(t1.h*60+t1.m);
-        if(diff < 0) diff += 24*60; 
+        let diff = calcularDiferenciaMinutos(hin, hout);
         
         let baseMin = 0;
         let extraMin = 0;
@@ -1648,16 +1707,50 @@ function marcarAsistencia(id,est){
     const actMin=ahora.getHours()*60+ahora.getMinutes();
     if(actMin>limInMin){tardanza=true;minutos=actMin-hh*60-mm;}
   }
-  const datos={hora_entrada:hEntrada,hora_salida:'',estado:tardanza&&est==='presente'?'tardanza':est,tardanza,minutos_tarde:minutos};
+  
+  const year = ahora.getFullYear();
+  const month = String(ahora.getMonth() + 1).padStart(2, '0');
+  const day = String(ahora.getDate()).padStart(2, '0');
+  const hoy = `${year}-${month}-${day}`;
+
+  const datos={
+    hora_entrada:hEntrada,
+    hora_salida:'',
+    estado:tardanza&&est==='presente'?'tardanza':est,
+    tardanza,
+    minutos_tarde:minutos,
+    fecha_entrada:hoy,
+    ts_entrada:ahora.getTime(),
+    timestamp_entrada:ahora.getTime()
+  };
   db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).update(datos);
+  db.ref(`negocios/${negocioID}/asistencia_gps/${hoy}/${id}`).update(datos);
   toast(tardanza?`⚠️ Tardanza de ${minutos} min registrada`:`✅ ${est==='presente'?'Entrada':'Ausencia'} registrada`,'ok');
 }
 
 function marcarSalida(id){
   const ahora=new Date();
   const hs=ahora.getHours().toString().padStart(2,'0')+':'+ahora.getMinutes().toString().padStart(2,'0');
-  db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).update({hora_salida:hs});
-  toast('🚪 Salida registrada','ok');
+  
+  const year = ahora.getFullYear();
+  const month = String(ahora.getMonth() + 1).padStart(2, '0');
+  const day = String(ahora.getDate()).padStart(2, '0');
+  const hoy = `${year}-${month}-${day}`;
+
+  db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).once('value').then(snap => {
+    const a = snap.val() || {};
+    const targetFecha = a.fecha_entrada || hoy;
+    const upd = {
+      hora_salida: hs,
+      estado: 'finalizado',
+      ts_salida: ahora.getTime(),
+      timestamp_salida: ahora.getTime()
+    };
+    db.ref(`negocios/${negocioID}/asistencia_hoy/${id}`).update(upd);
+    db.ref(`negocios/${negocioID}/asistencia_gps/${targetFecha}/${id}`).update(upd).then(() => {
+      toast('🚪 Salida registrada','ok');
+    });
+  });
 }
 
 function marcarTodosEntrada(){
@@ -1915,19 +2008,34 @@ async function renderPlanilla(){
         let he = marca.hora_entrada || marca.entrada_hora;
         let hs = marca.hora_salida || marca.salida_hora;
         
-        // Si hay entrada pero no salida, buscar salida en la mañana del dia siguiente (turno de noche)
+        // Si este registro tiene solo salida (sin entrada) es la continuación de un turno
+        // nocturno del día anterior — ya fue contado cuando procesamos el día anterior.
+        if (!he && hs) continue;
+        
+        // Si hay entrada pero no salida, buscar salida de madrugada en el día siguiente (turno nocturno)
         if (he && !hs && i < fechas.length - 1) {
              const nextMarca = asistDatos[fechas[i+1]][id];
-             if (nextMarca && (nextMarca.hora_salida || nextMarca.salida_hora) && !(nextMarca.hora_entrada || nextMarca.entrada_hora)) {
-                  hs = nextMarca.hora_salida || nextMarca.salida_hora;
+             // Solo tomar la salida del día siguiente si NO hay entrada nueva ese día
+             // (es decir, es continuación del turno anterior, no un nuevo turno)
+             if (nextMarca) {
+               const nextHe = nextMarca.hora_entrada || nextMarca.entrada_hora;
+               const nextHs = nextMarca.hora_salida || nextMarca.salida_hora;
+               if (nextHs && !nextHe) {
+                 // Caso clásico: el día siguiente tiene solo salida (sin nueva entrada)
+                 hs = nextHs;
+               } else if (nextHs && nextHe) {
+                 // El día siguiente tiene entrada Y salida: puede ser un turno nuevo.
+                 // Solo usar la salida como continuación si la hora es de madrugada (0-9)
+                 const hsH = parseInt((nextHs.split(':')[0]||'0'), 10);
+                 if (hsH >= 0 && hsH <= 9) {
+                   hs = nextHs;
+                 }
+               }
              }
         }
         
         if (he && hs) {
-            const t1 = parseTime(he);
-            const t2 = parseTime(hs);
-            let diffMin = (t2.h*60+t2.m) - (t1.h*60+t1.m);
-            if (diffMin < 0) diffMin += 24*60;
+            let diffMin = calcularDiferenciaMinutos(he, hs);
             
             if (diffMin > 0) {
               const hrs = diffMin / 60;
@@ -3505,6 +3613,10 @@ async function renderHistorial() {
         const he = marca.hora_entrada || marca.entrada_hora;
         const hs = marca.hora_salida || marca.salida_hora;
         
+        // FILTRO: si solo hay salida (sin entrada) es un registro huérfano de un turno
+        // nocturno que cruzó medianoche — no mostrar como fila independiente
+        if (!he && hs) return;
+        
         const horasObj = (he && hs) ? calcDetalleGanancia(id_emp, he, hs) : {str: '-'};
         
         html += `<tr>
@@ -3529,6 +3641,136 @@ async function renderHistorial() {
   }
 }
 
+function getLocalDateString(timestamp) {
+  const d = timestamp ? new Date(timestamp) : new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function iniciarSyncAsistencia() {
+  db.ref(`negocios/${negocioID}/asistencia_hoy`).on('value', snap => {
+    const data = snap.val() || {};
+    const hoyStr = getLocalDateString();
+    const ayerStr = getLocalDateString(Date.now() - 86400000);
+
+    Object.entries(data).forEach(([empId, asist]) => {
+      if (!asist.hora_entrada) return;
+
+      // Caso 1: Falta fecha_entrada o ts_entrada (APK vieja marcó entrada)
+      if (!asist.fecha_entrada || !asist.ts_entrada) {
+        const checkGps = (fecha) => {
+          return db.ref(`negocios/${negocioID}/asistencia_gps/${fecha}/${empId}`).once('value').then(s => {
+            const gpsData = s.val() || {};
+            const he = gpsData.hora_entrada || gpsData.entrada_hora;
+            if (he === asist.hora_entrada) {
+              const [h, m] = he.split(':').map(Number);
+              const dateObj = new Date(fecha + 'T' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':00');
+              const ts = dateObj.getTime();
+              db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).update({
+                fecha_entrada: fecha,
+                ts_entrada: ts,
+                timestamp_entrada: ts
+              });
+              return true;
+            }
+            return false;
+          });
+        };
+
+        checkGps(hoyStr).then(found => {
+          if (!found) {
+            checkGps(ayerStr).then(foundAyer => {
+              if (!foundAyer) {
+                // Fallback: usar el día de hoy
+                const [h, m] = asist.hora_entrada.split(':').map(Number);
+                const dateObj = new Date(hoyStr + 'T' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':00');
+                const ts = dateObj.getTime();
+                db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).update({
+                  fecha_entrada: hoyStr,
+                  ts_entrada: ts,
+                  timestamp_entrada: ts
+                });
+              }
+            });
+          }
+        });
+        return;
+      }
+
+      // Caso 2: Tiene entrada y salida, pero es de un día anterior (turno nocturno completado por APK vieja)
+      if (asist.fecha_entrada !== hoyStr && asist.hora_salida) {
+        const fechaEntrada = asist.fecha_entrada;
+
+        const checkAndMoveSalida = (fechaSalidaReal) => {
+          if (fechaSalidaReal === fechaEntrada) {
+            db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+            return;
+          }
+          
+          db.ref(`negocios/${negocioID}/asistencia_gps/${fechaSalidaReal}/${empId}`).once('value').then(s => {
+            const gpsData = s.val() || {};
+            const hs = gpsData.hora_salida || gpsData.salida_hora;
+            if (hs === asist.hora_salida) {
+              const updGps = {
+                hora_salida: asist.hora_salida,
+                ts_salida: asist.ts_salida || Date.now(),
+                timestamp_salida: asist.ts_salida || Date.now(),
+                estado: 'finalizado'
+              };
+              if (gpsData.salida_lat) updGps['salida_lat'] = gpsData.salida_lat;
+              if (gpsData.salida_lng) updGps['salida_lng'] = gpsData.salida_lng;
+              if (gpsData.lat_salida) updGps['lat_salida'] = gpsData.lat_salida;
+              if (gpsData.lng_salida) updGps['lng_salida'] = gpsData.lng_salida;
+              if (gpsData.foto_salida) updGps['foto_salida'] = gpsData.foto_salida;
+
+              db.ref(`negocios/${negocioID}/asistencia_gps/${fechaEntrada}/${empId}`).update(updGps).then(() => {
+                const fieldsToRemove = {
+                  hora_salida: null,
+                  salida_hora: null,
+                  ts_salida: null,
+                  timestamp_salida: null,
+                  salida_lat: null,
+                  salida_lng: null,
+                  lat_salida: null,
+                  lng_salida: null,
+                  foto_salida: null,
+                  estado: null
+                };
+                db.ref(`negocios/${negocioID}/asistencia_gps/${fechaSalidaReal}/${empId}`).update(fieldsToRemove);
+                db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+              });
+            }
+          });
+        };
+
+        db.ref(`negocios/${negocioID}/asistencia_gps/${fechaEntrada}/${empId}`).once('value').then(s => {
+          const gpsData = s.val() || {};
+          const hs = gpsData.hora_salida || gpsData.salida_hora;
+          if (hs === asist.hora_salida) {
+            db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+          } else {
+            checkAndMoveSalida(hoyStr);
+            checkAndMoveSalida(ayerStr);
+          }
+        });
+        return;
+      }
+
+      // Caso 3: Es de un día anterior, no tiene salida, pero ya pasaron más de 14 horas (salida olvidada)
+      if (asist.fecha_entrada !== hoyStr && !asist.hora_salida) {
+        const horasTranscurridas = (Date.now() - asist.ts_entrada) / 3600000;
+        // Si pasaron más de 14 horas desde la entrada de un turno vespertino/nocturno
+        // sin registrar salida, liberar el slot para que el empleado pueda marcar entrada hoy
+        if (horasTranscurridas > 14) {
+          db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+        }
+      }
+    });
+  });
+}
+
 // Inicializar fechas
 document.addEventListener('DOMContentLoaded', ()=>{
   setTimeout(()=>{
@@ -3539,6 +3781,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const sd = document.getElementById('historial-start');
     if(sd) sd.value = semanaAtras.toISOString().split('T')[0];
     llenarSelectorHistorial();
+    
+    // Iniciar corrector automático en segundo plano
+    iniciarSyncAsistencia();
   }, 1000);
 });
 \n</script>
