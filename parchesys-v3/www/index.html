@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PARCHESYS APP v3 - Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="login-container" class="container">
+        <div class="card">
+            <h2>Acceso Administrativo</h2>
+            <p>Solo personal autorizado</p>
+            <input type="email" id="admin-email" placeholder="Correo Electrónico" required>
+            <input type="password" id="admin-password" placeholder="Contraseña" required>
+            <button id="btn-admin-login" class="btn-primary">Ingresar</button>
+            <div id="login-error" class="error-text" style="display: none;"></div>
+        </div>
+    </div>
+
+    <div id="dashboard-container" class="dashboard" style="display: none;">
+        <nav class="sidebar">
+            <div class="logo">PARCHESYS Admin</div>
+            <ul class="nav-links">
+                <li class="active" data-view="dashboard">Dashboard</li>
+                <li data-view="empleados">Empleados</li>
+                <li data-view="turnos">Turnos</li>
+                <li data-view="asistencias">Asistencias</li>
+                <li data-view="planilla">Planillas</li>
+                <li data-view="dispositivos">Dispositivos</li>
+                <li data-view="auditoria">Auditoría</li>
+                <li data-view="configuracion">Configuración</li>
+            </ul>
+            <button id="btn-admin-logout" class="btn-danger">Cerrar Sesión</button>
+        </nav>
+        <main class="content">
+            <header>
+                <h1 id="view-title">Dashboard</h1>
+                <div class="user-info">Administrador</div>
+            </header>
+            
+            <div id="view-dashboard" class="view-section active">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Empleados Activos</h3>
+                        <div id="stat-empleados" class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Asistencias Hoy</h3>
+                        <div id="stat-asistencias" class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Dispositivos Vinculados</h3>
+                        <div id="stat-dispositivos" class="stat-value">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- More views will be populated dynamically via JS -->
+            <div id="view-empleados" class="view-section" style="display:none;">
+                <button id="btn-import-v2" class="btn-primary" style="background-color: #f59e0b; margin-right: 10px;">Importar Empleados de v2</button><button id="btn-crear-empleado" class="btn-primary">Nuevo Empleado</button>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>PIN</th>
+                            <th>Estado</th>
+                            <th>Dispositivo</th>
+                            <th>Última Actividad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-empleados">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="view-asistencias" class="view-section" style="display:none;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+                    <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Tipo</th>
+                            <th>Fecha/Hora</th>
+                            <th>Validación</th>
+                            <th>Ubicación</th>
+                            <th>Distancia</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-asistencias">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="view-dispositivos" class="view-section" style="display:none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Empleado</th>
+                            <th>Device ID</th>
+                            <th>Modelo</th>
+                            <th>SO</th>
+                            <th>Vinculación</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-dispositivos">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="view-auditoria" class="view-section" style="display:none;">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Usuario</th>
+                            <th>Acción</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-auditoria">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="view-turnos" class="view-section" style="display:none;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <input type="date" id="turnos-fecha-inicio" class="input-field" title="Inicio de Semana">
+                    <button class="btn-primary" onclick="loadTurnosSemana()">Cargar Semana</button>
+                    <button class="btn-primary" onclick="document.getElementById('modalTurno').style.display='flex'">Asignar Turno</button>
+                    <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr id="tb-turnos-head">
+                                <th>Empleado</th>
+                                <th>Lunes</th>
+                                <th>Martes</th>
+                                <th>Miércoles</th>
+                                <th>Jueves</th>
+                                <th>Viernes</th>
+                                <th>Sábado</th>
+                                <th>Domingo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-turnos">
+                            <!-- Dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-planilla" class="view-section" style="display:none;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                    <input type="date" id="planilla-fecha-inicio" class="input-field" title="Desde">
+                    <input type="date" id="planilla-fecha-fin" class="input-field" title="Hasta">
+                    <button class="btn-primary" onclick="calcularPlanillaUI()">Generar Planilla</button>
+                    <button class="btn-primary" onclick="guardarCortePlanilla()" style="background-color: #ef4444;">Guardar Histórico</button>
+                    <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Empleado</th>
+                                <th>Hrs Regulares</th>
+                                <th>Hrs Extras</th>
+                                <th>Salario Base</th>
+                                <th>Pago Extras</th>
+                                <th>ISSS</th>
+                                <th>AFP</th>
+                                <th>Deducciones</th>
+                                <th>Total Neto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-planilla">
+                            <!-- Dynamic -->
+                        </tbody>
+                        <tfoot>
+                            <tr style="font-weight: bold; background-color: #f8fafc;">
+                                <td colspan="8" style="text-align: right;">GRAN TOTAL:</td>
+                                <td id="planilla-gran-total">$0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-configuracion" class="view-section" style="display:none;">
+                <div class="card">
+                    <h3>Parámetros del Sistema</h3>
+                    <div class="form-group">
+                        <label>Radio Permitido GPS (metros)</label>
+                        <input type="number" id="config-radio" value="150">
+                    </div>
+                    <button id="btn-guardar-config" class="btn-primary">Guardar Cambios</button>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-empleado" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 id="modal-empleado-title">Nuevo Empleado</h3>
+            <input type="text" id="emp-nombre" placeholder="Nombre completo">
+            <input type="text" id="emp-pin" placeholder="PIN de 4-6 dígitos">
+            <input type="number" id="emp-salario" placeholder="Costo Hora Regular ($)">
+            <input type="number" id="emp-valor-extra" placeholder="Costo Hora Extra ($)">
+            <label style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                <input type="checkbox" id="emp-aplica-ley"> Aplica Descuentos de Ley (ISSS/AFP)
+            </label>
+            <div class="modal-actions">
+                <button id="btn-cancelar-empleado" class="btn-secondary">Cancelar</button>
+                <button id="btn-guardar-empleado" class="btn-primary">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals Info -->
+    <div id="modal-info" class="modal" style="display: none;">
+        <div class="modal-content info-content" id="modal-info-content">
+            <!-- Dynamic info -->
+        </div>
+    </div>
+
+    <script type="module" src="js/admin.js"></script>`n    <script type="module" src="js/turnos_planillas.js"></script>
+</body>
+</html>
+
+
+    <!-- Modal Turno -->
+    <div id="modalTurno" class="modal" style="display:none;">
+        <div class="modal-content">
+            <h3>Asignar Turno</h3>
+              <select id="turno-empleado" class="input-field">
+                  <option value="">Seleccionar Empleado</option>
+              </select>
+              <input type="date" id="turno-fecha" class="input-field">
+              
+              <label>Preset de Turno:</label>
+              <select id="turno-preset" class="input-field" onchange="aplicarPresetTurno()">
+                  <option value="">Personalizado</option>
+                  <option value="14:00-22:00">Tarde 1 (2:00 PM a 10:00 PM)</option>
+                  <option value="15:00-23:00">Tarde 2 (3:00 PM a 11:00 PM)</option>
+              </select>
+
+              <label>Hora Entrada:</label>
+              <input type="time" id="turno-in" class="input-field">
+              <label>Hora Salida:</label>
+              <input type="time" id="turno-out" class="input-field">
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('modalTurno').style.display='none'">Cancelar</button>
+                <button class="btn-primary" onclick="guardarTurnoUI()">Guardar Turno</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

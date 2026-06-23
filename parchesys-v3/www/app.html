@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PARCHESYS - Asistencia</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app-container" class="mobile-container">
+        <!-- Pantalla de Login (PIN) -->
+        <div id="screen-login" class="screen active">
+            <div class="logo-large">PARCHESYS</div>
+            <h2>Control de Asistencia</h2>
+            <p>Ingresa tu PIN personal</p>
+            
+            <div class="pin-display">
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+            </div>
+
+            <div class="keypad">
+                <button class="key" data-val="1">1</button>
+                <button class="key" data-val="2">2</button>
+                <button class="key" data-val="3">3</button>
+                <button class="key" data-val="4">4</button>
+                <button class="key" data-val="5">5</button>
+                <button class="key" data-val="6">6</button>
+                <button class="key" data-val="7">7</button>
+                <button class="key" data-val="8">8</button>
+                <button class="key" data-val="9">9</button>
+                <button class="key action-key" id="btn-clear-pin">C</button>
+                <button class="key" data-val="0">0</button>
+                <button class="key action-key" id="btn-submit-pin">OK</button>
+            </div>
+            
+            <div id="login-status" class="status-message"></div>
+        </div>
+
+        <!-- Pantalla Principal Empleado -->
+        <div id="screen-main" class="screen" style="display: none;">
+            <header class="app-header">
+                <div class="user-greeting">Hola, <span id="emp-name-display">Usuario</span></div>
+                <button id="btn-logout" class="btn-icon">🚪</button>
+            </header>
+
+            <div class="status-card">
+                <div class="status-label">Estado Actual</div>
+                <div id="current-status" class="status-value">DESCONOCIDO</div>
+                <div class="status-time" id="last-record-time">--:--</div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="btn-entrada" class="btn-massive btn-success">REGISTRAR ENTRADA</button>
+                <button id="btn-salida" class="btn-massive btn-danger">REGISTRAR SALIDA</button>
+            </div>
+
+            <div class="info-section">
+                <h3>Ubicación Base</h3>
+                <div id="location-status" class="loc-status">
+                    Validando...
+                </div>
+            </div>
+
+            <!-- Overlay para Procesando -->
+            <div id="processing-overlay" class="overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p id="processing-text">Validando seguridad...</p>
+            </div>
+            
+            <!-- Video Capture for Web Selfie -->
+            <div id="selfie-container" class="overlay" style="display: none;">
+                <div class="camera-ui">
+                    <h3>Autenticación Facial (Selfie)</h3>
+                    <p>Por favor, ubica tu rostro en el centro</p>
+                    <video id="selfie-video" autoplay playsinline></video>
+                    <button id="btn-take-selfie" class="btn-primary">Capturar</button>
+                    <button id="btn-cancel-selfie" class="btn-secondary">Cancelar</button>
+                    <canvas id="selfie-canvas" style="display:none;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capacitor JS -->
+    <script src="capacitor.js"></script>
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
