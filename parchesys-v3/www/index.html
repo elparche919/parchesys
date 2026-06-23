@@ -11,8 +11,7 @@
         <div class="card">
             <h2>Acceso Administrativo</h2>
             <p>Solo personal autorizado</p>
-            <input type="email" id="admin-email" placeholder="Correo Electrónico" required>
-            <input type="password" id="admin-password" placeholder="Contraseña" required>
+            <input type="password" id="admin-pin" placeholder="PIN Administrativo" required>
             <button id="btn-admin-login" class="btn-primary">Ingresar</button>
             <div id="login-error" class="error-text" style="display: none;"></div>
         </div>
@@ -89,6 +88,7 @@
                             <th>Validación</th>
                             <th>Ubicación</th>
                             <th>Distancia</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-asistencias">
@@ -213,8 +213,11 @@
     <div id="modal-empleado" class="modal" style="display: none;">
         <div class="modal-content">
             <h3 id="modal-empleado-title">Nuevo Empleado</h3>
+            <input type="hidden" id="emp-id">
             <input type="text" id="emp-nombre" placeholder="Nombre completo">
             <input type="text" id="emp-pin" placeholder="PIN de 4-6 dígitos">
+            <input type="text" id="emp-telefono" placeholder="Teléfono (Opcional)">
+            <input type="text" id="emp-dui" placeholder="DUI (Opcional)">
             <input type="number" id="emp-salario" placeholder="Costo Hora Regular ($)">
             <input type="number" id="emp-valor-extra" placeholder="Costo Hora Extra ($)">
             <label style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
@@ -231,6 +234,27 @@
     <div id="modal-info" class="modal" style="display: none;">
         <div class="modal-content info-content" id="modal-info-content">
             <!-- Dynamic info -->
+        </div>
+    </div>
+
+    <!-- Modal Editar Asistencia -->
+    <div id="modal-asistencia" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Editar Asistencia</h3>
+            <input type="hidden" id="edit-asis-id">
+            <label>Tipo de Movimiento:</label>
+            <select id="edit-asis-tipo" class="input-field">
+                <option value="ENTRADA">ENTRADA</option>
+                <option value="SALIDA">SALIDA</option>
+            </select>
+            <label>Fecha:</label>
+            <input type="date" id="edit-asis-fecha" class="input-field">
+            <label>Hora:</label>
+            <input type="time" id="edit-asis-hora" step="1" class="input-field">
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('modal-asistencia').style.display='none'">Cancelar</button>
+                <button class="btn-primary" onclick="guardarEdicionAsistencia()">Guardar Cambio</button>
+            </div>
         </div>
     </div>
 
