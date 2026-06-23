@@ -298,7 +298,6 @@ window.calcularPlanillaUI = async function() {
 
         let granTotal = 0;
         let resultadoPlanilla = [];
-        let debugOutputHTML = ''; // Para diagnóstico
         tbody.innerHTML = '';
 
         empleados.forEach(emp => {
@@ -308,11 +307,12 @@ window.calcularPlanillaUI = async function() {
             // 1. Ordenar asistencias cronológicamente exacto usando el parseador seguro
             asisEmp.sort((a, b) => getValidDate(a) - getValidDate(b));
             
-            const tiempoPorFechaTurno = {};
             let entradaActual = null;
             
-            // 2. Emparejar Entradas y Salidas globalmente
+            let minRegulares = 0;
+            let minExtra = 0;
             let logsEmp = [];
+            
             asisEmp.forEach(a => {
                 const tipo = (a.tipoMovimiento || '').trim().toUpperCase();
                 if (tipo === 'ENTRADA') {
@@ -322,51 +322,37 @@ window.calcularPlanillaUI = async function() {
                     const d2 = getValidDate(a);
                     const trabajadoMins = (d2 - d1) / 60000;
                     
-                    logsEmp.push(`PAR: Entrada=${d1.toISOString()}, Salida=${d2.toISOString()}, Mins=${trabajadoMins}`);
-
                     if (trabajadoMins > 0) {
-                        // Verificamos si la fecha del turno ENTRADA o la SALIDA caen en nuestro rango de consulta
                         const d1Time = d1.getTime();
                         const d2Time = d2.getTime();
                         
-                        // Si cualquier parte del turno (entrada o salida) cae en la semana actual, lo cobramos.
+                        // Si el turno entra en el rango de la planilla
                         if ((d1Time >= startTimestamp && d1Time <= endTimestamp) || (d2Time >= startTimestamp && d2Time <= endTimestamp)) {
-                            // Convertir fecha de entrada al estandar ISO si estaba en DD/MM/YYYY
                             let shiftDate = entradaActual.fecha;
                             if (shiftDate.includes('/')) {
                                 const p = shiftDate.split('/');
                                 shiftDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
                             }
 
-                            if (!tiempoPorFechaTurno[shiftDate]) {
-                                tiempoPorFechaTurno[shiftDate] = 0;
+                            // Buscar el límite de horas regulares de este turno (asignado o 8 horas por defecto)
+                            const turno = turnosEmp.find(t => t.fecha === shiftDate);
+                            let limiteRegularMins = 8 * 60; // 8 horas por defecto
+                            if (turno) {
+                                limiteRegularMins = calcularMinutosEntreHoras(turno.hora_in, turno.hora_out);
                             }
-                            tiempoPorFechaTurno[shiftDate] += trabajadoMins;
+
+                            // El contador se reinicia en cada marcaje: las primeras X horas son regulares, el resto extra
+                            if (trabajadoMins >= limiteRegularMins) {
+                                minRegulares += limiteRegularMins;
+                                minExtra += (trabajadoMins - limiteRegularMins);
+                            } else {
+                                minRegulares += trabajadoMins;
+                            }
                         }
                     }
                     entradaActual = null; // Reset para el siguiente par
                 }
             });
-            
-            let minRegulares = 0;
-            let minExtra = 0;
-            
-            // 3. Separar en Regulares y Extras por cada día de turno acumulado
-            for (const [shiftDate, totalTrabajado] of Object.entries(tiempoPorFechaTurno)) {
-                const turno = turnosEmp.find(t => t.fecha === shiftDate);
-                if (turno) {
-                    const duracionTurno = calcularMinutosEntreHoras(turno.hora_in, turno.hora_out);
-                    if (totalTrabajado >= duracionTurno) {
-                        minRegulares += duracionTurno;
-                        minExtra += (totalTrabajado - duracionTurno);
-                    } else {
-                        minRegulares += totalTrabajado;
-                    }
-                } else {
-                    // Si no tenía turno asignado ese día, todo es extra
-                    minExtra += totalTrabajado;
-                }
-            }
 
             const horasRegDecimal = minRegulares / 60;
             const horasExtDecimal = minExtra / 60;
@@ -381,20 +367,6 @@ window.calcularPlanillaUI = async function() {
             let pagoExtra = horasExtDecimal * costoExtra;
             
             const neto = subtotal + pagoExtra;
-
-            // Inyectar datos de depuración si es el usuario 5555
-            if (emp.pin === '5555' || emp.nombre.includes('5555')) {
-                debugOutputHTML += `<div style="background:#fce4e4; padding:10px; margin-top:20px; text-align:left; font-size:12px; font-family:monospace; color:#333;">
-                    <strong>DEBUG USUARIO 5555:</strong><br>
-                    - Horas Calculadas: ${horasReg} Reg, ${horasExt} Ext<br>
-                    - Salario Asignado: $${costoHora} Reg, $${costoExtra} Ext<br>
-                    - Asistencias Crudas Obtenidas: ${asisEmp.length}<br>
-                    ${asisEmp.map(x => `* ${x.tipoMovimiento} | fecha: ${x.fecha} | hora: ${x.hora}`).join('<br>')}<br>
-                    - Emparejamientos:<br>
-                    ${logsEmp.join('<br>')}<br>
-                    - TiempoPorFechaTurno: ${JSON.stringify(tiempoPorFechaTurno)}
-                </div>`;
-            }
 
             resultadoPlanilla.push({
                 empId: emp.id,
@@ -423,11 +395,6 @@ window.calcularPlanillaUI = async function() {
         });
 
         document.getElementById('planilla-gran-total').textContent = `$${granTotal.toFixed(2)}`;
-        
-        // Agregar panel de depuración al final
-        if (debugOutputHTML) {
-            tbody.innerHTML += `<tr><td colspan="8">${debugOutputHTML}</td></tr>`;
-        }
         
         ultimaPlanillaCalculada = {
             rango: `${inicio} al ${fin}`,
