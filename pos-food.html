@@ -1840,7 +1840,23 @@ body {
       <div style="background:rgba(16,185,129,0.06); border:1px solid rgba(16,185,129,0.2); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:6px;">
         <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:var(--text-muted);">Cajero Responsable:</span><span id="caja-info-usuario" style="font-weight:bold; color:white;">--</span></div>
         <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:var(--text-muted);">Apertura:</span><span id="caja-info-fecha" style="font-weight:bold; color:white;">--</span></div>
-        <div style="display:flex; justify-content:space-between; font-size:12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; margin-top:2px;"><span style="color:var(--text-muted);">Fondo Inicial:</span><span id="caja-info-inicial" style="font-weight:bold; color:white;">$0.00</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; border-top:1px solid rgba(255,255,255,0.05); padding-top:6px; margin-top:2px;">
+          <span style="color:var(--text-muted);">Fondo Inicial:</span>
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span id="caja-info-inicial" style="font-weight:bold; color:white;">$0.00</span>
+            <button onclick="abrirAjusteMontoInicial()" type="button" title="Ajustar fondo inicial" style="background:none; border:1px solid var(--border); color:var(--text-muted); border-radius:6px; width:22px; height:22px; font-size:11px; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+          </span>
+        </div>
+        <!-- Ajuste de Fondo Inicial (oculto por defecto) -->
+        <div id="caja-ajuste-inicial-box" style="display:none; flex-direction:column; gap:8px; margin-top:8px; padding-top:10px; border-top:1px dashed var(--border);">
+          <input type="number" id="caja-ajuste-monto" class="fi" placeholder="Nuevo fondo inicial $" step="0.01" style="font-size:14px; font-weight:bold; text-align:center;">
+          <input type="password" id="caja-ajuste-pin" class="fi" placeholder="PIN de autorización" maxlength="6" inputmode="numeric" style="font-size:14px; text-align:center; letter-spacing:3px;">
+          <div id="caja-ajuste-err" style="display:none; color:var(--danger); font-size:11px; font-weight:bold; text-align:center;">⚠ PIN incorrecto</div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn-sec" onclick="cerrarAjusteMontoInicial()" type="button" style="flex:1; padding:8px; font-size:11px;">Cancelar</button>
+            <button class="btn-sec" onclick="guardarAjusteMontoInicial()" type="button" style="flex:1; padding:8px; font-size:11px; background:var(--accent); color:#000;">Guardar</button>
+          </div>
+        </div>
       </div>
 
       <!-- Totales Sistema -->
@@ -2222,6 +2238,10 @@ document.addEventListener('DOMContentLoaded', function(){
   cargarHistorial();
   cargarMeseros();
   cargarPendientes();
+  
+  // Iniciar corrector automático de asistencia en segundo plano
+  if (typeof iniciarSyncAsistencia === 'function') iniciarSyncAsistencia();
+  
   // Show pending offline orders count on load
   setTimeout(_actualizarBadgeOffline, 1000);
 
@@ -2466,20 +2486,12 @@ function consultarCajaSesion() {
       _cajaSesion = snap.val();
       localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
     } else {
-      // Intentar cargar de local storage
-      var cached = localStorage.getItem('caja_sesion_' + negocioID);
-      if (cached) {
-        try {
-          _cajaSesion = JSON.parse(cached);
-          if (_cajaSesion.estado !== 'abierta') {
-            _cajaSesion = null;
-          }
-        } catch(e) {
-          _cajaSesion = null;
-        }
-      } else {
-        _cajaSesion = null;
-      }
+      // Firebase confirma que no hay sesión activa (caja cerrada).
+      // Ya no usamos el caché local como fuente de verdad aquí: solo serviría
+      // para casos de arranque offline (manejados por Firebase persistence),
+      // pero nunca debe contradecir un estado ya confirmado por el servidor.
+      _cajaSesion = null;
+      localStorage.removeItem('caja_sesion_' + negocioID);
     }
     actualizarCajaUI();
   });
@@ -2579,6 +2591,93 @@ function cerrarWarningMesaModal() {
     overlay.classList.remove('open');
     overlay.style.display = 'none';
   }
+}
+
+function abrirAjusteMontoInicial() {
+  if (!_cajaSesion) return;
+  document.getElementById('caja-ajuste-monto').value = _cajaSesion.monto_inicial || 0;
+  document.getElementById('caja-ajuste-pin').value = '';
+  document.getElementById('caja-ajuste-err').style.display = 'none';
+  document.getElementById('caja-ajuste-inicial-box').style.display = 'flex';
+}
+
+function cerrarAjusteMontoInicial() {
+  document.getElementById('caja-ajuste-inicial-box').style.display = 'none';
+}
+
+function guardarAjusteMontoInicial() {
+  if (!_cajaSesion) return;
+
+  var montoStr = document.getElementById('caja-ajuste-monto').value;
+  var pin = document.getElementById('caja-ajuste-pin').value.trim();
+  var errDiv = document.getElementById('caja-ajuste-err');
+
+  if (!montoStr || parseFloat(montoStr) < 0) {
+    toast('Ingresa un fondo inicial válido (mayor o igual a 0)', 'err');
+    return;
+  }
+  if (!pin) {
+    toast('Ingresa tu PIN de autorización', 'err');
+    return;
+  }
+
+  errDiv.style.display = 'none';
+
+  db.ref('negocios/' + negocioID + '/empleados').once('value').then(function(snap) {
+    var foundEmp = null;
+    if (snap.exists()) {
+      snap.forEach(function(c) {
+        var emp = c.val();
+        var empPin = String(emp.pin || emp.pin_app || '').trim();
+        if (empPin === pin && !foundEmp) {
+          foundEmp = emp;
+        }
+      });
+    }
+
+    if (!foundEmp) {
+      errDiv.textContent = '⚠ PIN incorrecto';
+      errDiv.style.display = 'block';
+      return;
+    }
+
+    var nuevoMonto = parseFloat(montoStr) || 0;
+    var montoAnterior = _cajaSesion.monto_inicial || 0;
+
+    if (!_cajaSesion.ajustes_fondo_inicial) {
+      _cajaSesion.ajustes_fondo_inicial = [];
+    }
+    _cajaSesion.ajustes_fondo_inicial.push({
+      monto_anterior: montoAnterior,
+      monto_nuevo: nuevoMonto,
+      usuario: foundEmp.nombre,
+      timestamp: Date.now()
+    });
+    _cajaSesion.monto_inicial = nuevoMonto;
+
+    var efecVentas = _cajaSesion.ventas_efectivo || 0;
+    var ingresosSum = 0;
+    if (_cajaSesion.ingresos_efectivo && _cajaSesion.ingresos_efectivo.length) {
+      _cajaSesion.ingresos_efectivo.forEach(function(i) {
+        ingresosSum += parseFloat(i.monto) || 0;
+      });
+    }
+    _cajaSesion.monto_esperado = nuevoMonto + efecVentas + ingresosSum;
+
+    var updates = {};
+    updates['negocios/' + negocioID + '/caja_sesion_activa'] = _cajaSesion;
+    updates['negocios/' + negocioID + '/cajas/' + _cajaSesion.id] = _cajaSesion;
+
+    db.ref().update(updates).then(function() {
+      localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
+      toast('💰 Fondo inicial actualizado a $' + nuevoMonto.toFixed(2) + ' por ' + foundEmp.nombre, 'ok');
+      cerrarAjusteMontoInicial();
+      abrirModalCaja(); // refrescar vista
+    }).catch(function(e) {
+      toast('Error al guardar el ajuste de fondo inicial', 'err');
+      console.error(e);
+    });
+  });
 }
 
 function abrirCajaSesion() {
@@ -2763,7 +2862,7 @@ function cerrarCajaSesion() {
       // Limpiar local state
       var finalTemp = Object.assign({}, sesionFinal);
       _cajaSesion = null;
-      localStorage.removeItem('caja_session_' + negocioID);
+      localStorage.removeItem('caja_sesion_' + negocioID);
       actualizarCajaUI();
       cerrarModalCaja();
       
@@ -3893,6 +3992,7 @@ function cargarProductos(){
       if(p && p.nombre){
         p._id = c.key;
         p._cat = p.categoria || p.cat || 'General';
+        if(String(p._cat).trim().toLowerCase() === 'bodega') return; // Bodega: stock oculto, nunca visible/vendible en POS
         tempProds[c.key] = p;
         cats.add(p._cat);
       }
@@ -3901,6 +4001,7 @@ function cargarProductos(){
     // Si está vacía, intentar estructura anidada por categorías
     if(Object.keys(tempProds).length === 0){
       snap.forEach(function(catSnap){
+        if(String(catSnap.key).trim().toLowerCase() === 'bodega') return; // Bodega: stock oculto, nunca visible/vendible en POS
         var items = catSnap.val();
         if(typeof items === 'object' && items !== null && !items.nombre){
           Object.keys(items).forEach(function(id){
@@ -4068,7 +4169,13 @@ function renderProds(prods){
   var g = document.getElementById('prod-grid');
   if(!prods.length){ g.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--muted);font-size:12px">Sin resultados</div>'; return; }
   g.innerHTML = prods.map(function(p){
-    var stockVal = parseFloat(p.stockFijo || 0);
+    var hasVariants = p.variantes && p.variantes.length > 0;
+    var stockVal = 0;
+    if (hasVariants) {
+      stockVal = p.variantes.reduce(function(sum, v) { return sum + parseFloat(v.stock || 0); }, 0);
+    } else {
+      stockVal = parseFloat(p.stockFijo || 0);
+    }
     var descStock = !!p.descuenta;
     var isAgotado = p.disponible===false || p.activo===false || p.oculto===true || (descStock && stockVal <= 0);
     var agotado = isAgotado ? 'agotado' : '';
@@ -7142,6 +7249,135 @@ function switchMobileTab(t){
   if(t===1) document.querySelector('.pnl-l').classList.add('active-tab');
   if(t===2) document.querySelector('.pnl-c').classList.add('active-tab');
   if(t===3) document.querySelector('.pnl-r').classList.add('active-tab');
+}
+
+function getLocalDateString(timestamp) {
+  const d = timestamp ? new Date(timestamp) : new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function iniciarSyncAsistencia() {
+  if (typeof db === 'undefined' || !db) return;
+  db.ref(`negocios/${negocioID}/asistencia_hoy`).on('value', snap => {
+    const data = snap.val() || {};
+    const hoyStr = getLocalDateString();
+    const ayerStr = getLocalDateString(Date.now() - 86400000);
+
+    Object.entries(data).forEach(([empId, asist]) => {
+      if (!asist.hora_entrada) return;
+
+      // Caso 1: Falta fecha_entrada o ts_entrada (APK vieja marcó entrada)
+      if (!asist.fecha_entrada || !asist.ts_entrada) {
+        const checkGps = (fecha) => {
+          return db.ref(`negocios/${negocioID}/asistencia_gps/${fecha}/${empId}`).once('value').then(s => {
+            const gpsData = s.val() || {};
+            const he = gpsData.hora_entrada || gpsData.entrada_hora;
+            if (he === asist.hora_entrada) {
+              const [h, m] = he.split(':').map(Number);
+              const dateObj = new Date(fecha + 'T' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':00');
+              const ts = dateObj.getTime();
+              db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).update({
+                fecha_entrada: fecha,
+                ts_entrada: ts,
+                timestamp_entrada: ts
+              });
+              return true;
+            }
+            return false;
+          });
+        };
+
+        checkGps(hoyStr).then(found => {
+          if (!found) {
+            checkGps(ayerStr).then(foundAyer => {
+              if (!foundAyer) {
+                // Fallback: usar el día de hoy
+                const [h, m] = asist.hora_entrada.split(':').map(Number);
+                const dateObj = new Date(hoyStr + 'T' + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':00');
+                const ts = dateObj.getTime();
+                db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).update({
+                  fecha_entrada: hoyStr,
+                  ts_entrada: ts,
+                  timestamp_entrada: ts
+                });
+              }
+            });
+          }
+        });
+        return;
+      }
+
+      // Caso 2: Tiene entrada y salida, pero es de un día anterior (turno nocturno completado por APK vieja)
+      if (asist.fecha_entrada !== hoyStr && asist.hora_salida) {
+        const fechaEntrada = asist.fecha_entrada;
+
+        const checkAndMoveSalida = (fechaSalidaReal) => {
+          if (fechaSalidaReal === fechaEntrada) {
+            db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+            return;
+          }
+          
+          db.ref(`negocios/${negocioID}/asistencia_gps/${fechaSalidaReal}/${empId}`).once('value').then(s => {
+            const gpsData = s.val() || {};
+            const hs = gpsData.hora_salida || gpsData.salida_hora;
+            if (hs === asist.hora_salida) {
+              const updGps = {
+                hora_salida: asist.hora_salida,
+                ts_salida: asist.ts_salida || Date.now(),
+                timestamp_salida: asist.ts_salida || Date.now(),
+                estado: 'finalizado'
+              };
+              if (gpsData.salida_lat) updGps['salida_lat'] = gpsData.salida_lat;
+              if (gpsData.salida_lng) updGps['salida_lng'] = gpsData.salida_lng;
+              if (gpsData.lat_salida) updGps['lat_salida'] = gpsData.lat_salida;
+              if (gpsData.lng_salida) updGps['lng_salida'] = gpsData.lng_salida;
+              if (gpsData.foto_salida) updGps['foto_salida'] = gpsData.foto_salida;
+
+              db.ref(`negocios/${negocioID}/asistencia_gps/${fechaEntrada}/${empId}`).update(updGps).then(() => {
+                const fieldsToRemove = {
+                  hora_salida: null,
+                  salida_hora: null,
+                  ts_salida: null,
+                  timestamp_salida: null,
+                  salida_lat: null,
+                  salida_lng: null,
+                  lat_salida: null,
+                  lng_salida: null,
+                  foto_salida: null,
+                  estado: null
+                };
+                db.ref(`negocios/${negocioID}/asistencia_gps/${fechaSalidaReal}/${empId}`).update(fieldsToRemove);
+                db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+              });
+            }
+          });
+        };
+
+        db.ref(`negocios/${negocioID}/asistencia_gps/${fechaEntrada}/${empId}`).once('value').then(s => {
+          const gpsData = s.val() || {};
+          const hs = gpsData.hora_salida || gpsData.salida_hora;
+          if (hs === asist.hora_salida) {
+            db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+          } else {
+            checkAndMoveSalida(hoyStr);
+            checkAndMoveSalida(ayerStr);
+          }
+        });
+        return;
+      }
+
+      // Caso 3: Es de un día anterior, no tiene salida, pero ya pasaron más de 14 horas (salida olvidada)
+      if (asist.fecha_entrada !== hoyStr && !asist.hora_salida) {
+        const horasTranscurridas = (Date.now() - asist.ts_entrada) / 3600000;
+        if (horasTranscurridas > 14) {
+          db.ref(`negocios/${negocioID}/asistencia_hoy/${empId}`).set(null);
+        }
+      }
+    });
+  });
 }
 </script>
 </body>
