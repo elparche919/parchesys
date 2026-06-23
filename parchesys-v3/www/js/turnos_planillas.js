@@ -23,6 +23,13 @@ window.aplicarPresetTurno = function() {
 // TURNOS
 // -------------------------------
 
+window.cargarSemanaActualTurnos = function() {
+    const monday = getMonday(new Date());
+    const strDate = monday.toISOString().split('T')[0];
+    document.getElementById('turnos-fecha-inicio').value = strDate;
+    window.loadTurnosSemana();
+}
+
 window.loadTurnosSemana = async function() {
     const inputFecha = document.getElementById('turnos-fecha-inicio').value;
     if (!inputFecha) {
@@ -156,6 +163,44 @@ function calcularMinutosEntreHoras(hIn, hOut) {
     return (h2 * 60 + m2) - (h1 * 60 + m1);
 }
 
+window.cargarSemanaActualPlanilla = function() {
+    const monday = getMonday(new Date());
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    document.getElementById('planilla-fecha-inicio').value = monday.toISOString().split('T')[0];
+    document.getElementById('planilla-fecha-fin').value = sunday.toISOString().split('T')[0];
+    window.calcularPlanillaUI();
+}
+
+window.recalcularFilaPlanilla = function(empId) {
+    const row = document.getElementById(`fila-planilla-${empId}`);
+    if(!row) return;
+
+    const subtotal = parseFloat(row.dataset.subtotal) || 0;
+    const pagoExtra = parseFloat(row.dataset.pagoextra) || 0;
+    
+    const bonoManual = parseFloat(document.getElementById(`bono-${empId}`).value) || 0;
+    const deducManual = parseFloat(document.getElementById(`deduc-${empId}`).value) || 0;
+    
+    const nuevoNeto = subtotal + pagoExtra + bonoManual - deducManual;
+    
+    document.getElementById(`neto-${empId}`).textContent = `$${nuevoNeto.toFixed(2)}`;
+    
+    let granTotal = 0;
+    const filas = document.querySelectorAll('[id^="fila-planilla-"]');
+    filas.forEach(f => {
+        const id = f.id.replace('fila-planilla-', '');
+        const st = parseFloat(f.dataset.subtotal) || 0;
+        const pe = parseFloat(f.dataset.pagoextra) || 0;
+        const bm = parseFloat(document.getElementById(`bono-${id}`).value) || 0;
+        const dm = parseFloat(document.getElementById(`deduc-${id}`).value) || 0;
+        granTotal += (st + pe + bm - dm);
+    });
+    
+    document.getElementById('planilla-gran-total').textContent = `$${granTotal.toFixed(2)}`;
+}
+
 window.calcularPlanillaUI = async function() {
     const inicio = document.getElementById('planilla-fecha-inicio').value;
     const fin = document.getElementById('planilla-fecha-fin').value;
@@ -166,20 +211,17 @@ window.calcularPlanillaUI = async function() {
     }
 
     const tbody = document.getElementById('tabla-planilla');
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;">Calculando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Calculando...</td></tr>';
 
     try {
-        // 1. Obtener empleados activos
         const empSnap = await getDocs(query(collection(db, "empleados"), where("estado", "==", "Activo")));
         const empleados = [];
         empSnap.forEach(d => empleados.push({ id: d.id, ...d.data() }));
 
-        // 2. Obtener turnos en el rango
         const turnosSnap = await getDocs(query(collection(db, "turnos"), where("fecha", ">=", inicio), where("fecha", "<=", fin)));
         const turnos = [];
         turnosSnap.forEach(t => turnos.push({ id: t.id, ...t.data() }));
 
-        // 3. Obtener asistencias en el rango
         const asisSnap = await getDocs(query(collection(db, "asistencias"), where("fecha", ">=", inicio), where("fecha", "<=", fin)));
         const asistencias = [];
         asisSnap.forEach(a => asistencias.push({ id: a.id, ...a.data() }));
@@ -206,8 +248,8 @@ window.calcularPlanillaUI = async function() {
                 if (turno && asisDia.length > 0) {
                     const duracionTurno = calcularMinutosEntreHoras(turno.hora_in, turno.hora_out);
                     
-                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada');
-                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida');
+                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada' || a.tipoMovimiento === 'ENTRADA');
+                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida' || a.tipoMovimiento === 'SALIDA');
                     
                     if (entradas.length > 0 && salidas.length > 0) {
                         const primeraEntrada = entradas[0];
@@ -224,8 +266,8 @@ window.calcularPlanillaUI = async function() {
                         }
                     }
                 } else if (!turno && asisDia.length > 0) {
-                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada');
-                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida');
+                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada' || a.tipoMovimiento === 'ENTRADA');
+                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida' || a.tipoMovimiento === 'SALIDA');
                     if (entradas.length > 0 && salidas.length > 0) {
                         const trabajado = calcularMinutosEntreHoras(entradas[0].hora, salidas[salidas.length - 1].hora);
                         if (trabajado > 0) minExtra += trabajado;
@@ -235,25 +277,19 @@ window.calcularPlanillaUI = async function() {
                 currD.setDate(currD.getDate() + 1);
             }
 
-            const horasReg = (minRegulares / 60).toFixed(2);
-            const horasExt = (minExtra / 60).toFixed(2);
+            const horasRegDecimal = minRegulares / 60;
+            const horasExtDecimal = minExtra / 60;
+            
+            const horasReg = horasRegDecimal.toFixed(2);
+            const horasExt = horasExtDecimal.toFixed(2);
             
             const costoHora = Number(emp.salarioBase) || 0;
-            let subtotal = (minRegulares / 60) * costoHora;
-            let pagoExtra = (minExtra / 60) * (Number(emp.valorHoraExtra) || 0);
+            const costoExtra = Number(emp.valorHoraExtra) || 0;
             
-            let bruto = subtotal + pagoExtra;
-            let isss = 0;
-            let afp = 0;
+            let subtotal = horasRegDecimal * costoHora;
+            let pagoExtra = horasExtDecimal * costoExtra;
             
-            if (emp.aplicaLey) {
-                isss = bruto * 0.03;
-                if (isss > 30) isss = 30;
-                afp = bruto * 0.0725;
-            }
-            
-            const totalDeduc = isss + afp;
-            const neto = bruto - totalDeduc;
+            let neto = subtotal + pagoExtra;
 
             resultadoPlanilla.push({
                 empId: emp.id,
@@ -262,25 +298,21 @@ window.calcularPlanillaUI = async function() {
                 horasExt,
                 subtotal,
                 pagoExtra,
-                isss,
-                afp,
-                totalDeduc,
-                neto
+                neto_base: neto
             });
 
             granTotal += neto;
 
             tbody.innerHTML += `
-                <tr>
+                <tr id="fila-planilla-${emp.id}" data-subtotal="${subtotal.toFixed(2)}" data-pagoextra="${pagoExtra.toFixed(2)}">
                     <td><strong>${emp.nombre}</strong></td>
                     <td style="text-align:center">${horasReg}</td>
                     <td style="text-align:center">${horasExt}</td>
                     <td style="text-align:right">$${subtotal.toFixed(2)}</td>
                     <td style="text-align:right">$${pagoExtra.toFixed(2)}</td>
-                    <td style="text-align:right; color: #ef4444;">-$${isss.toFixed(2)}</td>
-                    <td style="text-align:right; color: #ef4444;">-$${afp.toFixed(2)}</td>
-                    <td style="text-align:right; color: #ef4444;">-$${totalDeduc.toFixed(2)}</td>
-                    <td style="text-align:right; font-weight:bold; color: #10b981;">$${neto.toFixed(2)}</td>
+                    <td style="text-align:center"><input type="number" id="bono-${emp.id}" class="input-field" style="width: 80px;" value="0" min="0" step="0.01" oninput="recalcularFilaPlanilla('${emp.id}')"></td>
+                    <td style="text-align:center"><input type="number" id="deduc-${emp.id}" class="input-field" style="width: 80px;" value="0" min="0" step="0.01" oninput="recalcularFilaPlanilla('${emp.id}')"></td>
+                    <td style="text-align:right; font-weight:bold; color: #10b981;" id="neto-${emp.id}">$${neto.toFixed(2)}</td>
                 </tr>
             `;
         });
@@ -296,7 +328,7 @@ window.calcularPlanillaUI = async function() {
 
     } catch (e) {
         console.error(e);
-        tbody.innerHTML = `<tr><td colspan="9" style="color:red">Error: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="color:red">Error: ${e.message}</td></tr>`;
     }
 }
 
@@ -308,6 +340,21 @@ window.guardarCortePlanilla = async function() {
 
     if(confirm("¿Estás seguro de guardar esta planilla? Quedará guardada inmutablemente en el histórico.")) {
         try {
+            let finalGranTotal = 0;
+            ultimaPlanillaCalculada.detalles = ultimaPlanillaCalculada.detalles.map(det => {
+                const bonoManual = parseFloat(document.getElementById(`bono-${det.empId}`).value) || 0;
+                const deducManual = parseFloat(document.getElementById(`deduc-${det.empId}`).value) || 0;
+                const finalNeto = det.neto_base + bonoManual - deducManual;
+                finalGranTotal += finalNeto;
+                return {
+                    ...det,
+                    bonoManual,
+                    deduccionManual: deducManual,
+                    neto_final: finalNeto
+                };
+            });
+            ultimaPlanillaCalculada.granTotal = finalGranTotal;
+
             await addDoc(collection(db, "planillas_historico"), ultimaPlanillaCalculada);
             alert("¡Planilla Guardada en el Histórico Exitosamente!");
         } catch(e) {
