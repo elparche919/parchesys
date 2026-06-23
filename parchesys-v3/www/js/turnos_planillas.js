@@ -160,7 +160,12 @@ let ultimaPlanillaCalculada = null; // Para guardar el històrico luego
 function calcularMinutosEntreHoras(hIn, hOut) {
     const [h1, m1] = hIn.split(':').map(Number);
     const [h2, m2] = hOut.split(':').map(Number);
-    return (h2 * 60 + m2) - (h1 * 60 + m1);
+    let t1 = h1 * 60 + m1;
+    let t2 = h2 * 60 + m2;
+    if (t2 < t1) {
+        t2 += 24 * 60; // Cruzó la medianoche
+    }
+    return t2 - t1;
 }
 
 window.cargarSemanaActualPlanilla = function() {
@@ -234,47 +239,51 @@ window.calcularPlanillaUI = async function() {
             const turnosEmp = turnos.filter(t => t.emp_id === emp.id);
             const asisEmp = asistencias.filter(a => a.empleadoId === emp.id);
             
+            // 1. Ordenar asistencias cronológicamente exacto
+            asisEmp.sort((a, b) => new Date(`${a.fecha}T${a.hora}`) - new Date(`${b.fecha}T${b.hora}`));
+            
+            const tiempoPorFechaTurno = {};
+            let entradaActual = null;
+            
+            // 2. Emparejar Entradas y Salidas
+            asisEmp.forEach(a => {
+                const tipo = (a.tipoMovimiento || '').toUpperCase();
+                if (tipo === 'ENTRADA') {
+                    entradaActual = a;
+                } else if (tipo === 'SALIDA' && entradaActual) {
+                    const d1 = new Date(`${entradaActual.fecha}T${entradaActual.hora}`);
+                    const d2 = new Date(`${a.fecha}T${a.hora}`);
+                    const trabajadoMins = (d2 - d1) / 60000;
+                    
+                    if (trabajadoMins > 0) {
+                        const shiftDate = entradaActual.fecha;
+                        if (!tiempoPorFechaTurno[shiftDate]) {
+                            tiempoPorFechaTurno[shiftDate] = 0;
+                        }
+                        tiempoPorFechaTurno[shiftDate] += trabajadoMins;
+                    }
+                    entradaActual = null; // Reset para el siguiente par
+                }
+            });
+            
             let minRegulares = 0;
             let minExtra = 0;
             
-            let currD = new Date(inicio + 'T12:00:00');
-            const endD = new Date(fin + 'T12:00:00');
-            
-            while(currD <= endD) {
-                const strDate = currD.toISOString().split('T')[0];
-                const turno = turnosEmp.find(t => t.fecha === strDate);
-                const asisDia = asisEmp.filter(a => a.fecha === strDate);
-                
-                if (turno && asisDia.length > 0) {
+            // 3. Separar en Regulares y Extras por cada día de turno acumulado
+            for (const [shiftDate, totalTrabajado] of Object.entries(tiempoPorFechaTurno)) {
+                const turno = turnosEmp.find(t => t.fecha === shiftDate);
+                if (turno) {
                     const duracionTurno = calcularMinutosEntreHoras(turno.hora_in, turno.hora_out);
-                    
-                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada' || a.tipoMovimiento === 'ENTRADA');
-                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida' || a.tipoMovimiento === 'SALIDA');
-                    
-                    if (entradas.length > 0 && salidas.length > 0) {
-                        const primeraEntrada = entradas[0];
-                        const ultimaSalida = salidas[salidas.length - 1];
-                        const trabajado = calcularMinutosEntreHoras(primeraEntrada.hora, ultimaSalida.hora);
-                        
-                        if (trabajado > 0) {
-                            if (trabajado >= duracionTurno) {
-                                minRegulares += duracionTurno;
-                                minExtra += (trabajado - duracionTurno);
-                            } else {
-                                minRegulares += trabajado;
-                            }
-                        }
+                    if (totalTrabajado >= duracionTurno) {
+                        minRegulares += duracionTurno;
+                        minExtra += (totalTrabajado - duracionTurno);
+                    } else {
+                        minRegulares += totalTrabajado;
                     }
-                } else if (!turno && asisDia.length > 0) {
-                    const entradas = asisDia.filter(a => a.tipoMovimiento === 'Entrada' || a.tipoMovimiento === 'ENTRADA');
-                    const salidas = asisDia.filter(a => a.tipoMovimiento === 'Salida' || a.tipoMovimiento === 'SALIDA');
-                    if (entradas.length > 0 && salidas.length > 0) {
-                        const trabajado = calcularMinutosEntreHoras(entradas[0].hora, salidas[salidas.length - 1].hora);
-                        if (trabajado > 0) minExtra += trabajado;
-                    }
+                } else {
+                    // Si no tenía turno asignado ese día, todo es extra
+                    minExtra += totalTrabajado;
                 }
-                
-                currD.setDate(currD.getDate() + 1);
             }
 
             const horasRegDecimal = minRegulares / 60;
