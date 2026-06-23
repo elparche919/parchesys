@@ -2,293 +2,102 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PARCHESYS APP v3 - Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PARCHESYS - Asistencia</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div id="login-container" class="container">
-        <div class="card">
-            <h2>Acceso Administrativo</h2>
-            <p>Solo personal autorizado</p>
-            <input type="password" id="admin-pin" placeholder="PIN Administrativo" required>
-            <button id="btn-admin-login" class="btn-primary">Ingresar</button>
-            <div id="login-error" class="error-text" style="display: none;"></div>
-        </div>
-    </div>
+    <div id="app-container" class="mobile-container">
+        <!-- Pantalla de Login (PIN) -->
+        <div id="screen-login" class="screen active">
+            <div class="logo-large">PARCHESYS</div>
+            <h2>Control de Asistencia</h2>
+            <p>Ingresa tu PIN personal</p>
+            
+            <div class="pin-display">
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+            </div>
 
-    <div id="dashboard-container" class="dashboard" style="display: none;">
-        <nav class="sidebar">
-            <div class="logo">PARCHESYS Admin</div>
-            <ul class="nav-links">
-                <li class="active" data-view="dashboard">Dashboard</li>
-                <li data-view="empleados">Empleados</li>
-                <li data-view="turnos">Turnos</li>
-                <li data-view="asistencias">Asistencias</li>
-                <li data-view="planilla">Planillas</li>
-                <li data-view="dispositivos">Dispositivos</li>
-                <li data-view="auditoria">Auditoría</li>
-                <li data-view="configuracion">Configuración</li>
-            </ul>
-            <button id="btn-admin-logout" class="btn-danger">Cerrar Sesión</button>
-        </nav>
-        <main class="content">
-            <header>
-                <h1 id="view-title">Dashboard</h1>
-                <div class="user-info">Administrador</div>
+            <div class="keypad">
+                <button class="key" data-val="1">1</button>
+                <button class="key" data-val="2">2</button>
+                <button class="key" data-val="3">3</button>
+                <button class="key" data-val="4">4</button>
+                <button class="key" data-val="5">5</button>
+                <button class="key" data-val="6">6</button>
+                <button class="key" data-val="7">7</button>
+                <button class="key" data-val="8">8</button>
+                <button class="key" data-val="9">9</button>
+                <button class="key action-key" id="btn-clear-pin">C</button>
+                <button class="key" data-val="0">0</button>
+                <button class="key action-key" id="btn-submit-pin">OK</button>
+            </div>
+            
+            <div id="login-status" class="status-message"></div>
+        </div>
+
+        <!-- Pantalla Principal Empleado -->
+        <div id="screen-main" class="screen" style="display: none;">
+            <header class="app-header">
+                <div class="user-greeting">Hola, <span id="emp-name-display">Usuario</span></div>
+                <button id="btn-logout" class="btn-icon">🚪</button>
             </header>
-            
-            <div id="view-dashboard" class="view-section active">
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <h3>Empleados Activos</h3>
-                        <div id="stat-empleados" class="stat-value">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Asistencias Hoy</h3>
-                        <div id="stat-asistencias" class="stat-value">0</div>
-                    </div>
-                    <div class="stat-card">
-                        <h3>Dispositivos Vinculados</h3>
-                        <div id="stat-dispositivos" class="stat-value">0</div>
-                    </div>
+
+            <div class="status-card">
+                <div class="status-label">Estado Actual</div>
+                <div id="current-status" class="status-value">DESCONOCIDO</div>
+                <div class="status-time" id="last-record-time">--:--</div>
+            </div>
+
+            <div class="action-buttons">
+                <button id="btn-entrada" class="btn-massive btn-success">REGISTRAR ENTRADA</button>
+                <button id="btn-salida" class="btn-massive btn-danger">REGISTRAR SALIDA</button>
+                <button id="btn-horarios" class="btn-massive btn-secondary" style="margin-top: 10px; background-color: #6c757d;">📅 VER MIS HORARIOS</button>
+            </div>
+
+            <div class="info-section">
+                <h3>Ubicación Base</h3>
+                <div id="location-status" class="loc-status">
+                    Validando...
                 </div>
             </div>
 
-            <!-- More views will be populated dynamically via JS -->
-            <div id="view-empleados" class="view-section" style="display:none;">
-                <button id="btn-import-v2" class="btn-primary" style="background-color: #f59e0b; margin-right: 10px;">Importar Empleados de v2</button><button id="btn-crear-empleado" class="btn-primary">Nuevo Empleado</button>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>PIN</th>
-                            <th>Estado</th>
-                            <th>Dispositivo</th>
-                            <th>Última Actividad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-empleados">
-                        <!-- Dynamic -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="view-asistencias" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
-                    <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
-                </div>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Empleado</th>
-                            <th>Tipo</th>
-                            <th>Fecha/Hora</th>
-                            <th>Validación</th>
-                            <th>Ubicación</th>
-                            <th>Distancia</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-asistencias">
-                        <!-- Dynamic -->
-                    </tbody>
-                </table>
+            <!-- Overlay para Procesando -->
+            <div id="processing-overlay" class="overlay" style="display: none;">
+                <div class="spinner"></div>
+                <p id="processing-text">Validando seguridad...</p>
             </div>
             
-            <div id="view-dispositivos" class="view-section" style="display:none;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Empleado</th>
-                            <th>Device ID</th>
-                            <th>Modelo</th>
-                            <th>SO</th>
-                            <th>Vinculación</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-dispositivos">
-                        <!-- Dynamic -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="view-auditoria" class="view-section" style="display:none;">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha/Hora</th>
-                            <th>Usuario</th>
-                            <th>Acción</th>
-                            <th>Detalle</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-auditoria">
-                        <!-- Dynamic -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="view-turnos" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
-                    <input type="date" id="turnos-fecha-inicio" class="input-field" title="Inicio de Semana">
-                    <button class="btn-primary" onclick="loadTurnosSemana()">Cargar Semana</button>
-                    <button class="btn-primary" onclick="document.getElementById('modalTurno').style.display='flex'">Asignar Turno</button>
-                    <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr id="tb-turnos-head">
-                                <th>Empleado</th>
-                                <th>Lunes</th>
-                                <th>Martes</th>
-                                <th>Miércoles</th>
-                                <th>Jueves</th>
-                                <th>Viernes</th>
-                                <th>Sábado</th>
-                                <th>Domingo</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-turnos">
-                            <!-- Dynamic -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="view-planilla" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
-                    <input type="date" id="planilla-fecha-inicio" class="input-field" title="Desde">
-                    <input type="date" id="planilla-fecha-fin" class="input-field" title="Hasta">
-                    <button class="btn-primary" onclick="calcularPlanillaUI()">Generar Planilla</button>
-                    <button class="btn-primary" onclick="guardarCortePlanilla()" style="background-color: #ef4444;">Guardar Histórico</button>
-                    <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
-                </div>
-                <div style="overflow-x: auto;">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Empleado</th>
-                                <th>Hrs Regulares</th>
-                                <th>Hrs Extras</th>
-                                <th>Salario Base</th>
-                                <th>Pago Extras</th>
-                                <th>ISSS</th>
-                                <th>AFP</th>
-                                <th>Deducciones</th>
-                                <th>Total Neto</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tabla-planilla">
-                            <!-- Dynamic -->
-                        </tbody>
-                        <tfoot>
-                            <tr style="font-weight: bold; background-color: #f8fafc;">
-                                <td colspan="8" style="text-align: right;">GRAN TOTAL:</td>
-                                <td id="planilla-gran-total">$0.00</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>
-
-            <div id="view-configuracion" class="view-section" style="display:none;">
-                <div class="card">
-                    <h3>Parámetros del Sistema</h3>
-                    <div class="form-group">
-                        <label>Radio Permitido GPS (metros)</label>
-                        <input type="number" id="config-radio" value="150">
+            <!-- Video Capture for Web Selfie -->
+            <div id="selfie-container" class="overlay" style="display: none;">
+                <div class="camera-ui">
+                    <video id="selfie-video" autoplay playsinline></video>
+                    <canvas id="selfie-canvas" style="display: none;"></canvas>
+                    <div class="camera-actions">
+                        <button id="btn-cancel-selfie" class="btn-danger">Cancelar</button>
+                        <button id="btn-take-selfie" class="btn-success">Tomar Foto</button>
                     </div>
-                    <button id="btn-guardar-config" class="btn-primary">Guardar Cambios</button>
                 </div>
             </div>
 
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <div id="modal-empleado" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3 id="modal-empleado-title">Nuevo Empleado</h3>
-            <input type="hidden" id="emp-id">
-            <input type="text" id="emp-nombre" placeholder="Nombre completo">
-            <input type="text" id="emp-pin" placeholder="PIN de 4-6 dígitos">
-            <input type="text" id="emp-telefono" placeholder="Teléfono (Opcional)">
-            <input type="text" id="emp-dui" placeholder="DUI (Opcional)">
-            <input type="number" id="emp-salario" placeholder="Costo Hora Regular ($)">
-            <input type="number" id="emp-valor-extra" placeholder="Costo Hora Extra ($)">
-            <label style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                <input type="checkbox" id="emp-aplica-ley"> Aplica Descuentos de Ley (ISSS/AFP)
-            </label>
-            <div class="modal-actions">
-                <button id="btn-cancelar-empleado" class="btn-secondary">Cancelar</button>
-                <button id="btn-guardar-empleado" class="btn-primary">Guardar</button>
+            <!-- Modal Mis Horarios -->
+            <div id="modal-horarios" class="overlay" style="display: none; z-index: 9999;">
+                <div class="card" style="width: 90%; max-width: 400px; max-height: 80vh; overflow-y: auto; position: relative;">
+                    <h3 style="margin-bottom: 15px;">Mis Horarios (Semana Actual)</h3>
+                    <ul id="lista-horarios" style="list-style: none; padding: 0; text-align: left; margin-bottom: 20px;">
+                        <!-- Dynamic list -->
+                    </ul>
+                    <button id="btn-cerrar-horarios" class="btn-primary" style="width: 100%;">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modals Info -->
-    <div id="modal-info" class="modal" style="display: none;">
-        <div class="modal-content info-content" id="modal-info-content">
-            <!-- Dynamic info -->
-        </div>
-    </div>
-
-    <!-- Modal Editar Asistencia -->
-    <div id="modal-asistencia" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Editar Asistencia</h3>
-            <input type="hidden" id="edit-asis-id">
-            <label>Tipo de Movimiento:</label>
-            <select id="edit-asis-tipo" class="input-field">
-                <option value="ENTRADA">ENTRADA</option>
-                <option value="SALIDA">SALIDA</option>
-            </select>
-            <label>Fecha:</label>
-            <input type="date" id="edit-asis-fecha" class="input-field">
-            <label>Hora:</label>
-            <input type="time" id="edit-asis-hora" step="1" class="input-field">
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="document.getElementById('modal-asistencia').style.display='none'">Cancelar</button>
-                <button class="btn-primary" onclick="guardarEdicionAsistencia()">Guardar Cambio</button>
-            </div>
-        </div>
-    </div>
-
-    <script type="module" src="js/admin.js?v=2"></script>
-    <script type="module" src="js/turnos_planillas.js?v=2"></script>
-</body>
-</html>
-
-
-    <!-- Modal Turno -->
-    <div id="modalTurno" class="modal" style="display:none;">
-        <div class="modal-content">
-            <h3>Asignar Turno</h3>
-              <select id="turno-empleado" class="input-field">
-                  <option value="">Seleccionar Empleado</option>
-              </select>
-              <input type="date" id="turno-fecha" class="input-field">
-              
-              <label>Preset de Turno:</label>
-              <select id="turno-preset" class="input-field" onchange="aplicarPresetTurno()">
-                  <option value="">Personalizado</option>
-                  <option value="14:00-22:00">Tarde 1 (2:00 PM a 10:00 PM)</option>
-                  <option value="15:00-23:00">Tarde 2 (3:00 PM a 11:00 PM)</option>
-              </select>
-
-              <label>Hora Entrada:</label>
-              <input type="time" id="turno-in" class="input-field">
-              <label>Hora Salida:</label>
-              <input type="time" id="turno-out" class="input-field">
-            <div class="modal-actions">
-                <button class="btn-secondary" onclick="document.getElementById('modalTurno').style.display='none'">Cancelar</button>
-                <button class="btn-primary" onclick="guardarTurnoUI()">Guardar Turno</button>
-            </div>
-        </div>
-    </div>
+    <!-- Capacitor JS -->
+    <script src="capacitor.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
