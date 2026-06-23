@@ -206,6 +206,38 @@ window.recalcularFilaPlanilla = function(empId) {
     document.getElementById('planilla-gran-total').textContent = `$${granTotal.toFixed(2)}`;
 }
 
+// Intérprete Universal de Fechas para Planillas
+function safeParseDate(dStr, tStr) {
+    if (!dStr) return new Date(0);
+    let f = dStr;
+    // Si viene en formato DD/MM/YYYY
+    if (f.includes('/')) {
+        const p = f.split('/');
+        if (p.length === 3) {
+            let y = p[2]; let m = p[1]; let d = p[0];
+            if (y.length === 2) y = "20" + y; // Por si es DD/MM/YY
+            f = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+    }
+    
+    let h = tStr || "00:00:00";
+    // Si viene con a.m. o p.m.
+    if (/a\.?\s*m\.?|p\.?\s*m\.?/i.test(h)) {
+        const match = h.match(/(\d+):(\d+):?(\d*)/);
+        if (match) {
+            let hh = parseInt(match[1], 10);
+            const mm = match[2];
+            const ss = match[3] || "00";
+            if (/p/i.test(h) && hh < 12) hh += 12;
+            if (/a/i.test(h) && hh === 12) hh = 0;
+            h = `${hh.toString().padStart(2, '0')}:${mm}:${ss}`;
+        }
+    }
+    
+    const dt = new Date(`${f}T${h}`);
+    return isNaN(dt.getTime()) ? new Date(0) : dt;
+}
+
 window.calcularPlanillaUI = async function() {
     const inicio = document.getElementById('planilla-fecha-inicio').value;
     const fin = document.getElementById('planilla-fecha-fin').value;
@@ -223,13 +255,19 @@ window.calcularPlanillaUI = async function() {
         const empleados = [];
         empSnap.forEach(d => empleados.push({ id: d.id, ...d.data() }));
 
-        const turnosSnap = await getDocs(query(collection(db, "turnos"), where("fecha", ">=", inicio), where("fecha", "<=", fin)));
+        // Obtenemos todos los turnos para no perder los que hayan cruzado el límite de fecha mal escrito
+        const turnosSnap = await getDocs(collection(db, "turnos"));
         const turnos = [];
         turnosSnap.forEach(t => turnos.push({ id: t.id, ...t.data() }));
 
-        const asisSnap = await getDocs(query(collection(db, "asistencias"), where("fecha", ">=", inicio), where("fecha", "<=", fin)));
+        // Removemos el where() de Firebase porque si el usuario escribió la fecha como DD/MM/YYYY, 
+        // Firebase la filtraría incorrectamente. Las descargamos todas y filtramos en Memoria.
+        const asisSnap = await getDocs(collection(db, "asistencias"));
         const asistencias = [];
         asisSnap.forEach(a => asistencias.push({ id: a.id, ...a.data() }));
+
+        const startTimestamp = safeParseDate(inicio, "00:00:00").getTime();
+        const endTimestamp = safeParseDate(fin, "23:59:59").getTime();
 
         let granTotal = 0;
         let resultadoPlanilla = [];
@@ -239,28 +277,41 @@ window.calcularPlanillaUI = async function() {
             const turnosEmp = turnos.filter(t => t.emp_id === emp.id);
             const asisEmp = asistencias.filter(a => a.empleadoId === emp.id);
             
-            // 1. Ordenar asistencias cronológicamente exacto
-            asisEmp.sort((a, b) => new Date(`${a.fecha}T${a.hora}`) - new Date(`${b.fecha}T${b.hora}`));
+            // 1. Ordenar asistencias cronológicamente exacto usando el parseador seguro
+            asisEmp.sort((a, b) => safeParseDate(a.fecha, a.hora) - safeParseDate(b.fecha, b.hora));
             
             const tiempoPorFechaTurno = {};
             let entradaActual = null;
             
-            // 2. Emparejar Entradas y Salidas
+            // 2. Emparejar Entradas y Salidas globalmente (para agarrar madrugadas sin importar el rango)
             asisEmp.forEach(a => {
                 const tipo = (a.tipoMovimiento || '').toUpperCase();
                 if (tipo === 'ENTRADA') {
                     entradaActual = a;
                 } else if (tipo === 'SALIDA' && entradaActual) {
-                    const d1 = new Date(`${entradaActual.fecha}T${entradaActual.hora}`);
-                    const d2 = new Date(`${a.fecha}T${a.hora}`);
+                    const d1 = safeParseDate(entradaActual.fecha, entradaActual.hora);
+                    const d2 = safeParseDate(a.fecha, a.hora);
                     const trabajadoMins = (d2 - d1) / 60000;
                     
                     if (trabajadoMins > 0) {
-                        const shiftDate = entradaActual.fecha;
-                        if (!tiempoPorFechaTurno[shiftDate]) {
-                            tiempoPorFechaTurno[shiftDate] = 0;
+                        // Verificamos si la fecha del turno ENTRADA o la SALIDA caen en nuestro rango de consulta
+                        const d1Time = d1.getTime();
+                        const d2Time = d2.getTime();
+                        
+                        // Si cualquier parte del turno (entrada o salida) cae en la semana actual, lo cobramos.
+                        if ((d1Time >= startTimestamp && d1Time <= endTimestamp) || (d2Time >= startTimestamp && d2Time <= endTimestamp)) {
+                            // Convertir fecha de entrada al estandar ISO si estaba en DD/MM/YYYY
+                            let shiftDate = entradaActual.fecha;
+                            if (shiftDate.includes('/')) {
+                                const p = shiftDate.split('/');
+                                shiftDate = `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+                            }
+
+                            if (!tiempoPorFechaTurno[shiftDate]) {
+                                tiempoPorFechaTurno[shiftDate] = 0;
+                            }
+                            tiempoPorFechaTurno[shiftDate] += trabajadoMins;
                         }
-                        tiempoPorFechaTurno[shiftDate] += trabajadoMins;
                     }
                     entradaActual = null; // Reset para el siguiente par
                 }
