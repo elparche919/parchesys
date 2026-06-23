@@ -271,15 +271,95 @@ btnGuardarEmpleado.addEventListener('click', async () => {
 
 
 
+function getValidDate(a) {
+    if (a.fechaHora && typeof a.fechaHora.toDate === 'function') {
+        return a.fechaHora.toDate();
+    }
+    if (a.fechaHora && typeof a.fechaHora === 'string') {
+        const d = new Date(a.fechaHora);
+        if (!isNaN(d.getTime())) return d;
+    }
+    let f = a.fecha || "";
+    let h = a.hora || "00:00:00";
+    if (f.includes(',')) {
+        const parts = f.split(',');
+        f = parts[0].trim();
+        h = parts[1].trim();
+    }
+    if (f.includes('/')) {
+        const p = f.split('/');
+        if (p.length === 3) {
+            let y = p[2]; let m = p[1]; let d = p[0];
+            if (y.length === 2) y = "20" + y;
+            f = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+        }
+    }
+    if (/a\.?\s*m\.?|p\.?\s*m\.?/i.test(h)) {
+        const match = h.match(/(\d+):(\d+):?(\d*)/);
+        if (match) {
+            let hh = parseInt(match[1], 10);
+            const mm = match[2];
+            const ss = match[3] || "00";
+            if (/p/i.test(h) && hh < 12) hh += 12;
+            if (/a/i.test(h) && hh === 12) hh = 0;
+            h = `${hh.toString().padStart(2, '0')}:${mm}:${ss}`;
+        }
+    } else {
+        const match = h.match(/(\d+):(\d+):?(\d*)/);
+        if (match) {
+            h = `${match[1].padStart(2, '0')}:${match[2]}:${match[3]||"00"}`;
+        }
+    }
+    const dt = new Date(`${f}T${h}`);
+    return isNaN(dt.getTime()) ? new Date(0) : dt;
+}
+
 // Asistencias
 async function loadAsistencias() {
-    const q = query(collection(db, "asistencias"), orderBy("fechaHora", "desc"), limit(50));
+    // Ampliamos el límite a 200 para tener contexto histórico suficiente para emparejar Entradas y Salidas
+    const q = query(collection(db, "asistencias"), orderBy("fechaHora", "desc"), limit(200));
     const snap = await getDocs(q);
+    
+    let records = [];
+    snap.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
+    
+    let timeWorkedMap = {}; 
+    let lastSalida = {}; 
+    
+    // Al estar ordenadas de más reciente a más antiguo, una SALIDA aparece antes que su ENTRADA
+    records.forEach(r => {
+        const empId = r.empleadoId;
+        const tipo = (r.tipoMovimiento || '').trim().toUpperCase();
+        
+        if (tipo === 'SALIDA') {
+            if (!lastSalida[empId]) {
+                lastSalida[empId] = r;
+            }
+        } else if (tipo === 'ENTRADA') {
+            if (lastSalida[empId]) {
+                const dSalida = getValidDate(lastSalida[empId]);
+                const dEntrada = getValidDate(r);
+                const mins = (dSalida - dEntrada) / 60000;
+                
+                if (mins > 0) {
+                    const h = Math.floor(mins / 60);
+                    const m = Math.floor(mins % 60);
+                    timeWorkedMap[lastSalida[empId].id] = `${h}h ${m}m`;
+                }
+                lastSalida[empId] = null; // Reiniciar para el siguiente par
+            }
+        }
+    });
+
     tablaAsistencias.innerHTML = '';
     
-    snap.forEach(doc => {
-        const d = doc.data();
+    // Solo mostramos los últimos 50 en la tabla para no saturar
+    const displayRecords = records.slice(0, 50);
+    
+    displayRecords.forEach(d => {
         const dateStr = d.fechaHora && d.fechaHora.toDate ? d.fechaHora.toDate().toLocaleString() : d.fechaHora;
+        const tiempoStr = timeWorkedMap[d.id] || (d.tipoMovimiento === 'ENTRADA' ? '-' : 'Sin emparejar');
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td>${d.nombreEmpleado}</td>
@@ -287,9 +367,9 @@ async function loadAsistencias() {
             <td>${dateStr}</td>
             <td>${d.metodoValidacion} ${d.urlSelfie ? '<a href="'+d.urlSelfie+'" target="_blank">[Ver Selfie]</a>' : ''}</td>
             <td>${d.latitudActual?.toFixed(4)}, ${d.longitudActual?.toFixed(4)}</td>
-            <td>${d.distanciaCalculada ? d.distanciaCalculada + 'm' : '-'}</td>
+            <td style="font-weight:bold; color:#10b981;">${tiempoStr}</td>
             <td>
-                <button class="btn-secondary" onclick="window.editarAsistencia('${doc.id}', '${d.tipoMovimiento}', '${d.fecha}', '${d.hora}')">✏️ Editar</button>
+                <button class="btn-secondary" onclick="window.editarAsistencia('${d.id}', '${d.tipoMovimiento}', '${d.fecha}', '${d.hora}')">✏️ Editar</button>
             </td>
         `;
         tablaAsistencias.appendChild(tr);
