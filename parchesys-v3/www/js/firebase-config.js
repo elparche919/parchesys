@@ -1,6 +1,6 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, serverTimestamp, limit, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { getStorage, ref, uploadString, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
@@ -19,4 +19,4 @@ const db = getFirestore(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
 
-export { app, db, storage, auth, collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, serverTimestamp, limit, ref, uploadString, getDownloadURL, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut };
+export { app, db, storage, auth, collection, addDoc, getDocs, query, where, orderBy, doc, getDoc, setDoc, updateDoc, serverTimestamp, limit, deleteDoc, ref, uploadString, getDownloadURL, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut };
