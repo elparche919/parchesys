@@ -23,6 +23,11 @@ const selfieCanvas = document.getElementById('selfie-canvas');
 const btnTakeSelfie = document.getElementById('btn-take-selfie');
 const btnCancelSelfie = document.getElementById('btn-cancel-selfie');
 
+const btnHorarios = document.getElementById('btn-horarios');
+const modalHorarios = document.getElementById('modal-horarios');
+const btnCerrarHorarios = document.getElementById('btn-cerrar-horarios');
+const listaHorarios = document.getElementById('lista-horarios');
+
 let currentPin = '';
 let currentEmployee = null;
 let isNativeAndroid = false;
@@ -61,6 +66,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnSalida.addEventListener('click', () => startAttendanceFlow('SALIDA'));
     btnCancelSelfie.addEventListener('click', closeSelfie);
     btnTakeSelfie.addEventListener('click', captureSelfieAndProceed);
+    
+    btnHorarios.addEventListener('click', loadHorariosEmpleado);
+    btnCerrarHorarios.addEventListener('click', () => modalHorarios.style.display = 'none');
 });
 
 function updatePinDisplay() {
@@ -234,6 +242,56 @@ async function captureSelfieAndProceed() {
         console.error(e);
         alert("Error subiendo selfie: " + e.message + " (" + e.code + "). Verifica que Firebase Storage esté activado y sus Reglas permitan lectura/escritura.");
         setProcessing(false);
+    }
+}
+
+async function loadHorariosEmpleado() {
+    listaHorarios.innerHTML = "<li>Cargando horarios...</li>";
+    modalHorarios.style.display = 'flex';
+    
+    // Get monday of current week
+    const now = new Date();
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day == 0 ? -6: 1);
+    const monday = new Date(now.setDate(diff));
+    
+    const mondayStr = monday.toISOString().split('T')[0];
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const sundayStr = sunday.toISOString().split('T')[0];
+    
+    try {
+        const q = query(collection(db, "turnos"), where("emp_id", "==", currentEmployee.id), where("fecha", ">=", mondayStr), where("fecha", "<=", sundayStr));
+        const snap = await getDocs(q);
+        
+        let turnos = [];
+        snap.forEach(doc => turnos.push(doc.data()));
+        
+        // Sort by fecha
+        turnos.sort((a,b) => a.fecha.localeCompare(b.fecha));
+        
+        if (turnos.length === 0) {
+            listaHorarios.innerHTML = "<li>No tienes turnos asignados esta semana.</li>";
+            return;
+        }
+        
+        listaHorarios.innerHTML = "";
+        const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        
+        turnos.forEach(t => {
+            const fd = new Date(t.fecha + "T12:00:00");
+            const dName = diasNombres[fd.getDay() === 0 ? 6 : fd.getDay() - 1];
+            
+            const li = document.createElement('li');
+            li.style.padding = "10px";
+            li.style.borderBottom = "1px solid #ddd";
+            li.innerHTML = `<strong>${dName} (${t.fecha}):</strong> <br> ${t.hora_in} - ${t.hora_out}`;
+            listaHorarios.appendChild(li);
+        });
+        
+    } catch(e) {
+        console.error(e);
+        listaHorarios.innerHTML = "<li>Error al cargar horarios.</li>";
     }
 }
 
