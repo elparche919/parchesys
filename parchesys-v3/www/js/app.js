@@ -84,7 +84,9 @@ function updatePinDisplay() {
 function getOrCreateDeviceId() {
     let devId = localStorage.getItem('parchesys_device_id');
     if (!devId) {
-        devId = crypto.randomUUID();
+        devId = (crypto.randomUUID && typeof crypto.randomUUID === 'function') 
+            ? crypto.randomUUID() 
+            : 'dev_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
         localStorage.setItem('parchesys_device_id', devId);
     }
     return devId;
