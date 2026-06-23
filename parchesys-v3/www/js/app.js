@@ -263,11 +263,17 @@ async function loadHorariosEmpleado() {
     const sundayStr = sunday.toISOString().split('T')[0];
     
     try {
-        const q = query(collection(db, "turnos"), where("emp_id", "==", currentEmployee.id), where("fecha", ">=", mondayStr), where("fecha", "<=", sundayStr));
+        const q = query(collection(db, "turnos"), where("emp_id", "==", currentEmployee.id));
         const snap = await getDocs(q);
         
         let turnos = [];
-        snap.forEach(doc => turnos.push(doc.data()));
+        snap.forEach(doc => {
+            const t = doc.data();
+            // Filter by date manually in JS to avoid requiring a composite index in Firestore
+            if (t.fecha >= mondayStr && t.fecha <= sundayStr) {
+                turnos.push(t);
+            }
+        });
         
         // Sort by fecha
         turnos.sort((a,b) => a.fecha.localeCompare(b.fecha));
@@ -302,9 +308,22 @@ async function loadHorariosEmpleado() {
 // ==========================================
 
 function getGPSPosition(options) {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         if(isNativeAndroid && window.Capacitor.Plugins.Geolocation) {
-            window.Capacitor.Plugins.Geolocation.getCurrentPosition(options).then(resolve).catch(reject);
+            try {
+                // Check and request permissions first
+                const check = await window.Capacitor.Plugins.Geolocation.checkPermissions();
+                if (check.location !== 'granted') {
+                    const req = await window.Capacitor.Plugins.Geolocation.requestPermissions();
+                    if (req.location !== 'granted') {
+                        return reject(new Error("User denied Geolocation permission."));
+                    }
+                }
+                const pos = await window.Capacitor.Plugins.Geolocation.getCurrentPosition(options);
+                resolve(pos);
+            } catch(e) {
+                reject(e);
+            }
         } else {
             navigator.geolocation.getCurrentPosition(resolve, reject, options);
         }
@@ -418,10 +437,10 @@ async function processLocationAndSave(tipoMovimiento, metodoValidacion, urlSelfi
 
     } catch (e) {
         console.error(e);
-        if(e.code === 1 || e.message.includes('User denied')) {
+        if(e.code === 1 || (e.message && e.message.includes('User denied'))) {
             alert("Debe conceder permisos de ubicación GPS.");
         } else {
-            alert("Error procesando GPS o guardando. Reintente.");
+            alert("Error: " + (e.message || JSON.stringify(e)));
         }
     }
     setProcessing(false);
