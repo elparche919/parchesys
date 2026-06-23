@@ -207,9 +207,26 @@ window.recalcularFilaPlanilla = function(empId) {
 }
 
 // Intérprete Universal de Fechas para Planillas
-function safeParseDate(dStr, tStr) {
-    if (!dStr) return new Date(0);
-    let f = dStr;
+function getValidDate(a) {
+    // 1. Si existe el Timestamp nativo de Firebase, es la fuente más confiable
+    if (a.fechaHora && typeof a.fechaHora.toDate === 'function') {
+        return a.fechaHora.toDate();
+    }
+    if (a.fechaHora && typeof a.fechaHora === 'string') {
+        const d = new Date(a.fechaHora);
+        if (!isNaN(d.getTime())) return d;
+    }
+    
+    let f = a.fecha || "";
+    let h = a.hora || "00:00:00";
+    
+    // Si el usuario pegó toda la fecha y hora en el campo fecha (ej. "22/6/2026, 7:34:51 p. m.")
+    if (f.includes(',')) {
+        const parts = f.split(',');
+        f = parts[0].trim();
+        h = parts[1].trim();
+    }
+    
     // Si viene en formato DD/MM/YYYY
     if (f.includes('/')) {
         const p = f.split('/');
@@ -220,8 +237,7 @@ function safeParseDate(dStr, tStr) {
         }
     }
     
-    let h = tStr || "00:00:00";
-    // Si viene con a.m. o p.m.
+    // Limpiar hora
     if (/a\.?\s*m\.?|p\.?\s*m\.?/i.test(h)) {
         const match = h.match(/(\d+):(\d+):?(\d*)/);
         if (match) {
@@ -232,10 +248,21 @@ function safeParseDate(dStr, tStr) {
             if (/a/i.test(h) && hh === 12) hh = 0;
             h = `${hh.toString().padStart(2, '0')}:${mm}:${ss}`;
         }
+    } else {
+        const match = h.match(/(\d+):(\d+):?(\d*)/);
+        if (match) {
+            h = `${match[1].padStart(2, '0')}:${match[2]}:${match[3]||"00"}`;
+        }
     }
     
     const dt = new Date(`${f}T${h}`);
     return isNaN(dt.getTime()) ? new Date(0) : dt;
+}
+
+// Para las fechas de inicio y fin
+function parseBoundaryDate(dStr, tStr) {
+    const a = { fecha: dStr, hora: tStr };
+    return getValidDate(a);
 }
 
 window.calcularPlanillaUI = async function() {
@@ -266,11 +293,12 @@ window.calcularPlanillaUI = async function() {
         const asistencias = [];
         asisSnap.forEach(a => asistencias.push({ id: a.id, ...a.data() }));
 
-        const startTimestamp = safeParseDate(inicio, "00:00:00").getTime();
-        const endTimestamp = safeParseDate(fin, "23:59:59").getTime();
+        const startTimestamp = parseBoundaryDate(inicio, "00:00:00").getTime();
+        const endTimestamp = parseBoundaryDate(fin, "23:59:59").getTime();
 
         let granTotal = 0;
         let resultadoPlanilla = [];
+        let debugOutputHTML = ''; // Para diagnóstico
         tbody.innerHTML = '';
 
         empleados.forEach(emp => {
@@ -278,21 +306,24 @@ window.calcularPlanillaUI = async function() {
             const asisEmp = asistencias.filter(a => a.empleadoId === emp.id);
             
             // 1. Ordenar asistencias cronológicamente exacto usando el parseador seguro
-            asisEmp.sort((a, b) => safeParseDate(a.fecha, a.hora) - safeParseDate(b.fecha, b.hora));
+            asisEmp.sort((a, b) => getValidDate(a) - getValidDate(b));
             
             const tiempoPorFechaTurno = {};
             let entradaActual = null;
             
-            // 2. Emparejar Entradas y Salidas globalmente (para agarrar madrugadas sin importar el rango)
+            // 2. Emparejar Entradas y Salidas globalmente
+            let logsEmp = [];
             asisEmp.forEach(a => {
-                const tipo = (a.tipoMovimiento || '').toUpperCase();
+                const tipo = (a.tipoMovimiento || '').trim().toUpperCase();
                 if (tipo === 'ENTRADA') {
                     entradaActual = a;
                 } else if (tipo === 'SALIDA' && entradaActual) {
-                    const d1 = safeParseDate(entradaActual.fecha, entradaActual.hora);
-                    const d2 = safeParseDate(a.fecha, a.hora);
+                    const d1 = getValidDate(entradaActual);
+                    const d2 = getValidDate(a);
                     const trabajadoMins = (d2 - d1) / 60000;
                     
+                    logsEmp.push(`PAR: Entrada=${d1.toISOString()}, Salida=${d2.toISOString()}, Mins=${trabajadoMins}`);
+
                     if (trabajadoMins > 0) {
                         // Verificamos si la fecha del turno ENTRADA o la SALIDA caen en nuestro rango de consulta
                         const d1Time = d1.getTime();
@@ -349,7 +380,21 @@ window.calcularPlanillaUI = async function() {
             let subtotal = horasRegDecimal * costoHora;
             let pagoExtra = horasExtDecimal * costoExtra;
             
-            let neto = subtotal + pagoExtra;
+            const neto = subtotal + pagoExtra;
+
+            // Inyectar datos de depuración si es el usuario 5555
+            if (emp.pin === '5555' || emp.nombre.includes('5555')) {
+                debugOutputHTML += `<div style="background:#fce4e4; padding:10px; margin-top:20px; text-align:left; font-size:12px; font-family:monospace; color:#333;">
+                    <strong>DEBUG USUARIO 5555:</strong><br>
+                    - Horas Calculadas: ${horasReg} Reg, ${horasExt} Ext<br>
+                    - Salario Asignado: $${costoHora} Reg, $${costoExtra} Ext<br>
+                    - Asistencias Crudas Obtenidas: ${asisEmp.length}<br>
+                    ${asisEmp.map(x => `* ${x.tipoMovimiento} | fecha: ${x.fecha} | hora: ${x.hora}`).join('<br>')}<br>
+                    - Emparejamientos:<br>
+                    ${logsEmp.join('<br>')}<br>
+                    - TiempoPorFechaTurno: ${JSON.stringify(tiempoPorFechaTurno)}
+                </div>`;
+            }
 
             resultadoPlanilla.push({
                 empId: emp.id,
@@ -378,6 +423,11 @@ window.calcularPlanillaUI = async function() {
         });
 
         document.getElementById('planilla-gran-total').textContent = `$${granTotal.toFixed(2)}`;
+        
+        // Agregar panel de depuración al final
+        if (debugOutputHTML) {
+            tbody.innerHTML += `<tr><td colspan="8">${debugOutputHTML}</td></tr>`;
+        }
         
         ultimaPlanillaCalculada = {
             rango: `${inicio} al ${fin}`,
