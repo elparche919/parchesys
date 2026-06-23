@@ -134,7 +134,8 @@
             <div id="view-turnos" class="view-section" style="display:none;">
                 <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
                     <input type="date" id="turnos-fecha-inicio" class="input-field" title="Inicio de Semana">
-                    <button class="btn-primary" onclick="loadTurnosSemana()">Cargar Semana</button>
+                    <button class="btn-primary" onclick="loadTurnosSemana()">Cargar Fecha</button>
+                    <button class="btn-primary" style="background-color: #10b981;" onclick="cargarSemanaActualTurnos()">Cargar Semana Actual</button>
                     <button class="btn-primary" onclick="document.getElementById('modalTurno').style.display='flex'">Asignar Turno</button>
                     <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
                 </div>
@@ -164,6 +165,7 @@
                     <input type="date" id="planilla-fecha-inicio" class="input-field" title="Desde">
                     <input type="date" id="planilla-fecha-fin" class="input-field" title="Hasta">
                     <button class="btn-primary" onclick="calcularPlanillaUI()">Generar Planilla</button>
+                    <button class="btn-primary" style="background-color: #10b981;" onclick="cargarSemanaActualPlanilla()">Cargar Semana Actual</button>
                     <button class="btn-primary" onclick="guardarCortePlanilla()" style="background-color: #ef4444;">Guardar Histórico</button>
                     <button class="btn-secondary" onclick="window.print()" style="margin-left: auto;">🖨️ Imprimir</button>
                 </div>
@@ -174,11 +176,10 @@
                                 <th>Empleado</th>
                                 <th>Hrs Regulares</th>
                                 <th>Hrs Extras</th>
-                                <th>Salario Base</th>
-                                <th>Pago Extras</th>
-                                <th>ISSS</th>
-                                <th>AFP</th>
-                                <th>Deducciones</th>
+                                <th>Total Regular</th>
+                                <th>Total Extras</th>
+                                <th>Bono Manual ($)</th>
+                                <th>Deducciones Manuales ($)</th>
                                 <th>Total Neto</th>
                             </tr>
                         </thead>
@@ -260,9 +261,6 @@
 
     <script type="module" src="js/admin.js?v=2"></script>
     <script type="module" src="js/turnos_planillas.js?v=2"></script>
-</body>
-</html>
-
 
     <!-- Modal Turno -->
     <div id="modalTurno" class="modal" style="display:none;">
