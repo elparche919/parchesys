@@ -145,8 +145,22 @@ function showMainScreen() {
     empNameDisplay.textContent = currentEmployee.nombre;
     
     // Load last status (naive approach, fetch last doc)
-    currentStatus.textContent = currentEmployee.ultimoMovimiento || "NINGUNO";
+    const ultimo = currentEmployee.ultimoMovimiento || "NINGUNO";
+    currentStatus.textContent = ultimo;
     lastRecordTime.textContent = currentEmployee.ultimoRegistro || "--:--";
+
+    // Disable buttons based on state
+    if (ultimo === "ENTRADA") {
+        btnEntrada.disabled = true;
+        btnSalida.disabled = false;
+        btnEntrada.style.opacity = '0.5';
+        btnSalida.style.opacity = '1';
+    } else {
+        btnEntrada.disabled = false;
+        btnSalida.disabled = true;
+        btnEntrada.style.opacity = '1';
+        btnSalida.style.opacity = '0.5';
+    }
     
     if (currentEmployee.latitudBase) {
         locationStatus.innerHTML = `Ubicación Base Establecida <br> <small>(${currentEmployee.latitudBase.toFixed(4)}, ${currentEmployee.longitudBase.toFixed(4)})</small>`;

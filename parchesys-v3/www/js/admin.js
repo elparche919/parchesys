@@ -1,10 +1,9 @@
-import { app, db, auth, collection, getDocs, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, limit } from './firebase-config.js';
+import { app, db, auth, collection, getDocs, query, where, orderBy, doc, setDoc, updateDoc, serverTimestamp, deleteDoc, limit } from './firebase-config.js';
 
 // DOM Elements
 const loginContainer = document.getElementById('login-container');
 const dashboardContainer = document.getElementById('dashboard-container');
-const adminEmail = document.getElementById('admin-email');
-const adminPassword = document.getElementById('admin-password');
+const adminPin = document.getElementById('admin-pin');
 const btnLogin = document.getElementById('btn-admin-login');
 const loginError = document.getElementById('login-error');
 const btnLogout = document.getElementById('btn-admin-logout');
@@ -33,11 +32,9 @@ const tablaAsistencias = document.getElementById('tabla-asistencias');
 const tablaDispositivos = document.getElementById('tabla-dispositivos');
 const tablaAuditoria = document.getElementById('tabla-auditoria');
 
-// Check Auth State
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        // Assume all logged-in users here are admins for now.
-        // In a real app, check role in 'usuarios' collection
+// Check Session State
+function checkSession() {
+    if (sessionStorage.getItem('parchesys_admin_auth') === 'true') {
         loginContainer.style.display = 'none';
         dashboardContainer.style.display = 'flex';
         loadDashboardData();
@@ -45,35 +42,27 @@ onAuthStateChanged(auth, (user) => {
         loginContainer.style.display = 'flex';
         dashboardContainer.style.display = 'none';
     }
-});
+}
+checkSession();
 
 // Login
-btnLogin.addEventListener('click', async () => {
-    try {
-        await signInWithEmailAndPassword(auth, adminEmail.value, adminPassword.value);
+btnLogin.addEventListener('click', () => {
+    const pin = adminPin.value;
+    if (pin === '1919') {
+        sessionStorage.setItem('parchesys_admin_auth', 'true');
         loginError.style.display = 'none';
-    } catch (error) {
-        // AUTO-CREATION OF INITIAL ADMIN
-        if (adminEmail.value === 'cast152025@gmail.com') {
-            try {
-                await createUserWithEmailAndPassword(auth, adminEmail.value, adminPassword.value);
-                loginError.style.display = 'none';
-                return;
-            } catch (e) {
-                loginError.innerHTML = `Error creando administrador inicial:<br>${e.message} (${e.code})`;
-                loginError.style.display = 'block';
-                return;
-            }
-        }
-        
-        loginError.innerHTML = `Error de acceso:<br>${error.message} (${error.code})`;
+        checkSession();
+    } else {
+        loginError.innerHTML = `PIN Incorrecto`;
         loginError.style.display = 'block';
     }
 });
 
 // Logout
-btnLogout.addEventListener('click', async () => {
-    await signOut(auth);
+btnLogout.addEventListener('click', () => {
+    sessionStorage.removeItem('parchesys_admin_auth');
+    adminPin.value = '';
+    checkSession();
 });
 
 // Navigation Logic
@@ -101,12 +90,16 @@ navLinks.forEach(link => {
 // --- API Functions ---
 
 async function auditoria(accion, detalle) {
-    await setDoc(doc(collection(db, "auditoria")), {
-        fechaHora: serverTimestamp(),
-        accion: accion,
-        detalle: detalle,
-        usuario: auth.currentUser.email
-    });
+    try {
+        await setDoc(doc(collection(db, "auditoria")), {
+            fechaHora: serverTimestamp(),
+            accion: accion,
+            detalle: detalle,
+            usuario: 'ADMIN (PIN)'
+        });
+    } catch(e) {
+        console.error("Auditoria error", e);
+    }
 }
 
 // Load Dashboard Basic Data
@@ -134,23 +127,31 @@ async function loadEmpleados() {
         const q = query(collection(db, "empleados"), orderBy("nombre"));
         const snap = await getDocs(q);
         tablaEmpleados.innerHTML = '';
-        
-        snap.forEach(doc => {
-            const d = doc.data();
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${d.nombre}</td>
-                <td>${d.pin}</td>
-                <td><span class="badge ${d.estado === 'Activo' ? 'badge-success' : 'badge-danger'}">${d.estado}</span></td>
-                <td>${d.deviceId ? 'Vinculado' : 'Sin Vincular'}</td>
-                <td>${d.ultimoRegistro || 'Nunca'}</td>
-                <td>
-                    <button class="btn-secondary" onclick="window.resetDevice('${doc.id}', '${d.nombre}')">Reset Dispositivo</button>
-                    <button class="btn-secondary" onclick="window.resetGPS('${doc.id}', '${d.nombre}')">Reset GPS</button>
-                </td>
-            `;
-            tablaEmpleados.appendChild(tr);
-        });
+                snap.forEach(doc => {
+                const d = doc.data();
+                const tr = document.createElement('tr');
+                // Escape simple quotes for inline onclick parameters
+                const safeNombre = d.nombre.replace(/'/g, "\\'");
+                const dui = d.dui || '';
+                const tel = d.telefono || '';
+                const sal = d.salarioBase || 0;
+                const vext = d.valorHoraExtra || 0;
+                const ley = d.aplicaLey ? 'true' : 'false';
+
+                tr.innerHTML = `
+                    <td>${d.nombre}</td>
+                    <td>${d.pin}</td>
+                    <td><span class="badge ${d.estado === 'Activo' ? 'badge-success' : 'badge-danger'}">${d.estado}</span></td>
+                    <td>${d.deviceId ? 'Vinculado' : 'Sin Vincular'}</td>
+                    <td>${d.ultimoRegistro || 'Nunca'}</td>
+                    <td>
+                        <button class="btn-secondary" onclick="window.editarEmpleado('${doc.id}', '${safeNombre}', '${d.pin}', '${tel}', '${dui}', ${sal}, ${vext}, ${ley})">✏️ Editar</button>
+                        <button class="btn-secondary" onclick="window.resetDevice('${doc.id}', '${safeNombre}')">📱 Reset</button>
+                        <button class="btn-secondary" onclick="window.eliminarEmpleado('${doc.id}', '${safeNombre}')" style="color: red;">🗑️ Eliminar</button>
+                    </td>
+                `;
+                tablaEmpleados.appendChild(tr);
+            });
     } catch(err) {
         console.error(err);
         tablaEmpleados.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Error de Base de Datos: ${err.message}. Â¿Tienes habilitado Firestore y configuradas las Reglas de Seguridad?</td></tr>`;
@@ -174,43 +175,101 @@ window.resetGPS = async (id, nombre) => {
 };
 
 // Crear Empleado
+window.eliminarEmpleado = async (id, nombre) => {
+    if(confirm(`¿Estás SEGURO de eliminar al empleado ${nombre}? Esto borrará su perfil del sistema.`)) {
+        try {
+            await deleteDoc(doc(db, "empleados", id));
+            alert("Empleado eliminado.");
+            loadEmpleados();
+        } catch(e) {
+            console.error(e);
+            alert("Error al eliminar: " + e.message);
+        }
+    }
+}
+
+window.editarEmpleado = (id, nombre, pin, telefono, dui, salario, valorExtra, aplicaLey) => {
+    document.getElementById('modal-empleado-title').textContent = "Editar Empleado";
+    document.getElementById('emp-id').value = id;
+    document.getElementById('emp-nombre').value = nombre;
+    document.getElementById('emp-pin').value = pin;
+    document.getElementById('emp-telefono').value = telefono;
+    document.getElementById('emp-dui').value = dui;
+    document.getElementById('emp-salario').value = salario;
+    document.getElementById('emp-valor-extra').value = valorExtra;
+    document.getElementById('emp-aplica-ley').checked = (aplicaLey === true || aplicaLey === 'true');
+    modalEmpleado.style.display = 'flex';
+}
+
 btnCrearEmpleado.addEventListener('click', () => {
-    empNombre.value = '';
-    empPin.value = '';
+    document.getElementById('modal-empleado-title').textContent = "Nuevo Empleado";
+    document.getElementById('emp-id').value = '';
+    document.getElementById('emp-nombre').value = '';
+    document.getElementById('emp-pin').value = '';
+    document.getElementById('emp-telefono').value = '';
+    document.getElementById('emp-dui').value = '';
+    document.getElementById('emp-salario').value = '';
+    document.getElementById('emp-valor-extra').value = '';
+    document.getElementById('emp-aplica-ley').checked = false;
     modalEmpleado.style.display = 'flex';
 });
-btnCancelarEmpleado.addEventListener('click', () => modalEmpleado.style.display = 'none');
+
+btnCancelarEmpleado.addEventListener('click', () => {
+    modalEmpleado.style.display = 'none';
+});
 
 btnGuardarEmpleado.addEventListener('click', async () => {
+    const empId = document.getElementById('emp-id').value;
     const nom = empNombre.value.trim();
     const pin = empPin.value.trim();
+    const tel = document.getElementById('emp-telefono').value.trim();
+    const dui = document.getElementById('emp-dui').value.trim();
     const sal = Number(document.getElementById('emp-salario').value) || 0;
     const vext = Number(document.getElementById('emp-valor-extra').value) || 0;
     const aley = document.getElementById('emp-aplica-ley').checked;
 
     if(nom && pin.length >= 4) {
         try {
-            await setDoc(doc(collection(db, "empleados")), {
-                nombre: nom,
-                pin: pin,
-                salarioBase: sal,
-                valorHoraExtra: vext,
-                aplicaLey: aley,
-                estado: 'Activo',
-                deviceId: null,
-                fechaCreacion: serverTimestamp()
-            });
-            await auditoria('CREAR_EMPLEADO', `Nombre: ${nom}`);
+            if (empId) {
+                // Modo Edición
+                await updateDoc(doc(db, "empleados", empId), {
+                    nombre: nom,
+                    pin: pin,
+                    telefono: tel,
+                    dui: dui,
+                    salarioBase: sal,
+                    valorHoraExtra: vext,
+                    aplicaLey: aley
+                });
+                alert("Empleado actualizado correctamente.");
+            } else {
+                // Modo Creación
+                await setDoc(doc(collection(db, "empleados")), {
+                    nombre: nom,
+                    pin: pin,
+                    telefono: tel,
+                    dui: dui,
+                    salarioBase: sal,
+                    valorHoraExtra: vext,
+                    aplicaLey: aley,
+                    estado: 'Activo',
+                    deviceId: null,
+                    fechaCreacion: serverTimestamp()
+                });
+                alert("Empleado creado correctamente.");
+            }
             modalEmpleado.style.display = 'none';
             loadEmpleados();
         } catch(e) {
             console.error(e);
-            alert("Error al guardar en base de datos: " + e.message + ". Verifica las Reglas de Firestore.");
+            alert("Error al guardar: " + e.message);
         }
     } else {
-        alert("Ingrese nombre y un PIN de al menos 4 dÃ­gitos");
+        alert("Ingrese nombre y un PIN de al menos 4 dígitos");
     }
 });
+
+
 
 // Asistencias
 async function loadAsistencias() {
@@ -229,9 +288,51 @@ async function loadAsistencias() {
             <td>${d.metodoValidacion} ${d.urlSelfie ? '<a href="'+d.urlSelfie+'" target="_blank">[Ver Selfie]</a>' : ''}</td>
             <td>${d.latitudActual?.toFixed(4)}, ${d.longitudActual?.toFixed(4)}</td>
             <td>${d.distanciaCalculada ? d.distanciaCalculada + 'm' : '-'}</td>
+            <td>
+                <button class="btn-secondary" onclick="window.editarAsistencia('${doc.id}', '${d.tipoMovimiento}', '${d.fecha}', '${d.hora}')">✏️ Editar</button>
+            </td>
         `;
         tablaAsistencias.appendChild(tr);
     });
+}
+
+window.editarAsistencia = (id, tipo, fecha, hora) => {
+    document.getElementById('edit-asis-id').value = id;
+    document.getElementById('edit-asis-tipo').value = tipo;
+    document.getElementById('edit-asis-fecha').value = fecha;
+    
+    // El input time requiere formato HH:MM o HH:MM:SS
+    document.getElementById('edit-asis-hora').value = hora;
+    
+    document.getElementById('modal-asistencia').style.display = 'flex';
+}
+
+window.guardarEdicionAsistencia = async () => {
+    const id = document.getElementById('edit-asis-id').value;
+    const tipo = document.getElementById('edit-asis-tipo').value;
+    const fecha = document.getElementById('edit-asis-fecha').value;
+    const hora = document.getElementById('edit-asis-hora').value;
+
+    if(!fecha || !hora) {
+        alert("Llena la fecha y hora.");
+        return;
+    }
+
+    try {
+        // En un caso ideal se recalcularía el Date object (fechaHora), 
+        // pero la planilla en turnos_planillas lee el string 'fecha' y 'hora'.
+        await updateDoc(doc(db, "asistencias", id), {
+            tipoMovimiento: tipo,
+            fecha: fecha,
+            hora: hora
+        });
+        alert("Asistencia editada correctamente. Recuerda regenerar las planillas afectadas.");
+        document.getElementById('modal-asistencia').style.display = 'none';
+        loadAsistencias();
+    } catch(e) {
+        console.error(e);
+        alert("Error al editar: " + e.message);
+    }
 }
 
 // Dispositivos (Same as empleados basically, focused on device info)
