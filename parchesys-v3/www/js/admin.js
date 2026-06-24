@@ -370,6 +370,7 @@ async function loadAsistencias() {
             <td style="font-weight:bold; color:#10b981;">${tiempoStr}</td>
             <td>
                 <button class="btn-secondary" onclick="window.editarAsistencia('${d.id}', '${d.tipoMovimiento}', '${d.fecha}', '${d.hora}')">✏️ Editar</button>
+                <button class="btn-secondary" style="color: red;" onclick="window.eliminarAsistencia('${d.id}')">🗑️ Eliminar</button>
             </td>
         `;
         tablaAsistencias.appendChild(tr);
@@ -387,6 +388,19 @@ window.editarAsistencia = (id, tipo, fecha, hora) => {
     document.getElementById('modal-asistencia').style.display = 'flex';
 }
 
+window.eliminarAsistencia = async (id) => {
+    if(confirm("¿Estás seguro de eliminar esta marca de asistencia de forma permanente?")) {
+        try {
+            await deleteDoc(doc(db, "asistencias", id));
+            alert("Marca de asistencia eliminada.");
+            loadAsistencias();
+        } catch(e) {
+            console.error(e);
+            alert("Error al eliminar: " + e.message);
+        }
+    }
+}
+
 window.guardarEdicionAsistencia = async () => {
     const id = document.getElementById('edit-asis-id').value;
     const tipo = document.getElementById('edit-asis-tipo').value;
@@ -399,12 +413,12 @@ window.guardarEdicionAsistencia = async () => {
     }
 
     try {
-        // En un caso ideal se recalcularía el Date object (fechaHora), 
-        // pero la planilla en turnos_planillas lee el string 'fecha' y 'hora'.
+        const dt = new Date(`${fecha}T${hora}`);
         await updateDoc(doc(db, "asistencias", id), {
             tipoMovimiento: tipo,
             fecha: fecha,
-            hora: hora
+            hora: hora,
+            fechaHora: dt
         });
         alert("Asistencia editada correctamente. Recuerda regenerar las planillas afectadas.");
         document.getElementById('modal-asistencia').style.display = 'none';
@@ -412,6 +426,68 @@ window.guardarEdicionAsistencia = async () => {
     } catch(e) {
         console.error(e);
         alert("Error al editar: " + e.message);
+    }
+}
+
+window.abrirModalMarcaManual = async () => {
+    document.getElementById('modal-marca-manual').style.display = 'flex';
+    document.getElementById('manual-asis-fecha').value = new Date().toISOString().split('T')[0];
+    document.getElementById('manual-asis-hora').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
+    
+    const sel = document.getElementById('manual-asis-empleado');
+    sel.innerHTML = '<option value="">Cargando...</option>';
+    
+    try {
+        const empSnap = await getDocs(collection(db, "empleados"));
+        sel.innerHTML = '<option value="">Seleccionar Empleado</option>';
+        empSnap.forEach(doc => {
+            const d = doc.data();
+            const opt = document.createElement('option');
+            opt.value = doc.id;
+            opt.textContent = d.nombre;
+            sel.appendChild(opt);
+        });
+    } catch(e) {
+        sel.innerHTML = '<option value="">Error cargando empleados</option>';
+    }
+}
+
+window.guardarMarcaManual = async () => {
+    const empleadoId = document.getElementById('manual-asis-empleado').value;
+    const tipo = document.getElementById('manual-asis-tipo').value;
+    const fecha = document.getElementById('manual-asis-fecha').value;
+    const hora = document.getElementById('manual-asis-hora').value;
+
+    if(!empleadoId || !fecha || !hora) {
+        alert("Llena todos los campos.");
+        return;
+    }
+
+    const selectEl = document.getElementById('manual-asis-empleado');
+    const nombreEmpleado = selectEl.options[selectEl.selectedIndex].text;
+
+    try {
+        const dt = new Date(`${fecha}T${hora}`);
+        
+        await setDoc(doc(collection(db, "asistencias")), {
+            empleadoId: empleadoId,
+            nombreEmpleado: nombreEmpleado,
+            tipoMovimiento: tipo,
+            fecha: fecha,
+            hora: hora,
+            fechaHora: dt,
+            metodoValidacion: "MANUAL (ADMIN)",
+            latitudActual: 0,
+            longitudActual: 0,
+            urlSelfie: ""
+        });
+        
+        alert("Marca manual creada exitosamente. Recuerda regenerar las planillas afectadas.");
+        document.getElementById('modal-marca-manual').style.display = 'none';
+        loadAsistencias();
+    } catch(e) {
+        console.error(e);
+        alert("Error al crear marca: " + e.message);
     }
 }
 
