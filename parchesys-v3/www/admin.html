@@ -76,7 +76,8 @@
             </div>
 
             <div id="view-asistencias" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn-primary" onclick="abrirModalMarcaManual()">Nueva Marca Manual</button>
                     <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
                 </div>
                 <table class="data-table">
@@ -255,6 +256,30 @@
             <div class="modal-actions">
                 <button class="btn-secondary" onclick="document.getElementById('modal-asistencia').style.display='none'">Cancelar</button>
                 <button class="btn-primary" onclick="guardarEdicionAsistencia()">Guardar Cambio</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Marca Manual -->
+    <div id="modal-marca-manual" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nueva Marca Manual</h3>
+            <label>Empleado:</label>
+            <select id="manual-asis-empleado" class="input-field">
+                <option value="">Seleccionar Empleado</option>
+            </select>
+            <label>Tipo de Movimiento:</label>
+            <select id="manual-asis-tipo" class="input-field">
+                <option value="ENTRADA">ENTRADA</option>
+                <option value="SALIDA">SALIDA</option>
+            </select>
+            <label>Fecha:</label>
+            <input type="date" id="manual-asis-fecha" class="input-field">
+            <label>Hora:</label>
+            <input type="time" id="manual-asis-hora" step="1" class="input-field">
+            <div class="modal-actions">
+                <button class="btn-secondary" onclick="document.getElementById('modal-marca-manual').style.display='none'">Cancelar</button>
+                <button class="btn-primary" onclick="guardarMarcaManual()">Guardar Asistencia</button>
             </div>
         </div>
     </div>
