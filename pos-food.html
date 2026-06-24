@@ -2719,7 +2719,7 @@ function abrirCajaSesion() {
     var sesion = {
       id: 'caja_' + Date.now(),
       estado: 'abierta',
-      fecha_apertura: new Date().toISOString(),
+      fecha_apertura: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
       usuario_apertura: foundEmp.nombre,
       monto_inicial: monto,
       ventas_efectivo: 0,
@@ -2846,7 +2846,7 @@ function cerrarCajaSesion() {
     
     var sesionFinal = Object.assign({}, _cajaSesion);
     sesionFinal.estado = 'cerrada';
-    sesionFinal.fecha_cierre = new Date().toISOString();
+    sesionFinal.fecha_cierre = new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1);
     sesionFinal.usuario_cierre = foundEmp.nombre;
     sesionFinal.monto_real = real;
     sesionFinal.diferencia = dif;
@@ -4986,7 +4986,7 @@ function enviarAlertaStockBajo(productId, productName, currentStock) {
     mensaje: 'El producto "' + productName + '" tiene un stock de ' + currentStock + ' unidades.',
     tipo: 'stock_bajo',
     urgente: true,
-    fecha: new Date().toISOString(),
+    fecha: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
     leida: false,
     canal: 'push-modus',
     extra: {
@@ -5159,7 +5159,7 @@ function procesarOrden(tipoAccion){
       nota_cocina:_notaCocina,
       estado:estado,
       fecha:new Date().toLocaleDateString('es-SV'),
-      fecha_iso:new Date().toISOString(),
+      fecha_iso:new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
       timestamp:ts,
       caja_num:_cajaActual
     };
@@ -5525,7 +5525,7 @@ function acumularOrdenOffline() {
     total: total.toFixed(2),
     nota_cocina: _notaCocina,
     estado: 'offline_pendiente',
-    fecha_iso: new Date().toISOString(),
+    fecha_iso: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
     timestamp: Date.now()
   };
 
@@ -6839,7 +6839,7 @@ function confirmarMovCaja() {
       tipo: _movcajaTipo,                // 'ingreso' | 'egreso'
       monto: monto,
       concepto: concepto,
-      fecha: new Date().toISOString(),
+      fecha: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
       timestamp: ts,
       cajero: foundEmp.nombre || _loggedMesero || 'cajero',
       cajero_codigo: String(foundEmp.codigo || foundEmp.code || foundEmp.id_empleado || ''),

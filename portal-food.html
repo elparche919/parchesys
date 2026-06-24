@@ -1998,7 +1998,7 @@
          document.getElementById('p-est').value = d.oculto ? 'oculto' : 'activo';
          document.getElementById('p-inv-desc').value = d.descuenta ? 'si' : 'no';
          document.getElementById('p-inv-stk').value = d.stockFijo || 0;
-         document.getElementById('p-inv-bod').value = d.stock_bodega || 0;
+         document.getElementById('p-inv-bod').value = d.stockBodega || 0;
          document.getElementById('p-inv-min').value = d.stockMinimo !== undefined ? d.stockMinimo : 5;
          document.getElementById('p-iva').value = d.gravado ? 'gravado' : 'exento';
          document.getElementById('p-img').value = d.img || '';
@@ -2093,7 +2093,7 @@
           oculto: document.getElementById('p-est').value === 'oculto',
           descuenta: document.getElementById('p-inv-desc').value === 'si',
           stockFijo: parseFloat(document.getElementById('p-inv-stk').value||0),
-          stock_bodega: parseFloat(document.getElementById('p-inv-bod').value||0),
+          stockBodega: parseFloat(document.getElementById('p-inv-bod').value||0),
           stockMinimo: parseFloat(document.getElementById('p-inv-min').value||5),
           gravado: document.getElementById('p-iva').value === 'gravado',
           ingredientes: currentPlat.ingredientes,
@@ -2155,7 +2155,7 @@
         const stockVenta = (p.variantes && p.variantes.length)
           ? p.variantes.reduce((a, v) => a + (parseFloat(v.stock) || 0), 0)
           : parseFloat(p.stockFijo || 0);
-        const stockBod = parseFloat(p.stock_bodega || 0);
+        const stockBod = parseFloat(p.stockBodega || 0);
         const rowKey = encodeURIComponent(p._cat) + '|' + encodeURIComponent(p.id);
         let variantSelect = '';
         if (p.variantes && p.variantes.length) {
@@ -2196,9 +2196,9 @@
       const qty = parseFloat(qtyInput.value || 0);
       if (!qty || qty <= 0) { alert('Ingresa una cantidad válida.'); return; }
 
-      const nuevoBodega = (parseFloat(p.stock_bodega || 0)) + qty;
-      db.ref(`negocios/${negocioID}/productos/${cat}/${id}/stock_bodega`).set(nuevoBodega).then(() => {
-        p.stock_bodega = nuevoBodega;
+      const nuevoBodega = (parseFloat(p.stockBodega || 0)) + qty;
+      db.ref(`negocios/${negocioID}/productos/${cat}/${id}/stockBodega`).set(nuevoBodega).then(() => {
+        p.stockBodega = nuevoBodega;
         qtyInput.value = '';
         renderBodegaTabla();
       }).catch(e => { alert('Error al ingresar a bodega: ' + e.message); });
@@ -2209,13 +2209,13 @@
       if (!p) return;
       const qtyInput = document.getElementById('bdg-qty-' + rowKey);
       const qty = parseFloat(qtyInput.value || 0);
-      const stockBod = parseFloat(p.stock_bodega || 0);
+      const stockBod = parseFloat(p.stockBodega || 0);
       if (!qty || qty <= 0) { alert('Ingresa una cantidad válida.'); return; }
       if (qty > stockBod) { alert('No hay suficiente stock en bodega para trasladar.'); return; }
 
       const updates = {};
       const nuevoBodega = stockBod - qty;
-      updates[`negocios/${negocioID}/productos/${cat}/${id}/stock_bodega`] = nuevoBodega;
+      updates[`negocios/${negocioID}/productos/${cat}/${id}/stockBodega`] = nuevoBodega;
 
       if (p.variantes && p.variantes.length) {
         const varSel = document.getElementById('bdg-var-' + rowKey);
@@ -2231,7 +2231,7 @@
       }
 
       db.ref().update(updates).then(() => {
-        p.stock_bodega = nuevoBodega;
+        p.stockBodega = nuevoBodega;
         qtyInput.value = '';
         renderBodegaTabla();
       }).catch(e => { alert('Error al trasladar a venta: ' + e.message); });
