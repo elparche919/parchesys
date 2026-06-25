@@ -2532,7 +2532,7 @@
 
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalMes(v);
+        const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
         if (fechaV !== mes) return;
         const monto = parseFloat(v.total || 0);
         totalIngresos += monto;
@@ -2657,7 +2657,7 @@
       let prodsMap={}, channelsMap={}, paymentsMap={};
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalDia(v);
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
         if (fechaV < desde || fechaV > hasta) return;
         const monto = parseFloat(v.total||0);
         totalIngresos += monto; tickets++;
@@ -2684,7 +2684,7 @@
       const diasMap = {}; // 'YYYY-MM-DD' => { ingresos, tickets }
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalDia(v);
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
         if (!fechaV.startsWith(mes)) return;
         if (!diasMap[fechaV]) diasMap[fechaV] = { ingresos:0, tickets:0 };
         diasMap[fechaV].ingresos += parseFloat(v.total||0);
@@ -2757,7 +2757,7 @@
       let prodsMap={}, paymentsMap={}, canalesMap={}, ordenes=[];
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalDia(v);
+        const fechaV = (v.fecha_iso||v.fecha||'').substring(0,10);
         if (fechaV !== fecha) return;
         const monto = parseFloat(v.total||0);
         totalIng += monto; tickets++;
@@ -2789,7 +2789,7 @@
       // Tabla de órdenes
       document.getElementById('dd-tbl-ordenes').querySelector('tbody').innerHTML =
         ordenes.map(v => {
-          const hora = _getLocalISO(v) ? _getLocalISO(v).substring(11,16) : (v.hora||'—');
+          const hora = v.fecha_iso ? v.fecha_iso.substring(11,16) : (v.hora||'â€”');
           const desc = parseFloat(v.descuento_monto||0);
           return `<tr>
             <td style="font-weight:800;font-family:monospace">${v.orden||'â€”'}</td>
@@ -3202,7 +3202,7 @@
 
       // Helper: fecha ISO de una venta (YYYY-MM-DD)
       function fechaVenta(v) {
-        if (_getLocalISO(v)) return _getLocalDia(v);
+        if (v.fecha_iso) return v.fecha_iso.substring(0,10);
         const raw = v.fecha || '';
         if (raw.includes('/')) {
           const p = raw.split('/');
@@ -3349,8 +3349,8 @@
       snap.forEach(c => {
         const v = c.val();
         let fv = '';
-        if (_getLocalISO(v)) {
-      fv = _getLocalDia(v);
+        if (v.fecha_iso) {
+          fv = v.fecha_iso.substring(0,10);
         } else {
           const raw = v.fecha || '';
           if (raw.includes('/')) {
@@ -3545,7 +3545,7 @@
 
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalMes(v);
+        const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
         if (fechaV !== mes) return;
         const monto = parseFloat(v.total||0);
         const tip   = parseFloat(v.propina||0);
@@ -3557,7 +3557,7 @@
         else if (canal==='llevar'||canal==='para_llevar') ventaLlevar += monto;
         else if (canal==='delivery') ventaDelivery += monto;
         else ventaMesa += monto;
-        const dia = _getLocalDia(v);
+        const dia = v.fecha_iso ? v.fecha_iso.substring(0,10) : '';
         if (dia) diasSet.add(dia);
       });
 
@@ -3677,7 +3677,7 @@
 
       vSnap.forEach(c => {
         const v = { _key: c.key, ...c.val() };
-        const diaV = _getLocalDia(v);
+        const diaV = v.fecha_iso ? v.fecha_iso.substring(0,10) : (v.fecha_iso || '');
         const mesV  = diaV.substring(0,7);
         if (mesV !== mes) return;
         if (diaV < fechaInicio || diaV > fechaFin) return;
@@ -4649,7 +4649,7 @@
       let totalVentas = 0;
       vSnap.forEach(c => {
         const v = c.val();
-        const fechaV = _getLocalMes(v);
+        const fechaV = v.fecha_iso ? v.fecha_iso.substring(0,7) : (v.fecha||'').substring(0,7);
         if (fechaV === mes && v.estado === 'pagado') totalVentas += parseFloat(v.total||0);
       });
 
