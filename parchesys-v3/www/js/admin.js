@@ -315,66 +315,101 @@ function getValidDate(a) {
 }
 
 // Asistencias
-async function loadAsistencias() {
-    // Ampliamos el límite a 200 para tener contexto histórico suficiente para emparejar Entradas y Salidas
-    const q = query(collection(db, "asistencias"), orderBy("fechaHora", "desc"), limit(200));
+window.loadAsistencias = async function() {
+    const fechaInput = document.getElementById('asistencias-fecha');
+    let targetDate = fechaInput && fechaInput.value ? fechaInput.value : new Date().toISOString().split('T')[0];
+    if(fechaInput && !fechaInput.value) {
+        fechaInput.value = targetDate;
+    }
+
+    const q = query(collection(db, "asistencias"), where("fecha", "==", targetDate));
     const snap = await getDocs(q);
     
     let records = [];
     snap.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
     
-    let timeWorkedMap = {}; 
-    let lastSalida = {}; 
-    
-    // Al estar ordenadas de más reciente a más antiguo, una SALIDA aparece antes que su ENTRADA
+    let empMap = {};
     records.forEach(r => {
         const empId = r.empleadoId;
-        const tipo = (r.tipoMovimiento || '').trim().toUpperCase();
+        if(!empMap[empId]) empMap[empId] = { empleadoId: empId, nombre: r.nombreEmpleado, entradas: [], salidas: [] };
         
-        if (tipo === 'SALIDA') {
-            if (!lastSalida[empId]) {
-                lastSalida[empId] = r;
-            }
-        } else if (tipo === 'ENTRADA') {
-            if (lastSalida[empId]) {
-                const dSalida = getValidDate(lastSalida[empId]);
-                const dEntrada = getValidDate(r);
-                const mins = (dSalida - dEntrada) / 60000;
-                
-                if (mins > 0) {
-                    const h = Math.floor(mins / 60);
-                    const m = Math.floor(mins % 60);
-                    timeWorkedMap[lastSalida[empId].id] = `${h}h ${m}m`;
-                }
-                lastSalida[empId] = null; // Reiniciar para el siguiente par
-            }
-        }
+        const tipo = (r.tipoMovimiento || '').trim().toUpperCase();
+        if(tipo === 'ENTRADA') empMap[empId].entradas.push(r);
+        else if(tipo === 'SALIDA') empMap[empId].salidas.push(r);
     });
 
     tablaAsistencias.innerHTML = '';
     
-    // Solo mostramos los últimos 50 en la tabla para no saturar
-    const displayRecords = records.slice(0, 50);
-    
-    displayRecords.forEach(d => {
-        const dateStr = d.fechaHora && d.fechaHora.toDate ? d.fechaHora.toDate().toLocaleString() : d.fechaHora;
-        const tiempoStr = timeWorkedMap[d.id] || (d.tipoMovimiento === 'ENTRADA' ? '-' : 'Sin emparejar');
+    Object.values(empMap).forEach(emp => {
+        emp.entradas.sort((a,b) => getValidDate(a) - getValidDate(b));
+        emp.salidas.sort((a,b) => getValidDate(a) - getValidDate(b));
         
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>${d.nombreEmpleado}</td>
-            <td><span class="badge ${d.tipoMovimiento === 'ENTRADA' ? 'badge-success' : 'badge-danger'}">${d.tipoMovimiento}</span></td>
-            <td>${dateStr}</td>
-            <td>${d.metodoValidacion} ${d.urlSelfie ? '<a href="'+d.urlSelfie+'" target="_blank">[Ver Selfie]</a>' : ''}</td>
-            <td>${d.latitudActual?.toFixed(4)}, ${d.longitudActual?.toFixed(4)}</td>
-            <td style="font-weight:bold; color:#10b981;">${tiempoStr}</td>
-            <td>
-                <button class="btn-secondary" onclick="window.editarAsistencia('${d.id}', '${d.tipoMovimiento}', '${d.fecha}', '${d.hora}')">✏️ Editar</button>
-                <button class="btn-secondary" style="color: red;" onclick="window.eliminarAsistencia('${d.id}')">🗑️ Eliminar</button>
-            </td>
-        `;
-        tablaAsistencias.appendChild(tr);
+        let numPares = Math.max(emp.entradas.length, emp.salidas.length, 1);
+        
+        for(let i=0; i<numPares; i++) {
+            const ent = emp.entradas[i];
+            const sal = emp.salidas[i];
+            
+            let entStr = ent ? (ent.hora || (ent.fechaHora && ent.fechaHora.toDate ? ent.fechaHora.toDate().toLocaleTimeString() : ent.fechaHora)) : 'Sin Entrada';
+            let salStr = sal ? (sal.hora || (sal.fechaHora && sal.fechaHora.toDate ? sal.fechaHora.toDate().toLocaleTimeString() : sal.fechaHora)) : 'Pendiente de Salida';
+            
+            let entSelfie = ent && ent.urlSelfie ? ` <a href="${ent.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📸</a>` : '';
+            let salSelfie = sal && sal.urlSelfie ? ` <a href="${sal.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📸</a>` : '';
+
+            let entBadge = ent ? `<span class="badge badge-success" title="${ent.metodoValidacion}">⬇️ Entrada: ${entStr}</span>${entSelfie}` : `<span class="badge" style="background:#64748b;color:white">Sin Entrada</span>`;
+            
+            let salBadge = sal ? `<span class="badge badge-danger" title="${sal.metodoValidacion}">⬆️ Salida: ${salStr}</span>${salSelfie}` : (ent ? `<span class="badge" style="background:#f59e0b;color:white;cursor:pointer;" onclick="window.abrirModalMarcaManualSalida('${emp.empleadoId}', '${targetDate}')">⏳ Pendiente de Salida</span>` : `<span class="badge" style="background:#64748b;color:white">Sin Salida</span>`);
+            
+            let tiempoStr = '-';
+            if(ent && sal) {
+                const dEnt = getValidDate(ent);
+                const dSal = getValidDate(sal);
+                const mins = (dSal - dEnt) / 60000;
+                if(mins > 0) {
+                    const h = Math.floor(mins / 60);
+                    const m = Math.floor(mins % 60);
+                    tiempoStr = `${h}h ${m}m`;
+                }
+            }
+            
+            let accionesHTML = '<div style="display:flex;gap:4px;">';
+            if(ent) accionesHTML += `<button class="btn-secondary" style="font-size:10px;padding:4px 6px;" onclick="window.editarAsistencia('${ent.id}', 'ENTRADA', '${ent.fecha}', '${ent.hora}')">✏️ Ent</button>`;
+            if(sal) accionesHTML += `<button class="btn-secondary" style="font-size:10px;padding:4px 6px;" onclick="window.editarAsistencia('${sal.id}', 'SALIDA', '${sal.fecha}', '${sal.hora}')">✏️ Sal</button>`;
+            if(ent) accionesHTML += `<button class="btn-secondary" style="color:red;font-size:10px;padding:4px 6px;" onclick="window.eliminarAsistencia('${ent.id}')">🗑️ Ent</button>`;
+            if(sal) accionesHTML += `<button class="btn-secondary" style="color:red;font-size:10px;padding:4px 6px;" onclick="window.eliminarAsistencia('${sal.id}')">🗑️ Sal</button>`;
+            accionesHTML += '</div>';
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${emp.nombre}</strong></td>
+                <td>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:10px;">
+                        ${entBadge}
+                        <span style="color:#94a3b8;font-weight:bold;">------</span>
+                        ${salBadge}
+                    </div>
+                </td>
+                <td style="font-weight:bold; color:#10b981; text-align:center;">${tiempoStr}</td>
+                <td>${accionesHTML}</td>
+            `;
+            tablaAsistencias.appendChild(tr);
+        }
     });
+    
+    if(Object.keys(empMap).length === 0) {
+        tablaAsistencias.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay asistencias para esta fecha.</td></tr>';
+    }
+}
+
+async function loadAsistencias() {
+    return window.loadAsistencias();
+}
+
+window.abrirModalMarcaManualSalida = async (empleadoId, fecha) => {
+    await window.abrirModalMarcaManual();
+    document.getElementById('manual-asis-empleado').value = empleadoId;
+    document.getElementById('manual-asis-tipo').value = 'SALIDA';
+    document.getElementById('manual-asis-fecha').value = fecha;
 }
 
 window.editarAsistencia = (id, tipo, fecha, hora) => {
