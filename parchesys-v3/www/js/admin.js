@@ -111,7 +111,8 @@ async function loadDashboardData() {
     // Asistencias today
     const startOfDay = new Date();
     startOfDay.setHours(0,0,0,0);
-    const qAsist = query(collection(db, "asistencias"), where("fecha", ">=", startOfDay.toISOString().split('T')[0]));
+    const localDateStr = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth()+1).padStart(2,'0')}-${String(startOfDay.getDate()).padStart(2,'0')}`;
+    const qAsist = query(collection(db, "asistencias"), where("fecha", ">=", localDateStr));
     const asisSnap = await getDocs(qAsist);
     statAsistencias.textContent = asisSnap.size;
     
@@ -317,7 +318,9 @@ function getValidDate(a) {
 // Asistencias
 window.loadAsistencias = async function() {
     const fechaInput = document.getElementById('asistencias-fecha');
-    let targetDate = fechaInput && fechaInput.value ? fechaInput.value : new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const todayLocal = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    let targetDate = fechaInput && fechaInput.value ? fechaInput.value : todayLocal;
     if(fechaInput && !fechaInput.value) {
         fechaInput.value = targetDate;
     }
@@ -490,7 +493,9 @@ window.guardarEdicionAsistencia = async () => {
 
 window.abrirModalMarcaManual = async () => {
     document.getElementById('modal-marca-manual').style.display = 'flex';
-    document.getElementById('manual-asis-fecha').value = new Date().toISOString().split('T')[0];
+    const d = new Date();
+    const todayLocal = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    document.getElementById('manual-asis-fecha').value = todayLocal;
     document.getElementById('manual-asis-hora').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
     
     const sel = document.getElementById('manual-asis-empleado');
@@ -645,38 +650,53 @@ document.getElementById('btn-import-v2')?.addEventListener('click', async () => 
     }
 });
 
-// Restauración de datos para horas en formato 12h
-window.fixData = async () => {
-    if(!confirm('¿Estás seguro de restaurar el formato de las horas del 23 y 24?')) return;
+// Restauración de datos del día 23
+window.restoreData23 = async () => {
+    if(!confirm('¿Estás seguro de restaurar los datos exactos del 23 tal como aparecen en la imagen? Esto borrará las asistencias actuales del 23.')) return;
     try {
-        const q1 = query(collection(db, "asistencias"), where("fecha", "==", "2026-06-23"));
-        const q2 = query(collection(db, "asistencias"), where("fecha", "==", "2026-06-24"));
-        
-        const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
-        
+        // 1. Borrar todas las del día 23
+        const qDel = query(collection(db, "asistencias"), where("fecha", "==", "2026-06-23"));
+        const snapDel = await getDocs(qDel);
+        for(let docSnap of snapDel.docs) {
+            await deleteDoc(doc(db, "asistencias", docSnap.id));
+        }
+
+        // 2. Obtener IDs de empleados
+        const empSnap = await getDocs(collection(db, "empleados"));
+        let mapEmp = {};
+        empSnap.forEach(d => mapEmp[d.data().nombre] = d.id);
+
+        // 3. Registros a insertar
+        const targetRecords = [
+            { nombre: "Roxana Yasmin Rodriguez Gamez", tipo: "SALIDA", hora: "10:49 PM", horaStr: "22:49:39", metodo: "Biometria Android", lat: 13.3466, lng: -88.3940 },
+            { nombre: "Edwin Jaime González", tipo: "ENTRADA", hora: "2:38 PM", horaStr: "14:38:12", metodo: "Biometria Android", lat: 13.3466, lng: -88.3940 },
+            { nombre: "Fernando Daniel Garcia Parada", tipo: "ENTRADA", hora: "2:05 PM", horaStr: "14:05:32", metodo: "Biometria Android", lat: 13.3465, lng: -88.3940 },
+            { nombre: "Cristian Jose Granados Rivera", tipo: "ENTRADA", hora: "2:00 PM", horaStr: "14:00:01", metodo: "Biometria Android", lat: 13.3466, lng: -88.3940 },
+            { nombre: "Roxana Yasmin Rodriguez Gamez", tipo: "ENTRADA", hora: "2:00 PM", horaStr: "14:00:00", metodo: "Biometria Android", lat: 13.3465, lng: -88.3941 },
+            { nombre: "Rudy René de la O Bolaines", tipo: "ENTRADA", hora: "2:30 AM", horaStr: "02:30:00", metodo: "MANUAL (ADMIN)", lat: 0.0, lng: 0.0 },
+            { nombre: "Ana Sofía Osorio Ayala", tipo: "ENTRADA", hora: "2:05 AM", horaStr: "02:05:00", metodo: "MANUAL (ADMIN)", lat: 0.0, lng: 0.0 }
+        ];
+
         let count = 0;
-        const processSnap = async (snap) => {
-            for(let docSnap of snap.docs) {
-                let d = docSnap.data();
-                if (d.fechaHora && d.fechaHora.toDate) {
-                    let dt = d.fechaHora.toDate();
-                    let hInt = dt.getHours();
-                    let mm = dt.getMinutes().toString().padStart(2, '0');
-                    let ampm = hInt >= 12 ? 'PM' : 'AM';
-                    let h12 = hInt % 12;
-                    if(h12 === 0) h12 = 12;
-                    let hora12 = `${h12}:${mm} ${ampm}`;
-                    
-                    if (d.hora !== hora12) {
-                        await updateDoc(doc(db, "asistencias", docSnap.id), { hora: hora12 });
-                        count++;
-                    }
-                }
-            }
-        };
-        await processSnap(s1);
-        await processSnap(s2);
-        alert(`Datos restaurados exitosamente. Se corrigieron ${count} registros.`);
+        for(let r of targetRecords) {
+            const eId = mapEmp[r.nombre] || "ID_DESCONOCIDO";
+            const dt = new Date(`2026-06-23T${r.horaStr}`);
+            await setDoc(doc(collection(db, "asistencias")), {
+                empleadoId: eId,
+                nombreEmpleado: r.nombre,
+                tipoMovimiento: r.tipo,
+                fecha: "2026-06-23",
+                hora: r.hora,
+                fechaHora: dt,
+                metodoValidacion: r.metodo,
+                latitudActual: r.lat,
+                longitudActual: r.lng,
+                urlSelfie: ""
+            });
+            count++;
+        }
+        
+        alert(`Datos del 23 restaurados exitosamente. Se insertaron ${count} registros.`);
         window.loadAsistencias();
     } catch (e) {
         alert("Error: " + e.message);
