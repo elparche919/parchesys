@@ -417,9 +417,25 @@ window.editarAsistencia = (id, tipo, fecha, hora) => {
     document.getElementById('edit-asis-tipo').value = tipo;
     document.getElementById('edit-asis-fecha').value = fecha;
     
-    // El input time requiere formato HH:MM o HH:MM:SS
-    document.getElementById('edit-asis-hora').value = hora;
-    
+    let hora24 = hora;
+    if(/a\.?\s*m\.?|p\.?\s*m\.?/i.test(hora)) {
+        const match = hora.match(/(\d+):(\d+)/);
+        if(match) {
+            let hh = parseInt(match[1]);
+            const mm = match[2];
+            if(/p/i.test(hora) && hh < 12) hh += 12;
+            if(/a/i.test(hora) && hh === 12) hh = 0;
+            hora24 = `${hh.toString().padStart(2, '0')}:${mm}`;
+        }
+    } else if (hora.match(/^\d+:\d+$/)) {
+        const parts = hora.split(':');
+        hora24 = `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    } else if (hora.match(/^\d+:\d+:\d+$/)) {
+        const parts = hora.split(':');
+        hora24 = `${parts[0].padStart(2, '0')}:${parts[1].padStart(2, '0')}`;
+    }
+
+    document.getElementById('edit-asis-hora').value = hora24;
     document.getElementById('modal-asistencia').style.display = 'flex';
 }
 
@@ -440,19 +456,27 @@ window.guardarEdicionAsistencia = async () => {
     const id = document.getElementById('edit-asis-id').value;
     const tipo = document.getElementById('edit-asis-tipo').value;
     const fecha = document.getElementById('edit-asis-fecha').value;
-    const hora = document.getElementById('edit-asis-hora').value;
+    const horaVal = document.getElementById('edit-asis-hora').value;
 
-    if(!fecha || !hora) {
+    if(!fecha || !horaVal) {
         alert("Llena la fecha y hora.");
         return;
     }
 
+    // Convertir a 12 horas (AM/PM) para mantener consistencia
+    let [hh, mm] = horaVal.split(':');
+    let hInt = parseInt(hh, 10);
+    let ampm = hInt >= 12 ? 'PM' : 'AM';
+    let h12 = hInt % 12;
+    if(h12 === 0) h12 = 12;
+    let hora12 = `${h12}:${mm} ${ampm}`;
+
     try {
-        const dt = new Date(`${fecha}T${hora}`);
+        const dt = new Date(`${fecha}T${horaVal}`);
         await updateDoc(doc(db, "asistencias", id), {
             tipoMovimiento: tipo,
             fecha: fecha,
-            hora: hora,
+            hora: hora12,
             fechaHora: dt
         });
         alert("Asistencia editada correctamente. Recuerda regenerar las planillas afectadas.");
@@ -491,25 +515,33 @@ window.guardarMarcaManual = async () => {
     const empleadoId = document.getElementById('manual-asis-empleado').value;
     const tipo = document.getElementById('manual-asis-tipo').value;
     const fecha = document.getElementById('manual-asis-fecha').value;
-    const hora = document.getElementById('manual-asis-hora').value;
+    const horaVal = document.getElementById('manual-asis-hora').value;
 
-    if(!empleadoId || !fecha || !hora) {
+    if(!empleadoId || !fecha || !horaVal) {
         alert("Llena todos los campos.");
         return;
     }
+
+    // Convertir a 12 horas (AM/PM)
+    let [hh, mm] = horaVal.split(':');
+    let hInt = parseInt(hh, 10);
+    let ampm = hInt >= 12 ? 'PM' : 'AM';
+    let h12 = hInt % 12;
+    if(h12 === 0) h12 = 12;
+    let hora12 = `${h12}:${mm} ${ampm}`;
 
     const selectEl = document.getElementById('manual-asis-empleado');
     const nombreEmpleado = selectEl.options[selectEl.selectedIndex].text;
 
     try {
-        const dt = new Date(`${fecha}T${hora}`);
+        const dt = new Date(`${fecha}T${horaVal}`);
         
         await setDoc(doc(collection(db, "asistencias")), {
             empleadoId: empleadoId,
             nombreEmpleado: nombreEmpleado,
             tipoMovimiento: tipo,
             fecha: fecha,
-            hora: hora,
+            hora: hora12,
             fechaHora: dt,
             metodoValidacion: "MANUAL (ADMIN)",
             latitudActual: 0,
@@ -612,3 +644,41 @@ document.getElementById('btn-import-v2')?.addEventListener('click', async () => 
         document.getElementById('btn-import-v2').textContent = 'Importar Empleados de v2';
     }
 });
+
+// Restauración de datos para horas en formato 12h
+window.fixData = async () => {
+    if(!confirm('¿Estás seguro de restaurar el formato de las horas del 23 y 24?')) return;
+    try {
+        const q1 = query(collection(db, "asistencias"), where("fecha", "==", "2026-06-23"));
+        const q2 = query(collection(db, "asistencias"), where("fecha", "==", "2026-06-24"));
+        
+        const [s1, s2] = await Promise.all([getDocs(q1), getDocs(q2)]);
+        
+        let count = 0;
+        const processSnap = async (snap) => {
+            for(let docSnap of snap.docs) {
+                let d = docSnap.data();
+                if (d.fechaHora && d.fechaHora.toDate) {
+                    let dt = d.fechaHora.toDate();
+                    let hInt = dt.getHours();
+                    let mm = dt.getMinutes().toString().padStart(2, '0');
+                    let ampm = hInt >= 12 ? 'PM' : 'AM';
+                    let h12 = hInt % 12;
+                    if(h12 === 0) h12 = 12;
+                    let hora12 = `${h12}:${mm} ${ampm}`;
+                    
+                    if (d.hora !== hora12) {
+                        await updateDoc(doc(db, "asistencias", docSnap.id), { hora: hora12 });
+                        count++;
+                    }
+                }
+            }
+        };
+        await processSnap(s1);
+        await processSnap(s2);
+        alert(`Datos restaurados exitosamente. Se corrigieron ${count} registros.`);
+        window.loadAsistencias();
+    } catch (e) {
+        alert("Error: " + e.message);
+    }
+};
