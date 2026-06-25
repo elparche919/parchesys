@@ -76,7 +76,8 @@
             </div>
 
             <div id="view-asistencias" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; justify-content: flex-end; gap: 10px; align-items: center;">
+                    <input type="date" id="asistencias-fecha" class="input-field" title="Fecha de Asistencia" onchange="loadAsistencias()" style="margin-right: auto;">
                     <button class="btn-primary" onclick="abrirModalMarcaManual()">Nueva Marca Manual</button>
                     <button class="btn-secondary" onclick="window.print()">🖨️ Imprimir</button>
                 </div>
@@ -84,11 +85,8 @@
                     <thead>
                         <tr>
                             <th>Empleado</th>
-                            <th>Tipo</th>
-                            <th>Fecha/Hora</th>
-                            <th>Validación</th>
-                            <th>Ubicación</th>
-                            <th>Tiempo Trabajado</th>
+                            <th style="text-align:center;">Asistencia</th>
+                            <th style="text-align:center;">Tiempo Trabajado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
