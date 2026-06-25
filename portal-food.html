@@ -415,13 +415,16 @@
               </div>
               <!-- Top platillos del día -->
               <div class="tbl-card">
-                <div style="padding:12px 16px;font-weight:900;border-bottom:1px solid var(--m-border)">
-                  <i class="fa-solid fa-crown" style="color:#fbbf24"></i> Top Platillos del Día
+                <div style="padding:12px 16px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center; flex-wrap:wrap; gap:10px;">
+                  <span><i class="fa-solid fa-burger" style="color:#38bdf8"></i> Productos del Día</span>
+                  <input type="text" id="dd-prod-search" placeholder="Buscar producto..." class="f-inp" style="width:140px; padding:6px 10px; font-size:12px; margin:0; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff;" onkeyup="renderReporteDiaProductos()">
                 </div>
-                <table id="dd-tbl-prods">
-                  <thead><tr><th>Platillo</th><th style="text-align:center">Cant.</th><th style="text-align:right">Recaudado</th></tr></thead>
-                  <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr></tbody>
-                </table>
+                <div style="max-height: 300px; overflow-y: auto;">
+                  <table id="dd-tbl-prods">
+                    <thead style="position: sticky; top: 0; z-index: 10;"><tr><th>Platillo</th><th style="text-align:center">Cant.</th><th style="text-align:right">Recaudado</th></tr></thead>
+                    <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr></tbody>
+                  </table>
+                </div>
               </div>
             </div>
             <div style="display:flex;flex-direction:column;gap:16px">
@@ -449,14 +452,16 @@
           <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
             <div>
               <div class="tbl-card">
-                <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
-                  <span><i class="fa-solid fa-crown" style="color:#fbbf24"></i> Top Platillos</span>
-                  <span style="font-size:11px;color:var(--m-muted)">por cantidad vendida</span>
+                <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center; flex-wrap:wrap; gap:10px;">
+                  <span><i class="fa-solid fa-burger" style="color:#38bdf8"></i> Productos Vendidos</span>
+                  <input type="text" id="rep-prod-search" placeholder="Buscar producto..." class="f-inp" style="width:160px; padding:6px 10px; font-size:12px; margin:0; background:#1e293b; border:1px solid #334155; border-radius:6px; color:#fff;" onkeyup="renderReporteProductos()">
                 </div>
-                <table id="rep-top-prods">
-                  <thead><tr><th>Platillo</th><th style="text-align:center">Órdenes</th><th style="text-align:right">Recaudado</th></tr></thead>
-                  <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted)">Selecciona un mes</td></tr></tbody>
-                </table>
+                <div style="max-height: 400px; overflow-y: auto;">
+                  <table id="rep-top-prods">
+                    <thead style="position: sticky; top: 0; z-index: 10;"><tr><th>Platillo</th><th style="text-align:center">Cant.</th><th style="text-align:right">Recaudado</th></tr></thead>
+                    <tbody><tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px;">Selecciona un período</td></tr></tbody>
+                  </table>
+                </div>
               </div>
               <div class="tbl-card">
                 <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border)"><i class="fa-solid fa-percent" style="color:#f59e0b"></i> Descuentos del Período</div>
@@ -2820,14 +2825,9 @@
           </tr>`;
         }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin ventas en este día</td></tr>';
 
-      // Top platillos del día
-      const topArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q).slice(0,8);
-      document.getElementById('dd-tbl-prods').querySelector('tbody').innerHTML =
-        topArr.map((p,i) => `<tr>
-          <td><span style="font-size:10px;font-weight:900;color:var(--m-muted);margin-right:6px">#${i+1}</span>${p.n}</td>
-          <td align="center" style="font-weight:900">${p.q}</td>
-          <td align="right" style="font-weight:900;color:#16a34a">$${p.v.toFixed(2)}</td>
-        </tr>`).join('') || '<tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr>';
+      // Platillos del día
+      window._currentDiaProdsArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q);
+      if(typeof renderReporteDiaProductos === 'function') renderReporteDiaProductos();
 
       // Distribución pago
       const payTotal = Object.values(paymentsMap).reduce((a,b)=>a+b,0);
@@ -2903,6 +2903,29 @@
       }
     }
 
+    window._currentProdsArr = [];
+    function renderReporteProductos() {
+      const q = (document.getElementById('rep-prod-search').value || '').toLowerCase().trim();
+      const filtered = q ? window._currentProdsArr.filter(p => p.n.toLowerCase().includes(q)) : window._currentProdsArr;
+      
+      document.getElementById('rep-top-prods').querySelector('tbody').innerHTML =
+        filtered.map(p=>`<tr><td style="font-weight:700">${p.n}</td><td align="center">${p.q}</td><td align="right" style="font-weight:800;color:#16a34a">$${p.v.toFixed(2)}</td></tr>`).join('')
+        || '<tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin coincidencias</td></tr>';
+    }
+
+    window._currentDiaProdsArr = [];
+    function renderReporteDiaProductos() {
+      const q = (document.getElementById('dd-prod-search').value || '').toLowerCase().trim();
+      const filtered = q ? window._currentDiaProdsArr.filter(p => p.n.toLowerCase().includes(q)) : window._currentDiaProdsArr;
+      
+      document.getElementById('dd-tbl-prods').querySelector('tbody').innerHTML =
+        filtered.map((p,i) => `<tr>
+          <td><span style="font-size:10px;font-weight:900;color:var(--m-muted);margin-right:6px">#${i+1}</span><span style="font-weight:700">${p.n}</span></td>
+          <td align="center" style="font-weight:900">${p.q}</td>
+          <td align="right" style="font-weight:900;color:#16a34a">$${p.v.toFixed(2)}</td>
+        </tr>`).join('') || '<tr><td colspan="3" align="center" style="color:var(--m-muted);padding:16px">Sin datos</td></tr>';
+    }
+
     /* â”€â”€â”€ Helper: actualizar KPIs del Resumen â”€â”€â”€ */
     function _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, descRows) {
       const balance = totalIngresos - totalEgresos;
@@ -2916,10 +2939,8 @@
       const bestChan = Object.entries(channelsMap).sort((a,b)=>b[1]-a[1])[0];
       document.getElementById('rep-main-channel').textContent = bestChan ? bestChan[0].toUpperCase() : 'â€”';
 
-      const topArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q).slice(0,10);
-      document.getElementById('rep-top-prods').querySelector('tbody').innerHTML =
-        topArr.map(p=>`<tr><td style="font-weight:700">${p.n}</td><td align="center">${p.q}</td><td align="right" style="font-weight:800;color:#16a34a">$${p.v.toFixed(2)}</td></tr>`).join('')
-        || '<tr><td colspan="3" align="center" style="color:var(--m-muted)">Sin datos</td></tr>';
+      window._currentProdsArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q);
+      if(typeof renderReporteProductos === 'function') renderReporteProductos();
 
       const payTotal = Object.values(paymentsMap).reduce((a,b)=>a+b,0);
       document.getElementById('rep-payment-dist').innerHTML = Object.entries(paymentsMap).map(([k,v]) => {
