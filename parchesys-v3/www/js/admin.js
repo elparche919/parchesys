@@ -325,43 +325,142 @@ window.loadAsistencias = async function() {
         fechaInput.value = targetDate;
     }
 
-    const q = query(collection(db, "asistencias"), where("fecha", "==", targetDate));
+    // Fetch 3 days to correctly pair shifts across midnight
+    const dDate = new Date(targetDate + "T12:00:00");
+    const dPrev = new Date(dDate); dPrev.setDate(dPrev.getDate() - 1);
+    const dNext = new Date(dDate); dNext.setDate(dNext.getDate() + 1);
+    
+    const fmt = (dt) => `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+    const pStr = fmt(dPrev);
+    const nStr = fmt(dNext);
+
+    const q = query(collection(db, "asistencias"), where("fecha", ">=", pStr), where("fecha", "<=", nStr));
     const snap = await getDocs(q);
     
     let records = [];
     snap.forEach(doc => records.push({ id: doc.id, ...doc.data() }));
     
-    let empMap = {};
+    let empRecords = {};
     records.forEach(r => {
-        const empId = r.empleadoId;
-        if(!empMap[empId]) empMap[empId] = { empleadoId: empId, nombre: r.nombreEmpleado, entradas: [], salidas: [] };
+        if(!empRecords[r.empleadoId]) empRecords[r.empleadoId] = { nombre: r.nombreEmpleado, recs: [], empleadoId: r.empleadoId };
+        empRecords[r.empleadoId].recs.push(r);
+    });
+
+    let finalEmpShifts = {};
+    
+    Object.keys(empRecords).forEach(empId => {
+        let recs = empRecords[empId].recs;
+        recs.sort((a,b) => getValidDate(a) - getValidDate(b));
         
-        const tipo = (r.tipoMovimiento || '').trim().toUpperCase();
-        if(tipo === 'ENTRADA') empMap[empId].entradas.push(r);
-        else if(tipo === 'SALIDA') empMap[empId].salidas.push(r);
+        let turnos = [];
+        let currentTurno = null;
+        
+        for (let r of recs) {
+            const tipo = (r.tipoMovimiento || '').trim().toUpperCase();
+            if (tipo === 'ENTRADA') {
+                if (currentTurno && currentTurno.sal === null) {
+                    // Mismo turno, registrar entrada duplicada
+                    if (!currentTurno.ent.duplicados) currentTurno.ent.duplicados = [];
+                    currentTurno.ent.duplicados.push(r);
+                    if (r.metodoValidacion === 'MANUAL (ADMIN)') {
+                        let oldEnt = currentTurno.ent;
+                        currentTurno.ent = r;
+                        currentTurno.ent.duplicados = oldEnt.duplicados || [];
+                        currentTurno.ent.duplicados.push(oldEnt);
+                    }
+                } else {
+                    if (currentTurno) turnos.push(currentTurno);
+                    currentTurno = { ent: r, sal: null };
+                }
+            } else if (tipo === 'SALIDA') {
+                if (currentTurno) {
+                    if (currentTurno.sal === null) {
+                        currentTurno.sal = r;
+                    } else {
+                        // Mismo turno, registrar salida duplicada
+                        if (!currentTurno.sal.duplicados) currentTurno.sal.duplicados = [];
+                        currentTurno.sal.duplicados.push(r);
+                        if (r.metodoValidacion === 'MANUAL (ADMIN)') {
+                            let oldSal = currentTurno.sal;
+                            currentTurno.sal = r;
+                            currentTurno.sal.duplicados = oldSal.duplicados || [];
+                            currentTurno.sal.duplicados.push(oldSal);
+                        }
+                    }
+                } else {
+                    if (turnos.length > 0 && turnos[turnos.length - 1].ent === null) {
+                        let lastTurno = turnos[turnos.length - 1];
+                        if (!lastTurno.sal.duplicados) lastTurno.sal.duplicados = [];
+                        lastTurno.sal.duplicados.push(r);
+                        if (r.metodoValidacion === 'MANUAL (ADMIN)') {
+                            let oldSal = lastTurno.sal;
+                            lastTurno.sal = r;
+                            lastTurno.sal.duplicados = oldSal.duplicados || [];
+                            lastTurno.sal.duplicados.push(oldSal);
+                        }
+                    } else {
+                        turnos.push({ ent: null, sal: r });
+                    }
+                }
+            }
+        }
+        if (currentTurno) turnos.push(currentTurno);
+        
+        // Filter turnos to only show the ones that BELONG to the targetDate
+        let filteredTurnos = turnos.filter(t => {
+            if (t.ent) return t.ent.fecha === targetDate;
+            if (t.sal) return t.sal.fecha === targetDate; // Orphaned
+            return false;
+        });
+
+        if (filteredTurnos.length > 0) {
+            finalEmpShifts[empId] = { 
+                empleadoId: empId, 
+                nombre: empRecords[empId].nombre, 
+                turnos: filteredTurnos 
+            };
+        }
     });
 
     tablaAsistencias.innerHTML = '';
     
-    Object.values(empMap).forEach(emp => {
-        emp.entradas.sort((a,b) => getValidDate(a) - getValidDate(b));
-        emp.salidas.sort((a,b) => getValidDate(a) - getValidDate(b));
-        
-        let numPares = Math.max(emp.entradas.length, emp.salidas.length, 1);
-        
-        for(let i=0; i<numPares; i++) {
-            const ent = emp.entradas[i];
-            const sal = emp.salidas[i];
+    Object.values(finalEmpShifts).forEach(emp => {
+        for(let i=0; i<emp.turnos.length; i++) {
+            const ent = emp.turnos[i].ent;
+            const sal = emp.turnos[i].sal;
             
             let entStr = ent ? (ent.hora || (ent.fechaHora && ent.fechaHora.toDate ? ent.fechaHora.toDate().toLocaleTimeString() : ent.fechaHora)) : 'Sin Entrada';
             let salStr = sal ? (sal.hora || (sal.fechaHora && sal.fechaHora.toDate ? sal.fechaHora.toDate().toLocaleTimeString() : sal.fechaHora)) : 'Pendiente de Salida';
             
-            let entSelfie = ent && ent.urlSelfie ? ` <a href="${ent.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📸</a>` : '';
-            let salSelfie = sal && sal.urlSelfie ? ` <a href="${sal.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📸</a>` : '';
-
-            let entBadge = ent ? `<span class="badge badge-success" title="${ent.metodoValidacion}">⬇️ Entrada: ${entStr}</span>${entSelfie}` : `<span class="badge" style="background:#64748b;color:white">Sin Entrada</span>`;
+            function getIcon(met) {
+                if (!met) return '';
+                met = met.toUpperCase();
+                if (met.includes('BIOMETR')) return '📱';
+                if (met.includes('SELFIE')) return '📸';
+                if (met.includes('MANUAL')) return '✍️';
+                return '';
+            }
+            let entIconsArr = ent ? [getIcon(ent.metodoValidacion)] : [];
+            if (ent && ent.duplicados) ent.duplicados.forEach(d => entIconsArr.push(getIcon(d.metodoValidacion)));
+            let entIcons = [...new Set(entIconsArr)].join(' ');
             
-            let salBadge = sal ? `<span class="badge badge-danger" title="${sal.metodoValidacion}">⬆️ Salida: ${salStr}</span>${salSelfie}` : (ent ? `<span class="badge" style="background:#f59e0b;color:white;cursor:pointer;" onclick="window.abrirModalMarcaManualSalida('${emp.empleadoId}', '${targetDate}')">⏳ Pendiente de Salida</span>` : `<span class="badge" style="background:#64748b;color:white">Sin Salida</span>`);
+            let salIconsArr = sal ? [getIcon(sal.metodoValidacion)] : [];
+            if (sal && sal.duplicados) sal.duplicados.forEach(d => salIconsArr.push(getIcon(d.metodoValidacion)));
+            let salIcons = [...new Set(salIconsArr)].join(' ');
+
+            let entSelfie = ent && ent.urlSelfie ? ` <a href="${ent.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📷</a>` : '';
+            let salSelfie = sal && sal.urlSelfie ? ` <a href="${sal.urlSelfie}" target="_blank" style="text-decoration:none;font-size:14px;" title="Ver foto">📷</a>` : '';
+
+            let entNota = (ent && ent.notas) ? ` <span title="${ent.notas}" style="cursor:help;">📝</span>` : '';
+            let salNota = (sal && sal.notas) ? ` <span title="${sal.notas}" style="cursor:help;">📝</span>` : '';
+
+            let orphanWarnEnt = !sal ? ' ⚠️' : '';
+            let orphanWarnSal = !ent ? ' ⚠️' : '';
+
+            let entBadge = ent ? `<span class="badge badge-success" title="${ent.metodoValidacion}">🟢 Entrada: ${entStr} ${entIcons}</span>${entSelfie}${entNota}` : `<span class="badge" style="background:#64748b;color:white">Sin Entrada ${orphanWarnSal}</span>`;
+            
+            let salBadge = sal ? `<span class="badge badge-danger" title="${sal.metodoValidacion}">🔴 Salida: ${salStr} ${salIcons}</span>${salSelfie}${salNota}` : (ent ? `<span class="badge" style="background:#f59e0b;color:white;cursor:pointer;" onclick="window.abrirModalMarcaManualSalida('${emp.empleadoId}', '${targetDate}')">⏳ Pendiente de Salida ${orphanWarnEnt}</span>` : `<span class="badge" style="background:#64748b;color:white">Sin Salida ⚠️</span>`);
+
             
             let tiempoStr = '-';
             if(ent && sal) {
@@ -399,7 +498,7 @@ window.loadAsistencias = async function() {
         }
     });
     
-    if(Object.keys(empMap).length === 0) {
+    if(Object.keys(finalEmpShifts).length === 0) {
         tablaAsistencias.innerHTML = '<tr><td colspan="4" style="text-align:center;">No hay asistencias para esta fecha.</td></tr>';
     }
 }

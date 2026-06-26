@@ -1,4 +1,4 @@
-import { db, storage, collection, getDocs, query, where, doc, updateDoc, setDoc, serverTimestamp, ref, uploadString, getDownloadURL } from './firebase-config.js';
+import { db, storage, collection, getDocs, query, where, orderBy, limit, doc, updateDoc, setDoc, serverTimestamp, ref, uploadString, getDownloadURL } from './firebase-config.js';
 
 // DOM
 const screenLogin = document.getElementById('screen-login');
@@ -345,25 +345,31 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
 }
 
 async function processLocationAndSave(tipoMovimiento, metodoValidacion, urlSelfie) {
-    setProcessing(true, "Obteniendo GPS preciso...");
+    setProcessing(true, "Iniciando registro...");
     
+    let latitude = 0;
+    let longitude = 0;
+    let accuracy = 9999;
+    let dist = 0;
+    let notas = "";
+
     try {
+        setProcessing(true, "Obteniendo GPS...");
         const pos = await getGPSPosition({ enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
-        const { latitude, longitude, accuracy } = pos.coords;
+        latitude = pos.coords.latitude;
+        longitude = pos.coords.longitude;
+        accuracy = pos.coords.accuracy;
         
         // Precisión GPS exigida (Móviles reales)
         const MAX_ACCURACY = 150;
         if (accuracy > MAX_ACCURACY) {
-            alert(`Señal GPS débil. Precisión: ${Math.round(accuracy)}m. Requerido: <${MAX_ACCURACY}m. Muévase a un área despejada.`);
-            setProcessing(false);
-            return;
+            notas += `Señal GPS débil (${Math.round(accuracy)}m). `;
+            alert(`Señal GPS débil. Precisión: ${Math.round(accuracy)}m. Requerido: <${MAX_ACCURACY}m. El registro se guardará con advertencia.`);
         }
 
-        // Si no tiene ubicación base, registrarla ahora
-        if (!currentEmployee.latitudBase) {
+        // Si no tiene ubicación base, registrarla ahora solo si la precisión es buena
+        if (!currentEmployee.latitudBase && accuracy <= MAX_ACCURACY) {
             setProcessing(true, "Configurando Ubicación Base (tomando muestras)...");
-            // Simplified: we should ideally take 5 samples, but for UX in a single pass we just use this high accuracy one 
-            // as base, or implement a quick loop. Let's do a loop.
             let sumLat = 0, sumLon = 0, sumAcc = 0;
             const SAMPLES = 5;
             for(let i=0; i<SAMPLES; i++) {
@@ -390,23 +396,66 @@ async function processLocationAndSave(tipoMovimiento, metodoValidacion, urlSelfi
         }
 
         // Validación de Distancia
-        const dist = haversineDistance(currentEmployee.latitudBase, currentEmployee.longitudBase, latitude, longitude);
-        
-        // El radio fijo configurado es 150m
-        const RADIO_PERMITIDO = 150; 
-        
-        if (dist > RADIO_PERMITIDO) {
-            alert(`Fuera del área autorizada.\nDistancia actual: ${Math.round(dist)}m\nPermitida: ${RADIO_PERMITIDO}m`);
-            setProcessing(false);
-            return;
+        if (currentEmployee.latitudBase) {
+            dist = haversineDistance(currentEmployee.latitudBase, currentEmployee.longitudBase, latitude, longitude);
+            
+            // El radio fijo configurado es 150m
+            const RADIO_PERMITIDO = 150; 
+            
+            if (dist > RADIO_PERMITIDO) {
+                notas += `Fuera del área autorizada (${Math.round(dist)}m). `;
+                alert(`Fuera del área autorizada.\nDistancia actual: ${Math.round(dist)}m\nPermitida: ${RADIO_PERMITIDO}m. El registro se guardará con advertencia.`);
+            }
         }
 
-        // GUARDAR REGISTRO UNIFICADO
+    } catch (e) {
+        console.error("Error GPS: ", e);
+        notas += "Error o permisos de GPS denegados. ";
+        alert("No se pudo obtener su ubicación GPS. El registro se guardará pero debe reportarlo al administrador.");
+    }
+
+    try {
+        // GUARDAR REGISTRO UNIFICADO SIEMPRE
         setProcessing(true, "Guardando registro...");
         
         const now = new Date();
-        const strDate = now.toISOString().split('T')[0];
+        let strDate = now.toISOString().split('T')[0];
         const strTime = now.toTimeString().split(' ')[0];
+
+        // LOGICA DE REINICIO DE TURNO (Evita huérfanos el día siguiente)
+        if (tipoMovimiento === 'SALIDA') {
+            const qLast = query(collection(db, "asistencias"), 
+                where("empleadoId", "==", currentEmployee.id),
+                where("tipoMovimiento", "==", "ENTRADA")
+            );
+            const snapLast = await getDocs(qLast);
+            if (!snapLast.empty) {
+                // Filtrar y ordenar en memoria para evitar errores de índice compuesto en Firestore
+                let entradas = [];
+                snapLast.forEach(doc => entradas.push(doc.data()));
+                entradas.sort((a, b) => {
+                    const tA = a.fechaHora?.toDate ? a.fechaHora.toDate().getTime() : (a.fechaHora?.seconds ? a.fechaHora.seconds * 1000 : new Date(`${a.fecha}T${a.hora}`).getTime());
+                    const tB = b.fechaHora?.toDate ? b.fechaHora.toDate().getTime() : (b.fechaHora?.seconds ? b.fechaHora.seconds * 1000 : new Date(`${b.fecha}T${b.hora}`).getTime());
+                    return tB - tA; // Descending
+                });
+
+                const lastEntrada = entradas[0];
+                // Validar que la entrada fue hace menos de 24 horas
+                let entTime;
+                if (lastEntrada.fechaHora && lastEntrada.fechaHora.toDate) {
+                    entTime = lastEntrada.fechaHora.toDate();
+                } else if (lastEntrada.fechaHora && lastEntrada.fechaHora.seconds) {
+                    entTime = new Date(lastEntrada.fechaHora.seconds * 1000);
+                } else {
+                    entTime = new Date(`${lastEntrada.fecha}T${lastEntrada.hora}`);
+                }
+                
+                const diffHours = (now - entTime) / (1000 * 60 * 60);
+                if (diffHours < 24) {
+                    strDate = lastEntrada.fecha; // Heredamos fecha de ENTRADA para unificar el ciclo del turno
+                }
+            }
+        }
 
         await setDoc(doc(collection(db, "asistencias")), {
             empleadoId: currentEmployee.id,
@@ -418,12 +467,13 @@ async function processLocationAndSave(tipoMovimiento, metodoValidacion, urlSelfi
             deviceId: currentEmployee.deviceId,
             latitudActual: latitude,
             longitudActual: longitude,
-            latitudBase: currentEmployee.latitudBase,
-            longitudBase: currentEmployee.longitudBase,
+            latitudBase: currentEmployee.latitudBase || null,
+            longitudBase: currentEmployee.longitudBase || null,
             distanciaCalculada: Math.round(dist),
             precisionGPS: accuracy,
             metodoValidacion: metodoValidacion,
-            urlSelfie: urlSelfie || null
+            urlSelfie: urlSelfie || null,
+            notas: notas
         });
 
         // Actualizar último estado en Empleado
@@ -437,11 +487,7 @@ async function processLocationAndSave(tipoMovimiento, metodoValidacion, urlSelfi
 
     } catch (e) {
         console.error(e);
-        if(e.code === 1 || (e.message && e.message.includes('User denied'))) {
-            alert("Debe conceder permisos de ubicación GPS.");
-        } else {
-            alert("Error: " + (e.message || JSON.stringify(e)));
-        }
+        alert("Error crítico al guardar: " + (e.message || JSON.stringify(e)));
     }
     setProcessing(false);
 }
