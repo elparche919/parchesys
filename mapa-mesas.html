@@ -477,7 +477,7 @@
     <div class="p-body">
       <div class="field-group">
         <label class="lbl">Número de Mesa</label>
-        <input class="inp" id="edit-num" type="number" readonly>
+        <input class="inp" id="edit-num" type="number">
       </div>
       <div class="field-group">
         <label class="lbl">Capacidad (Pax)</label>
@@ -774,9 +774,15 @@
         
         if(_selectedMesaId == id) div.classList.add('selected');
 
+        let meseroBadge = '';
+        if ((m.estado === 'ocupada' || m.estado === 'cuenta') && m.mesero) {
+            let n = m.mesero.split(' ')[0];
+            meseroBadge = `<div style="font-size:9px; margin-top:3px; background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:4px; letter-spacing:0.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:90%; color:#fff;">${n}</div>`;
+        }
         div.innerHTML = `
           <span class="mesa-id">${id}</span>
           <span class="mesa-cap"><i class="fa-solid fa-user"></i> ${m.capacidad || 4}</span>
+          ${meseroBadge}
           <div class="edit-indicator"><i class="fa-solid fa-pencil"></i></div>
         `;
 
@@ -869,17 +875,41 @@
 
     function saveMesaChanges() {
       if(!_selectedMesaId) return;
-      const num = _selectedMesaId;
+      const oldId = _selectedMesaId;
+      const numInput = document.getElementById('edit-num').value.trim();
+      const num = parseInt(numInput);
+      
+      if (!num || isNaN(num)) {
+        alert("Número de mesa inválido.");
+        return;
+      }
+      
       const cap = document.getElementById('edit-cap').value;
       const zona = document.getElementById('edit-zona').value.trim().toUpperCase();
       const activeShapeBtn = document.querySelector('.shape-btn.active');
       const forma = activeShapeBtn ? activeShapeBtn.dataset.shape : 'square';
 
-      db.ref(`negocios/${negocioID}/mesas/${num}`).update({
-        capacidad: parseInt(cap),
-        zona: zona || 'INTERIOR',
-        forma: forma
-      });
+      if (num != oldId) {
+        if (_mesas[num]) {
+          if (!confirm(`La mesa ${num} ya existe. ¿Deseas sobreescribirla? (Esto podría afectar sus pedidos activos)`)) {
+            return;
+          }
+        }
+        const oldData = _mesas[oldId];
+        const newData = Object.assign({}, oldData, {
+          capacidad: parseInt(cap),
+          zona: zona || 'INTERIOR',
+          forma: forma
+        });
+        db.ref(`negocios/${negocioID}/mesas/${num}`).set(newData);
+        db.ref(`negocios/${negocioID}/mesas/${oldId}`).remove();
+      } else {
+        db.ref(`negocios/${negocioID}/mesas/${num}`).update({
+          capacidad: parseInt(cap),
+          zona: zona || 'INTERIOR',
+          forma: forma
+        });
+      }
 
       _currentZona = zona || 'INTERIOR';
       closeEditor();
