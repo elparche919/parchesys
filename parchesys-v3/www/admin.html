@@ -160,7 +160,10 @@
             </div>
 
             <div id="view-planilla" class="view-section" style="display:none;">
-                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center;">
+                <div class="header-actions" style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <select id="planilla-empleado" class="input-field" title="Empleado">
+                        <option value="ALL">Todos los Empleados</option>
+                    </select>
                     <input type="date" id="planilla-fecha-inicio" class="input-field" title="Desde">
                     <input type="date" id="planilla-fecha-fin" class="input-field" title="Hasta">
                     <button class="btn-primary" onclick="calcularPlanillaUI()">Generar Planilla</button>
