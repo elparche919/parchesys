@@ -299,6 +299,10 @@ window.calcularPlanillaUI = async function() {
         empSnap.forEach(d => empleados.push({ id: d.id, ...d.data() }));
         
         const selEmpId = document.getElementById('planilla-empleado').value;
+        const divDetalle = document.getElementById('planilla-detalle-individual');
+        if (divDetalle) {
+            divDetalle.style.display = (selEmpId && selEmpId !== 'ALL') ? 'block' : 'none';
+        }
         if (selEmpId && selEmpId !== 'ALL') {
             empleados = empleados.filter(e => e.id === selEmpId);
         }
@@ -362,18 +366,58 @@ window.calcularPlanillaUI = async function() {
                                 limiteRegularMins = calcularMinutosEntreHoras(turno.hora_in, turno.hora_out);
                             }
 
+                            let diaReg = 0, diaExt = 0;
                             // El contador se reinicia en cada marcaje: las primeras X horas son regulares, el resto extra
                             if (trabajadoMins >= limiteRegularMins) {
+                                diaReg = limiteRegularMins;
+                                diaExt = (trabajadoMins - limiteRegularMins);
                                 minRegulares += limiteRegularMins;
                                 minExtra += (trabajadoMins - limiteRegularMins);
                             } else {
+                                diaReg = trabajadoMins;
                                 minRegulares += trabajadoMins;
                             }
+                            
+                            logsEmp.push({
+                                fecha: shiftDate,
+                                entHora: entradaActual.hora,
+                                salHora: a.hora,
+                                regDia: (diaReg/60).toFixed(2),
+                                extDia: (diaExt/60).toFixed(2),
+                                regAcum: (minRegulares/60).toFixed(2),
+                                extAcum: (minExtra/60).toFixed(2),
+                                ganadoDia: ((diaReg/60) * (Number(emp.salarioBase)||0) + (diaExt/60) * (Number(emp.valorHoraExtra)||0)).toFixed(2)
+                            });
                         }
                     }
                     entradaActual = null; // Reset para el siguiente par
                 }
             });
+            
+            if (selEmpId && selEmpId !== 'ALL' && emp.id === selEmpId) {
+                const tbDet = document.getElementById('tabla-planilla-detalle');
+                if (tbDet) {
+                    tbDet.innerHTML = '';
+                    if (logsEmp.length === 0) {
+                        tbDet.innerHTML = '<tr><td colspan="8" style="text-align:center;">No hay registros detallados en este periodo.</td></tr>';
+                    } else {
+                        logsEmp.forEach(lg => {
+                            tbDet.innerHTML += `
+                                <tr>
+                                    <td>${lg.fecha}</td>
+                                    <td>${lg.entHora}</td>
+                                    <td>${lg.salHora}</td>
+                                    <td style="text-align:center;">${lg.regDia}</td>
+                                    <td style="text-align:center;">${lg.extDia}</td>
+                                    <td style="text-align:center; font-weight:bold;">${lg.regAcum}</td>
+                                    <td style="text-align:center; font-weight:bold;">${lg.extAcum}</td>
+                                    <td style="text-align:right; font-weight:bold; color:#10b981;">$${lg.ganadoDia}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            }
 
             const horasRegDecimal = minRegulares / 60;
             const horasExtDecimal = minExtra / 60;
