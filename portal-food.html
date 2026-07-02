@@ -322,7 +322,7 @@
         <button class="rep-tab"        data-tab="reportes"   onclick="switchRepTab(this,'reportes')">  <i class="fa-solid fa-file-chart-column"></i> Generar Reportes</button>
       </div>
 
-      <!-- â•â• TAB: RESUMEN â•â• -->
+      <!-- -- TAB: RESUMEN -- -->
       <div class="rep-panel" id="rep-tab-resumen">
 
         <!-- â”€â”€ Granularity toolbar â”€â”€ -->
@@ -494,7 +494,7 @@
 
       </div>
 
-      <!-- â•â• TAB: EGRESOS (Gastos + Merma fusionados) â•â• -->
+      <!-- -- TAB: EGRESOS (Gastos + Merma fusionados) -- -->
       <div class="rep-panel" id="rep-tab-egresos" style="display:none">
 
         <!-- KPIs combinados -->
@@ -540,14 +540,14 @@
         </div>
       </div>
 
-      <!-- â•â• TAB: METAS DEL MES â•â• -->
+      <!-- -- TAB: METAS DEL MES -- -->
       <div class="rep-panel" id="rep-tab-metas" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
           <!-- COLUMNA IZQUIERDA - Configurar Metas -->
           <div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-              <span style="font-size:22px">ðŸŽ¯</span>
+              <span style="font-size:22px">🎯</span>
               <div>
                 <div style="font-size:16px;font-weight:900">Configurar Metas Mensuales</div>
                 <div style="font-size:12px;color:var(--m-muted);margin-top:2px">Define los objetivos del mes seleccionado</div>
@@ -605,7 +605,7 @@
           <!-- COLUMNA DERECHA - Progreso vs Meta -->
           <div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-              <span style="font-size:22px">ðŸ“Š</span>
+              <span style="font-size:22px">📊</span>
               <div>
                 <div style="font-size:16px;font-weight:900">Progreso vs Meta</div>
                 <div style="font-size:12px;color:var(--m-muted);margin-top:2px">Comparativa en tiempo real con el mes activo</div>
@@ -689,7 +689,7 @@
               <!-- Tarjeta resumen semáforo -->
               <div id="pm-semaforo" class="tbl-card" style="padding:20px;text-align:center;display:none">
                 <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--m-muted);margin-bottom:10px">Estado General del Mes</div>
-                <div style="font-size:48px;margin-bottom:8px" id="pm-emoji">ðŸŸ¡</div>
+                <div style="font-size:48px;margin-bottom:8px" id="pm-emoji">🟡</div>
                 <div style="font-size:18px;font-weight:900" id="pm-estado-txt">-</div>
                 <div style="font-size:12px;color:var(--m-muted);margin-top:4px" id="pm-estado-sub">-</div>
               </div>
@@ -699,7 +699,7 @@
         </div>
       </div>
 
-      <!-- â•â• TAB: VENTAS POR MESERO â•â• -->
+      <!-- -- TAB: VENTAS POR MESERO -- -->
       <div class="rep-panel" id="rep-tab-meseros" style="display:none">
         <!-- Cabecera + sub-tabs de granularidad -->
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
@@ -740,7 +740,7 @@
       </div>
 
 
-      <!-- â•â• TAB: CORTE DE CAJA â•â• -->
+      <!-- -- TAB: CORTE DE CAJA -- -->
       <div class="rep-panel" id="rep-tab-corte" style="display:none">
 
         <!-- Toolbar -->
@@ -833,7 +833,7 @@
       </div>
 
 
-      <!-- â•â• TAB: CIERRE DE MES â•â• -->
+      <!-- -- TAB: CIERRE DE MES -- -->
       <div class="rep-panel" id="rep-tab-cierre" style="display:none">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
           <div>
@@ -882,14 +882,14 @@
           </div>
         </div>
       </div>
-      <!-- â•â• TAB: GENERAR REPORTES â•â• -->
+      <!-- -- TAB: GENERAR REPORTES -- -->
       <div class="rep-panel" id="rep-tab-reportes" style="display:none">
 
         <!-- Header -->
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:14px">
           <div>
             <div style="font-size:18px;font-weight:900;display:flex;align-items:center;gap:10px">
-              <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px">ðŸ“‹</span>
+              <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);width:36px;height:36px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;font-size:18px">📋</span>
               Centro de Reportes Gerenciales
             </div>
             <div style="font-size:12px;color:var(--m-muted);margin-top:4px">Genera reportes profesionales en Excel o PDF con diseño ejecutivo</div>
@@ -912,7 +912,7 @@
 
           <!-- 1. Finanzas General -->
           <div class="rpt-card" data-tipo="finanzas" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ“Š</div>
+            <div style="font-size:28px;margin-bottom:10px">📊</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Finanzas General</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Ingresos, egresos, balance neto, margen y flujo de caja</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -924,7 +924,7 @@
 
           <!-- 2. Ventas Detalladas -->
           <div class="rpt-card" data-tipo="ventas" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ›’</div>
+            <div style="font-size:28px;margin-bottom:10px">🛒</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Ventas Detalladas</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Ventas por día, canal (mesa/delivery/llevar), ticket promedio</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -936,7 +936,7 @@
 
           <!-- 3. Meseros / Cajeros -->
           <div class="rpt-card" data-tipo="meseros" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ‘¨â€ðŸ³</div>
+            <div style="font-size:28px;margin-bottom:10px">👨‍🍳</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Rendimiento de Equipo</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Ventas, órdenes y ticket promedio por mesero y cajero</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -948,7 +948,7 @@
 
           <!-- 4. Productos más Vendidos -->
           <div class="rpt-card" data-tipo="productos" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ†</div>
+            <div style="font-size:28px;margin-bottom:10px">🏆</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Productos más Vendidos</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Top 20 platillos por cantidad, recaudación y participación</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -960,7 +960,7 @@
 
           <!-- 5. Inventario -->
           <div class="rpt-card" data-tipo="inventario" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ“¦</div>
+            <div style="font-size:28px;margin-bottom:10px">📦</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Reporte de Inventario</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Valorización, stock actual, alertas de bajo stock y rotación</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -972,7 +972,7 @@
 
           <!-- 6. Merma & Pérdidas -->
           <div class="rpt-card" data-tipo="merma" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ—‘ï¸</div>
+            <div style="font-size:28px;margin-bottom:10px">🗑️</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Merma & Pérdidas</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Costo de merma, motivos, productos y responsables</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -984,7 +984,7 @@
 
           <!-- 7. Egresos & Gastos -->
           <div class="rpt-card" data-tipo="egresos" onclick="seleccionarReporte(this)" style="background:var(--m-surface);border:2px solid var(--m-border);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸ’¸</div>
+            <div style="font-size:28px;margin-bottom:10px">💸</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Egresos & Gastos</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Desglose por categoría: renta, planilla, servicios, otros</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -996,7 +996,7 @@
 
           <!-- 8. Cierre Ejecutivo -->
           <div class="rpt-card" data-tipo="ejecutivo" onclick="seleccionarReporte(this)" style="background:linear-gradient(135deg,rgba(59,130,246,.12),rgba(139,92,246,.12));border:2px solid rgba(139,92,246,.4);border-radius:14px;padding:20px;cursor:pointer;transition:.2s;position:relative">
-            <div style="font-size:28px;margin-bottom:10px">ðŸŽ¯</div>
+            <div style="font-size:28px;margin-bottom:10px">🎯</div>
             <div style="font-size:13px;font-weight:900;margin-bottom:4px">Cierre Ejecutivo P&L</div>
             <div style="font-size:11px;color:var(--m-muted);line-height:1.5">Informe completo para gerencia: todos los módulos en un documento</div>
             <div style="margin-top:12px;display:flex;gap:6px">
@@ -1056,7 +1056,7 @@
       </div>
     </div>
 
-    <!-- â•â• MODAL MERMA â•â• -->
+    <!-- -- MODAL MERMA -- -->
     <div class="modal-overlay" id="mod-merma">
       <div class="modal-box" style="max-width:440px">
         <div class="mb-head"><h2><i class="fa-solid fa-trash-can"></i> Registrar Merma</h2><button class="mb-close" onclick="closeModal('mod-merma')">&times;</button></div>
@@ -1159,7 +1159,7 @@
           </div>
           <div class="f-grp">
             <label>Emoji / Ícono (opcional)</label>
-            <input type="text" id="cat-emoji" class="f-inp" placeholder="Ej: ðŸ” ðŸ² ðŸ¥¤">
+            <input type="text" id="cat-emoji" class="f-inp" placeholder="Ej: 🍔 🍲 🥤">
           </div>
           <div class="f-grp">
             <label>Descripción (opcional)</label>
@@ -1211,7 +1211,7 @@
       </div>
 
       <div style="margin-bottom:20px; display:flex; gap:20px; align-items:center">
-          <input type="text" class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); max-width:400px" placeholder="ðŸ” Buscar por código o nombre..." oninput="filtrarInventario(this.value)">
+          <input type="text" class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); max-width:400px" placeholder="🔍 Buscar por código o nombre..." oninput="filtrarInventario(this.value)">
           <select class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); max-width:200px" onchange="filtrarTipoInv(this.value)">
               <option value="">Todos los tipos</option>
               <option value="FISICO">Productos Físicos</option>
@@ -1475,7 +1475,7 @@
         <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:15px; font-size:12px; color:#1e3a8a; line-height:1.5">
           <i class="fa-solid fa-circle-info"></i> Este stock <b>no se muestra ni se vende en el POS</b>. Úsalo para recibir mercadería (ej. bebidas) antes de pasarla al stock de venta. Ya no es necesario crear una categoría "Bodega" en el menú - usa este módulo con tus productos reales.
         </div>
-        <input type="text" class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); margin-bottom:15px" placeholder="ðŸ” Buscar producto por nombre..." oninput="filtrarBodega(this.value)">
+        <input type="text" class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); margin-bottom:15px" placeholder="🔍 Buscar producto por nombre..." oninput="filtrarBodega(this.value)">
         <div class="tbl-card" style="max-height:50vh; overflow-y:auto">
           <table>
             <thead>
@@ -1630,6 +1630,24 @@
       db.ref(`negocios/${negocioID}/productos`).on('value', renderMenu);
       db.ref(`negocios/${negocioID}/inventario_global`).on('value', renderInsumos);
       db.ref(`negocios/${negocioID}/finanzas_food`).orderByChild('ts').limitToLast(10).on('value', renderFinanzasDash);
+    db.ref(`negocios/${negocioID}/ventas`).orderByChild('ts').limitToLast(10).on('value', snap => {
+      const vals = [];
+      snap.forEach(c => {
+        let v = c.val();
+        if(!v) return;
+        vals.push({
+          id: c.key,
+          ref: 'Venta #' + (v.correlativo || c.key.substring(1,6)),
+          tipo: 'INGRESO',
+          monto: parseFloat(v.total || 0),
+          ts: v.ts || (v.fecha ? Date.parse(v.fecha) : Date.now()),
+          rawTs: v.ts,
+          rawFecha: v.fecha
+        });
+      });
+      dashVentasVals = vals;
+      if (typeof _renderFinanzasCombined === 'function') _renderFinanzasCombined();
+    });
       // Categorias del menú
       db.ref(`negocios/${negocioID}/menu_categorias`).on('value', renderCategorias);
       // â”€â”€â”€ Órdenes Web Entrantes (Panóptico) â”€â”€â”€
@@ -1658,7 +1676,7 @@
         gridEl.innerHTML = entries.map(([id,o]) => {
           var mins = Math.floor((Date.now()-(o.timestamp||Date.now()))/60000);
           var tipoLabel = o.tipo==='domicilio'?'domicilio':'llevar';
-          var tipoEmoji = o.tipo==='domicilio'?'ðŸ›µ':'ðŸ¥¡';
+          var tipoEmoji = o.tipo==='domicilio'?'🛵':'🥡';
           var itemsHtml = (o.items||[]).slice(0,5).map(it=>`<b>${it.cant}Ã—</b> ${it.desc}`).join('<br>');
           return `<div class="pwc">
             <div class="pwc-head">
@@ -1796,10 +1814,43 @@
           closeModal('mod-fin');
        });
     }
-    function renderFinanzasDash(snap) {
+
+    let dashFinanzasVals = [];
+    let dashVentasVals = [];
+
+    function _renderFinanzasCombined() {
       const tb = document.getElementById('dash-finanzas-tbody');
-      const vals = [];
+      if (!tb) return;
+      let combined = [...dashFinanzasVals, ...dashVentasVals];
+      combined.sort((a, b) => {
+        let ta = Number(a.ts) || 0;
+        let tb = Number(b.ts) || 0;
+        return tb - ta;
+      });
+      const ultimos10 = combined.slice(0, 10);
       
+      if (!ultimos10.length) {
+        tb.innerHTML = '<tr><td colspan="5" align="center">Sin movimientos</td></tr>';
+        return;
+      }
+
+      tb.innerHTML = ultimos10.map(v => {
+        const displayId = v.id.replace(/^(mov_|-)/g, '').substring(0, 7);
+        const badgeClass = v.tipo === 'INGRESO' ? 'badge-ok' : 'badge-err';
+        return `
+          <tr>
+            <td style="font-size:11px; color:var(--m-muted)" title="ts: ${v.ts} | rawTs: ${v.rawTs} | rawFecha: ${v.rawFecha}">${displayId}</td>
+            <td style="font-weight:700">${v.ref}</td>
+            <td><span class="${badgeClass}">${v.tipo}</span></td>
+            <td style="font-weight:900">$${v.monto.toFixed(2)}</td>
+            <td style="font-size:12px">${v.ts > 1000 ? new Date(v.ts).toLocaleString() : 'Inválida: ' + (v.rawFecha||v.rawTs||'N/A')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderFinanzasDash(snap) {
+      const vals = [];
       snap.forEach(c => {
         function parseLocalToTs(str) {
           if (!str) return 0;
@@ -1807,26 +1858,34 @@
           if (!isNaN(ts)) return ts;
           try {
             let p1 = str.split(',');
-            if (p1.length === 2) {
-              let pDate = p1[0].trim().split('/');
-              if (pDate.length === 3) {
+            let dStr = str;
+            let tStr = "00:00:00";
+            if (p1.length >= 2) { dStr = p1[0].trim(); tStr = p1[1].trim(); }
+            else if (str.includes(' ')) { let p2 = str.split(' '); dStr = p2[0]; tStr = p2.slice(1).join(' '); }
+            
+            let pDate = dStr.split('/');
+            if (pDate.length === 3) {
                 let d = pDate[0], m = pDate[1], y = pDate[2];
-                let pTime = p1[1].trim().match(/(\d+):(\d+):(\d+)\s*(a\.?\s*m\.?|p\.?\s*m\.?)/i);
-                if (pTime) {
-                  let hh = parseInt(pTime[1]), mm = parseInt(pTime[2]), ss = parseInt(pTime[3]);
-                  let ampm = pTime[4].toLowerCase().replace(/\./g, '').trim();
-                  if (ampm === 'pm' && hh < 12) hh += 12;
-                  if (ampm === 'am' && hh === 12) hh = 0;
-                  return new Date(y, m - 1, d, hh, mm, ss).getTime();
+                let hh = 0, mm = 0, ss = 0;
+                let tm = tStr.match(/(\d+):(\d+)(?::(\d+))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)/i);
+                if (tm) {
+                    hh = parseInt(tm[1]); mm = parseInt(tm[2]); ss = tm[3] ? parseInt(tm[3]) : 0;
+                    let ampm = tm[4].toLowerCase().replace(/\./g, '').trim();
+                    if (ampm === 'pm' && hh < 12) hh += 12;
+                    if (ampm === 'am' && hh === 12) hh = 0;
+                } else {
+                    let tm2 = tStr.match(/(\d+):(\d+)(?::(\d+))?/);
+                    if (tm2) { hh = parseInt(tm2[1]); mm = parseInt(tm2[2]); ss = tm2[3]?parseInt(tm2[3]):0; }
                 }
-              }
+                let dt = new Date(y, m - 1, d, hh, mm, ss).getTime();
+                if (!isNaN(dt)) return dt;
             }
           } catch(e) {}
-          return 0;
+          let h = 0; for(let i=0;i<str.length;i++) h += str.charCodeAt(i);
+          return h; 
         }
 
         if (c.key === 'movimientos_caja') {
-          // Aplanar movimientos de caja provenientes del POS
           c.forEach(subC => {
             const subVal = subC.val() || {};
             vals.push({
@@ -1834,47 +1893,28 @@
               ref: subVal.concepto || 'Movimiento de Caja',
               tipo: (subVal.tipo || 'INGRESO').toUpperCase(),
               monto: parseFloat(subVal.monto || 0),
-              ts: subVal.timestamp || (subVal.fecha ? parseLocalToTs(subVal.fecha) : Date.now())
+              ts: subVal.timestamp || (subVal.fecha ? parseLocalToTs(subVal.fecha) : Date.now()),
+              rawTs: subVal.timestamp,
+              rawFecha: subVal.fecha
             });
           });
         } else {
-          // Movimientos planos registrados desde el Portal
           const val = c.val() || {};
           vals.push({
             id: c.key,
             ref: val.ref || 'Movimiento Financiero',
             tipo: (val.tipo || 'INGRESO').toUpperCase(),
             monto: parseFloat(val.monto || 0),
-            ts: val.ts || (val.fecha ? parseLocalToTs(val.fecha) : Date.now())
+            ts: val.ts || (val.fecha ? parseLocalToTs(val.fecha) : Date.now()),
+            rawTs: val.ts,
+            rawFecha: val.fecha
           });
         }
       });
-      
-      // Ordenar cronológicamente descendente (más recientes primero)
-      vals.sort((a, b) => b.ts - a.ts);
-      
-      // Mostrar solo los últimos 10 movimientos
-      const ultimos10 = vals.slice(0, 10);
-      
-      if (!ultimos10.length) {
-        tb.innerHTML = '<tr><td colspan="5" align="center">Sin movimientos</td></tr>';
-        return;
-      }
-      
-      tb.innerHTML = ultimos10.map(v => {
-        const displayId = v.id.replace(/^(mov_|-)/g, '').substring(0, 7);
-        const badgeClass = v.tipo === 'INGRESO' ? 'badge-ok' : 'badge-err';
-        return `
-          <tr>
-            <td style="font-size:11px; color:var(--m-muted)">${displayId}</td>
-            <td style="font-weight:700">${v.ref}</td>
-            <td><span class="${badgeClass}">${v.tipo}</span></td>
-            <td style="font-weight:900">$${v.monto.toFixed(2)}</td>
-            <td style="font-size:12px">${new Date(v.ts).toLocaleString()}</td>
-          </tr>
-        `;
-      }).join('');
+      dashFinanzasVals = vals;
+      _renderFinanzasCombined();
     }
+
 
     /* --- 2. CATEGORÍAS DEL MENÚ --- */
     let _categorias = [];
@@ -1908,13 +1948,13 @@
       const list = document.getElementById('cats-list');
       if(list) {
         if(!_categorias.length) {
-          list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--m-muted);font-size:11px">Sin categorías.<br>Crea la primera ðŸ‘†</div>';
+          list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--m-muted);font-size:11px">Sin categorías.<br>Crea la primera 👆</div>';
         } else {
           list.innerHTML = _categorias.map(c => `
             <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:10px;cursor:pointer;transition:.1s; background:${_menuCatSeleccionada===c.nombre ? '#e2e8f0' : 'transparent'}"
                  onclick="filtrarCatMenu('${c.nombre}')"
                  onmouseover="if('${_menuCatSeleccionada}'!=='${c.nombre}') this.style.background='#f1f5f9'" onmouseout="if('${_menuCatSeleccionada}'!=='${c.nombre}') this.style.background='transparent'">
-              <span style="font-size:18px">${c.emoji||'ðŸ“‹'}</span>
+              <span style="font-size:18px">${c.emoji||'📋'}</span>
               <div style="flex:1;min-width:0">
                 <div style="font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.nombre}</div>
                 ${c.descripcion?`<div style="font-size:10px;color:var(--m-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${c.descripcion}</div>`:''}
@@ -1995,7 +2035,7 @@
       if(!confirm('¿Eliminar esta categoría? Los platillos asociados no se eliminarán.')) return;
       db.ref(`negocios/${negocioID}/menu_categorias/${key}`).remove().then(() => {
         closeModal('mod-cat');
-        showToast('ðŸ—‘ï¸ Categoría eliminada');
+        showToast('🗑️ Categoría eliminada');
       });
     }
 
@@ -2540,9 +2580,9 @@
         document.body.removeChild(link);
     }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ------------------------------------------------
        4. AUDITORÍA FINANCIERA - LÓGICA COMPLETA
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ------------------------------------------------ */
 
     /* â”€â”€ Sub-tab switcher â”€â”€ */
     function switchRepTab(el, tab) {
@@ -2638,9 +2678,9 @@
       renderCalendarioDias(vSnap, mes);
     }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ----------------------------------------------------
        GRANULARIDAD DEL RESUMEN (Mes / Semana / Día)
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ---------------------------------------------------- */
     let _resumenGran = 'mes';
     let _diaActivo   = null; // 'YYYY-MM-DD'
     let _diasConDatos = []; // cache de días con ventas en el mes activo
@@ -3350,11 +3390,11 @@
       // Ranking cards
       document.getElementById('meseros-ranking').innerHTML = arr.slice(0,6).map((m,i) => `
         <div class="mesero-card ${i===0?'top':''}">
-          <div class="mesero-rank">${i===0?'ðŸ¥‡':i===1?'ðŸ¥ˆ':i===2?'ðŸ¥‰':'#'+(i+1)} Lugar</div>
+          <div class="mesero-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)} Lugar</div>
           <div class="mesero-name">${m.nombre}</div>
           <div class="mesero-stat">${m.ordenes} órdenes · Prom. $${(m.total/m.ordenes).toFixed(2)}</div>
           <div style="display:flex;gap:10px;margin-top:2px">
-            ${m.propinas>0?`<div style="font-size:10px;color:#a78bfa;font-weight:700">ðŸª™ Propinas: $${m.propinas.toFixed(2)}</div>`:''}
+            ${m.propinas>0?`<div style="font-size:10px;color:#a78bfa;font-weight:700">🪙 Propinas: $${m.propinas.toFixed(2)}</div>`:''}
             ${m.descs>0?`<div style="font-size:10px;color:#f97316;font-weight:700">Desc: -$${m.descs.toFixed(2)}</div>`:''}
           </div>
           ${m.canceladas>0?`<div style="font-size:10px;color:#fb7185;font-weight:700">âš  ${m.canceladas} cancelada${m.canceladas>1?'s':''}</div>`:''}
@@ -3663,7 +3703,7 @@
       document.getElementById('ci-total-egresos').textContent = '$'+totalEgresos.toFixed(2);
       document.getElementById('ci-resultado-neto').textContent= (neto>=0?'':'- ')+'$'+Math.abs(neto).toFixed(2);
       document.getElementById('ci-resultado-neto').style.color= neto>=0?'#16a34a':'#dc2626';
-      document.getElementById('ci-resultado-label').textContent = neto>=0?'ðŸ“ˆ Mes rentable - Margen '+margen.toFixed(1)+'%':'ðŸ“‰ Mes en pérdida - Revisar egresos';
+      document.getElementById('ci-resultado-label').textContent = neto>=0?'📈 Mes rentable - Margen '+margen.toFixed(1)+'%':'📉 Mes en pérdida - Revisar egresos';
       document.getElementById('ci-resultado-label').style.color = neto>=0?'#16a34a':'#dc2626';
       document.getElementById('ci-margen').textContent   = margen.toFixed(1)+'%';
       document.getElementById('ci-dias').textContent     = dias;
@@ -3672,10 +3712,10 @@
       window._cierreData = { mes, totalIngresos, totalEgresos, neto, margen, dias, promDia, ventaMesa, ventaLlevar, ventaDelivery, propinas, gastosFijos, mermaTotal, totalDesc };
     }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ----------------------------------------------------------
        MOTOR DE REPORTES GERENCIALES - PARCHE SYS
        Excel multi-hoja con formato VIP + PDF con diseño de marca
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ---------------------------------------------------------- */
 
     // Cache de datos para reportes
     window._rptCache = {};
@@ -3895,7 +3935,7 @@
           egresos:'Egresos & Gastos', ejecutivo:'Cierre Ejecutivo P&L'
         })[t]||t).join(' | ')],
       ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(portada), 'ðŸ“‹ Portada');
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(portada), '📋 Portada');
 
       // â”€â”€ FINANZAS GENERAL â”€â”€
       if (tipos.includes('finanzas') || tipos.includes('ejecutivo')) {
@@ -3929,7 +3969,7 @@
             if (cell && typeof cell.v === 'number' && col !== 'L') cell.z = '0.0%';
           });
         });
-        XLSX.utils.book_append_sheet(wb, ws, 'ðŸ“Š Finanzas');
+        XLSX.utils.book_append_sheet(wb, ws, '📊 Finanzas');
       }
 
       // â”€â”€ VENTAS DETALLADAS â”€â”€
@@ -3942,7 +3982,7 @@
         ];
         const wsV = XLSX.utils.aoa_to_sheet(diasRows);
         wsV['!cols'] = [{wch:16},{wch:18}];
-        XLSX.utils.book_append_sheet(wb, wsV, 'ðŸ›’ Ventas');
+        XLSX.utils.book_append_sheet(wb, wsV, '🛒 Ventas');
       }
 
       // â”€â”€ RENDIMIENTO EQUIPO â”€â”€
@@ -3955,7 +3995,7 @@
         ];
         const wsE = XLSX.utils.aoa_to_sheet(empRows);
         wsE['!cols'] = [{wch:28},{wch:10},{wch:16},{wch:14},{wch:20}];
-        XLSX.utils.book_append_sheet(wb, wsE, 'ðŸ‘¨â€ðŸ³ Equipo');
+        XLSX.utils.book_append_sheet(wb, wsE, '👨‍🍳 Equipo');
       }
 
       // â”€â”€ PRODUCTOS MÃS VENDIDOS â”€â”€
@@ -3967,7 +4007,7 @@
         ];
         const wsP = XLSX.utils.aoa_to_sheet(prodRows);
         wsP['!cols'] = [{wch:4},{wch:36},{wch:18},{wch:14},{wch:16}];
-        XLSX.utils.book_append_sheet(wb, wsP, 'ðŸ† Productos');
+        XLSX.utils.book_append_sheet(wb, wsP, '🏆 Productos');
       }
 
       // â”€â”€ INVENTARIO â”€â”€
@@ -3982,7 +4022,7 @@
         ];
         const wsI = XLSX.utils.aoa_to_sheet(invRows);
         wsI['!cols'] = [{wch:12},{wch:30},{wch:12},{wch:16},{wch:8},{wch:10},{wch:12},{wch:14},{wch:14}];
-        XLSX.utils.book_append_sheet(wb, wsI, 'ðŸ“¦ Inventario');
+        XLSX.utils.book_append_sheet(wb, wsI, '📦 Inventario');
       }
 
       // â”€â”€ MERMA â”€â”€
@@ -3995,7 +4035,7 @@
         ];
         const wsM = XLSX.utils.aoa_to_sheet(mermaRows);
         wsM['!cols'] = [{wch:12},{wch:24},{wch:18},{wch:10},{wch:10},{wch:12},{wch:20}];
-        XLSX.utils.book_append_sheet(wb, wsM, 'ðŸ—‘ï¸ Merma');
+        XLSX.utils.book_append_sheet(wb, wsM, '🗑️ Merma');
       }
 
       // â”€â”€ EGRESOS â”€â”€
@@ -4012,7 +4052,7 @@
         ];
         const wsG = XLSX.utils.aoa_to_sheet(egRows);
         wsG['!cols'] = [{wch:12},{wch:20},{wch:32},{wch:24},{wch:12}];
-        XLSX.utils.book_append_sheet(wb, wsG, 'ðŸ’¸ Egresos');
+        XLSX.utils.book_append_sheet(wb, wsG, '💸 Egresos');
       }
 
       XLSX.writeFile(wb, `MODUS_FOOD_Reporte_${periodo}_${mes}.xlsx`);
@@ -4099,7 +4139,7 @@
       html += `<div class="page cover">
         <div>
           <div class="cover-logo">âš¡ PARCHE SYS · Sistema Gerencial</div>
-          <div class="cover-emoji">ðŸ“‹</div>
+          <div class="cover-emoji">📋</div>
           <div class="cover-title">Reporte<br>Gerencial</div>
           <div class="cover-sub">Análisis integral de operaciones y finanzas</div>
           <div class="cover-badge">Período ${periodoLabel}</div>
@@ -4124,7 +4164,7 @@
         const bV = Math.min((d.totalVentas/barMax*100),100).toFixed(1);
         const bE = Math.min((d.totalEgresos/barMax*100),100).toFixed(1);
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ“Š</span><div><div class="title">Finanzas General</div><div class="sub">${periodoLabel} · ${d.fechaInicio} â†’ ${d.fechaFin}</div></div></div>
+          <div class="section-header"><span class="icon">📊</span><div><div class="title">Finanzas General</div><div class="sub">${periodoLabel} · ${d.fechaInicio} â†’ ${d.fechaFin}</div></div></div>
           <div class="kpi-grid kpi-grid-4">
             <div class="kpi green"><div class="kl">Ingresos Totales</div><div class="kv">${fmt(d.totalVentas)}</div></div>
             <div class="kpi red"><div class="kl">Egresos Totales</div><div class="kv">${fmt(d.totalEgresos)}</div></div>
@@ -4153,7 +4193,7 @@
       if (tipos.includes('ventas') || tipos.includes('ejecutivo')) {
         const diasOrdenados = Object.entries(d.ventaPorDia).sort();
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ›’</span><div><div class="title">Ventas Detalladas por Día</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header"><span class="icon">🛒</span><div><div class="title">Ventas Detalladas por Día</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
           <table>
             <thead><tr><th>#</th><th>Fecha</th><th style="text-align:right">Total del Día</th><th style="text-align:right">% del Período</th></tr></thead>
             <tbody>
@@ -4168,12 +4208,12 @@
       if (tipos.includes('meseros') || tipos.includes('ejecutivo')) {
         const empList = Object.values(d.empleadosMap).sort((a,b)=>b.total-a.total);
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ‘¨â€ðŸ³</span><div><div class="title">Rendimiento del Equipo</div><div class="sub">Meseros y Cajeros · ${mes}</div></div></div>
+          <div class="section-header"><span class="icon">👨‍🍳</span><div><div class="title">Rendimiento del Equipo</div><div class="sub">Meseros y Cajeros · ${mes}</div></div></div>
           <table>
             <thead><tr><th>#</th><th>Empleado</th><th style="text-align:center">Órdenes</th><th style="text-align:right">Total Vendido</th><th style="text-align:right">Ticket Prom.</th><th style="text-align:right">Descuentos</th></tr></thead>
             <tbody>
               ${empList.map((e,i)=>`<tr ${i===0?'style="background:#fffbeb"':''}>
-                <td>${i===0?'ðŸ¥‡':i===1?'ðŸ¥ˆ':i===2?'ðŸ¥‰':(i+1)}</td>
+                <td>${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</td>
                 <td style="font-weight:${i===0?900:700}">${e.nombre}</td>
                 <td style="text-align:center">${e.ordenes}</td>
                 <td style="text-align:right;font-weight:800;color:#16a34a">${fmt(e.total)}</td>
@@ -4189,12 +4229,12 @@
       if (tipos.includes('productos') || tipos.includes('ejecutivo')) {
         const topProds = Object.values(d.prodsMap).sort((a,b)=>b.q-a.q).slice(0,20);
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ†</span><div><div class="title">Top 20 Productos más Vendidos</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header"><span class="icon">🏆</span><div><div class="title">Top 20 Productos más Vendidos</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
           <table>
             <thead><tr><th>#</th><th>Platillo</th><th style="text-align:center">Cantidad</th><th style="text-align:right">Recaudado</th><th style="text-align:right">% Recaud.</th></tr></thead>
             <tbody>
               ${topProds.map((p,i)=>`<tr ${i<3?'style="background:#fffbeb"':''}>
-                <td style="font-weight:900">${i===0?'ðŸ¥‡':i===1?'ðŸ¥ˆ':i===2?'ðŸ¥‰':(i+1)}</td>
+                <td style="font-weight:900">${i===0?'🥇':i===1?'🥈':i===2?'🥉':(i+1)}</td>
                 <td style="font-weight:${i<3?800:400}">${p.n}</td>
                 <td style="text-align:center;font-weight:700">${p.q}</td>
                 <td style="text-align:right;font-weight:800;color:#16a34a">${fmt(p.v)}</td>
@@ -4210,7 +4250,7 @@
         const invVal = d.inventario.filter(i=>i.tipo!=='SERVICIO').reduce((a,i)=>a+(parseFloat(i.stock||0)*parseFloat(i.costo||0)),0);
         const lowStock = d.inventario.filter(i=>i.tipo==='FISICO'&&parseFloat(i.stock||0)<=5).length;
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ“¦</span><div><div class="title">Reporte de Inventario</div><div class="sub">Estado al ${new Date().toLocaleDateString('es-SV')}</div></div></div>
+          <div class="section-header"><span class="icon">📦</span><div><div class="title">Reporte de Inventario</div><div class="sub">Estado al ${new Date().toLocaleDateString('es-SV')}</div></div></div>
           <div class="kpi-grid kpi-grid-3" style="margin-bottom:18px">
             <div class="kpi green"><div class="kl">Valorización Total</div><div class="kv">${fmt(invVal)}</div></div>
             <div class="kpi red"><div class="kl">Ítems Bajo Stock</div><div class="kv">${lowStock}</div></div>
@@ -4239,7 +4279,7 @@
       // â”€â”€ MERMA & PÉRDIDAS â”€â”€
       if (tipos.includes('merma') || tipos.includes('ejecutivo')) {
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ—‘ï¸</span><div><div class="title">Merma & Pérdidas</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header"><span class="icon">🗑️</span><div><div class="title">Merma & Pérdidas</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
           <div class="kpi-grid kpi-grid-3" style="margin-bottom:18px">
             <div class="kpi red"><div class="kl">Costo Total Merma</div><div class="kv">${fmt(d.totalMerma)}</div></div>
             <div class="kpi amber"><div class="kl">Registros</div><div class="kv">${d.mermas.length}</div></div>
@@ -4264,7 +4304,7 @@
       // â”€â”€ EGRESOS & GASTOS â”€â”€
       if (tipos.includes('egresos') || tipos.includes('ejecutivo')) {
         html += `<div class="page">
-          <div class="section-header"><span class="icon">ðŸ’¸</span><div><div class="title">Egresos & Gastos Administrativos</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header"><span class="icon">💸</span><div><div class="title">Egresos & Gastos Administrativos</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
           <div class="kpi-grid kpi-grid-2" style="margin-bottom:18px">
             <div class="kpi red"><div class="kl">Total Gastos del Período</div><div class="kv">${fmt(d.totalGastos)}</div></div>
             <div class="kpi amber"><div class="kl">Categoría con Mayor Gasto</div><div class="kv-sm" style="font-size:14px">${Object.entries(d.gastosPorCat).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-'}</div></div>
@@ -4289,7 +4329,7 @@
       if (tipos.includes('ejecutivo')) {
         const esRentable = d.utilidad >= 0;
         html += `<div class="page">
-          <div class="section-header" style="background:linear-gradient(135deg,#3b82f6,#7c3aed)"><span class="icon">ðŸŽ¯</span><div><div class="title">Cierre Ejecutivo - P&L</div><div class="sub">Estado de Resultados · ${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header" style="background:linear-gradient(135deg,#3b82f6,#7c3aed)"><span class="icon">🎯</span><div><div class="title">Cierre Ejecutivo - P&L</div><div class="sub">Estado de Resultados · ${periodoLabel} · ${mes}</div></div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
             <div>
               <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #0f172a">INGRESOS</div>
@@ -4314,7 +4354,7 @@
           <div class="resultado-box ${esRentable?'green':'red'}">
             <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:8px">RESULTADO NETO DEL PERÍODO</div>
             <div class="resultado-neto" style="color:${esRentable?'#16a34a':'#dc2626'}">${esRentable?'':'â€“'}${fmt(Math.abs(d.utilidad))}</div>
-            <div style="font-size:13px;font-weight:700;margin-top:8px;color:${esRentable?'#16a34a':'#dc2626'}">${esRentable?'ðŸ“ˆ Período Rentable':'ðŸ“‰ Período en Pérdida'} · Margen ${pct(d.margen)}</div>
+            <div style="font-size:13px;font-weight:700;margin-top:8px;color:${esRentable?'#16a34a':'#dc2626'}">${esRentable?'📈 Período Rentable':'📉 Período en Pérdida'} · Margen ${pct(d.margen)}</div>
           </div>
           <div class="kpi-grid kpi-grid-4" style="margin-top:16px">
             <div class="kpi blue"><div class="kl">Tickets</div><div class="kv-sm">${d.tickets}</div></div>
@@ -4459,9 +4499,9 @@
       db.ref(`negocios/${negocioID}/info`).update(info).then(() => alert('Salvado exitosamente en PARCHE SYS Core.'));
     }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ----------------------------------------------------------
        PARCHE SYS - Permisos de módulos por empleado
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ---------------------------------------------------------- */
     function aplicarPermisosFood(modulos, rol) {
       var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
       if (isElectron) {
@@ -4611,10 +4651,10 @@
       }
     }
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ----------------------------------------------------------
        PARCHE SYS - Helpers de empleados para POS y Delivery
        Expuestos en window para uso desde pos-food.html, etc.
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ---------------------------------------------------------- */
 
     /** Retorna lista de meseros activos [{key, nombre}] */
     window.getFoodMeseros = function() {
@@ -4667,9 +4707,9 @@
       return db.ref().update(updates);
     };
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    /* ----------------------------------------------------------
        METAS MENSUALES - Guardar, Cargar y Renderizar Progreso
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ---------------------------------------------------------- */
 
     async function guardarMetas() {
       const mes = document.getElementById('rep-mes').value;
@@ -4807,7 +4847,7 @@
         } else {
           elBar.style.background = 'linear-gradient(90deg,#0284c7,#38bdf8)';
           elBadge.style.cssText  = 'font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px;background:rgba(56,189,248,.2);color:#38bdf8';
-          elBadge.textContent    = 'ðŸ† Meta alcanzada';
+          elBadge.textContent    = '🏆 Meta alcanzada';
         }
       }
     }
@@ -4827,15 +4867,15 @@
       const oks = [ventasOk, gadminOk, gcampoOk, utilidadOk].filter(Boolean).length;
 
       if (oks === 4) {
-        emoji.textContent = 'ðŸŸ¢'; txt.textContent = 'Mes en excelente rumbo';
+        emoji.textContent = '🟢'; txt.textContent = 'Mes en excelente rumbo';
         sub.textContent   = 'Todas las metas van en verde - sigue así';
         sem.style.borderColor = 'rgba(22,163,74,.4)';
       } else if (oks >= 2) {
-        emoji.textContent = 'ðŸŸ¡'; txt.textContent = 'Mes en ruta, con áreas a mejorar';
+        emoji.textContent = '🟡'; txt.textContent = 'Mes en ruta, con áreas a mejorar';
         sub.textContent   = 'Revisa los indicadores en naranja o rojo';
         sem.style.borderColor = 'rgba(245,158,11,.4)';
       } else {
-        emoji.textContent = 'ðŸ”´'; txt.textContent = 'Mes con desviaciones importantes';
+        emoji.textContent = '🔴'; txt.textContent = 'Mes con desviaciones importantes';
         sub.textContent   = 'Ajusta gastos o activa estrategias de venta';
         sem.style.borderColor = 'rgba(220,38,38,.4)';
       }
