@@ -84,6 +84,7 @@ navLinks.forEach(link => {
         if(view === 'asistencias') loadAsistencias();
         if(view === 'dispositivos') loadDispositivos();
         if(view === 'auditoria') loadAuditoria();
+        if(view === 'planilla' && window.loadPlanillaEmpleados) window.loadPlanillaEmpleados();
     });
 });
 

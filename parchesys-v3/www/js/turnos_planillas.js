@@ -157,6 +157,22 @@ window.guardarTurnoUI = async function() {
 
 let ultimaPlanillaCalculada = null; // Para guardar el històrico luego
 
+window.loadPlanillaEmpleados = async function() {
+    const sel = document.getElementById('planilla-empleado');
+    if (!sel || sel.options.length > 1) return; // already loaded or doesn't exist
+    
+    try {
+        const empSnap = await getDocs(query(collection(db, "empleados"), where("estado", "==", "Activo")));
+        empSnap.forEach(d => {
+            const emp = d.data();
+            sel.innerHTML += `<option value="${d.id}">${emp.nombre}</option>`;
+        });
+    } catch(e) {
+        console.error("Error cargando empleados para planilla:", e);
+    }
+}
+
+
 function calcularMinutosEntreHoras(hIn, hOut) {
     const [h1, m1] = hIn.split(':').map(Number);
     const [h2, m2] = hOut.split(':').map(Number);
@@ -279,8 +295,13 @@ window.calcularPlanillaUI = async function() {
 
     try {
         const empSnap = await getDocs(query(collection(db, "empleados"), where("estado", "==", "Activo")));
-        const empleados = [];
+        let empleados = [];
         empSnap.forEach(d => empleados.push({ id: d.id, ...d.data() }));
+        
+        const selEmpId = document.getElementById('planilla-empleado').value;
+        if (selEmpId && selEmpId !== 'ALL') {
+            empleados = empleados.filter(e => e.id === selEmpId);
+        }
 
         // Obtenemos todos los turnos para no perder los que hayan cruzado el límite de fecha mal escrito
         const turnosSnap = await getDocs(collection(db, "turnos"));
