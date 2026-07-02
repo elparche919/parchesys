@@ -133,7 +133,7 @@
     .cfg-panel { display:none; }
     .cfg-panel.active { display:block; }
 
-    /* PORTAL â€” ORDENES WEB */
+    /* PORTAL - ORDENES WEB */
     .pwc { background:#1a0a2e; border:1px solid #7c3aed; border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:10px; }
     .pwc-head { display:flex; align-items:center; justify-content:space-between; }
     .pwc-id { font-size:16px; font-weight:900; color:#e9d5ff; letter-spacing:.5px; }
@@ -243,15 +243,15 @@
         </table>
       </div>
 
-      <!-- â–ˆâ–ˆ ORDENES WEB ENTRANTES â€” PANÓPTICO â–ˆâ–ˆ -->
+      <!-- â–ˆâ–ˆ ORDENES WEB ENTRANTES - PANÓPTICO â–ˆâ–ˆ -->
       <div class="hd" style="margin-top:30px; margin-bottom:15px;">
         <div>
           <h2 style="font-size:20px; font-weight:900; display:flex; align-items:center; gap:10px;">
-            <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#7c3aed;border-radius:8px;font-size:14px">ðŸŒ</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;background:#7c3aed;border-radius:8px;font-size:14px">🌐</span>
             Órdenes Web Entrantes
             <span id="portal-web-count" style="background:#7c3aed;color:white;border-radius:20px;padding:2px 12px;font-size:13px;font-weight:900;display:none">0</span>
           </h2>
-          <p style="color:var(--m-muted)">Pedidos recibidos por menú digital â€” pendientes de asignar a un mesero</p>
+          <p style="color:var(--m-muted)">Pedidos recibidos por menú digital - pendientes de asignar a un mesero</p>
         </div>
         <a href="cocina.html?negocio=negocio_food_sv_demo" style="padding:10px 18px;border-radius:8px;background:#7c3aed;color:white;font-weight:800;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
           <i class="fa-solid fa-fire-burner"></i> Ver KDS Cocina
@@ -364,7 +364,7 @@
         <div id="resumen-calendario-wrap" style="margin-bottom:24px">
           <div class="tbl-card">
             <div style="padding:14px 18px;font-weight:900;border-bottom:1px solid var(--m-border);display:flex;justify-content:space-between;align-items:center">
-              <span><i class="fa-solid fa-calendar-days" style="color:#38bdf8"></i> Desglose por Día <span style="font-size:11px;font-weight:500;color:var(--m-muted)">â€” haz clic en un día para ver detalle</span></span>
+              <span><i class="fa-solid fa-calendar-days" style="color:#38bdf8"></i> Desglose por Día <span style="font-size:11px;font-weight:500;color:var(--m-muted)">- haz clic en un día para ver detalle</span></span>
               <span id="cal-mes-lbl" style="font-size:11px;color:var(--m-muted)"></span>
             </div>
             <div id="resumen-calendario" style="padding:14px 18px;display:grid;grid-template-columns:repeat(7,1fr);gap:6px;min-height:60px">
@@ -381,8 +381,8 @@
                 <i class="fa-solid fa-arrow-left"></i> Volver al Mes
               </button>
               <div>
-                <div style="font-size:18px;font-weight:900" id="dia-detalle-titulo">â€”</div>
-                <div style="font-size:12px;color:var(--m-muted)" id="dia-detalle-sub">â€”</div>
+                <div style="font-size:18px;font-weight:900" id="dia-detalle-titulo">-</div>
+                <div style="font-size:12px;color:var(--m-muted)" id="dia-detalle-sub">-</div>
               </div>
             </div>
             <div style="display:flex;gap:8px">
@@ -477,7 +477,7 @@
                 <div style="display:flex;flex-direction:column;gap:12px">
                   <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Tickets Emitidos</div><div style="font-size:22px;font-weight:900" id="rep-total-tickets">0</div></div>
                   <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Ticket Promedio</div><div style="font-size:22px;font-weight:900" id="rep-avg-ticket">$0.00</div></div>
-                  <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Canal Principal</div><div style="font-size:22px;font-weight:900" id="rep-main-channel">â€”</div></div>
+                  <div><div style="font-size:9px;opacity:.7;font-weight:800;text-transform:uppercase">Canal Principal</div><div style="font-size:22px;font-weight:900" id="rep-main-channel">-</div></div>
                 </div>
               </div>
               <div class="tbl-card" style="padding:18px">
@@ -500,9 +500,9 @@
         <!-- KPIs combinados -->
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
           <div class="rep-kpi red"><div class="rep-kpi-lbl">Total Gastos Admin</div><div class="rep-kpi-val" id="g-total">$0.00</div></div>
-          <div class="rep-kpi amber"><div class="rep-kpi-lbl">Categoría Principal</div><div class="rep-kpi-val" style="font-size:18px" id="g-cat-top">â€”</div></div>
+          <div class="rep-kpi amber"><div class="rep-kpi-lbl">Categoría Principal</div><div class="rep-kpi-val" style="font-size:18px" id="g-cat-top">-</div></div>
           <div class="rep-kpi red"><div class="rep-kpi-lbl">Total Merma (Costo)</div><div class="rep-kpi-val" id="m-total">$0.00</div></div>
-          <div class="rep-kpi amber"><div class="rep-kpi-lbl">Producto más Mermado</div><div class="rep-kpi-val" style="font-size:18px" id="m-top">â€”</div></div>
+          <div class="rep-kpi amber"><div class="rep-kpi-lbl">Producto más Mermado</div><div class="rep-kpi-val" style="font-size:18px" id="m-top">-</div></div>
         </div>
 
         <!-- Cabecera sección Gastos -->
@@ -511,7 +511,7 @@
             <span style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#fb7185;font-size:10px;font-weight:900;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em">
               <i class="fa-solid fa-receipt"></i> Gastos Fijos
             </span>
-            <span style="font-size:12px;color:var(--m-muted)">Renta, planilla, luz, agua, gas, insumos, etc. â€” <span id="g-count" style="font-weight:800;color:var(--m-text)">0</span> registros</span>
+            <span style="font-size:12px;color:var(--m-muted)">Renta, planilla, luz, agua, gas, insumos, etc. - <span id="g-count" style="font-weight:800;color:var(--m-text)">0</span> registros</span>
           </div>
           <button class="btn-m" onclick="abrirModalGasto()"><i class="fa-solid fa-plus"></i> Registrar Gasto</button>
         </div>
@@ -528,7 +528,7 @@
             <span style="background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.3);color:#fbbf24;font-size:10px;font-weight:900;padding:4px 12px;border-radius:20px;text-transform:uppercase;letter-spacing:.06em">
               <i class="fa-solid fa-trash-can"></i> Merma
             </span>
-            <span style="font-size:12px;color:var(--m-muted)">Productos perdidos, caducados o accidentados â€” <span id="m-count" style="font-weight:800;color:var(--m-text)">0</span> registros</span>
+            <span style="font-size:12px;color:var(--m-muted)">Productos perdidos, caducados o accidentados - <span id="m-count" style="font-weight:800;color:var(--m-text)">0</span> registros</span>
           </div>
           <button class="btn-m" onclick="abrirModalMerma()"><i class="fa-solid fa-plus"></i> Registrar Merma</button>
         </div>
@@ -544,7 +544,7 @@
       <div class="rep-panel" id="rep-tab-metas" style="display:none">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
 
-          <!-- COLUMNA IZQUIERDA â€” Configurar Metas -->
+          <!-- COLUMNA IZQUIERDA - Configurar Metas -->
           <div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
               <span style="font-size:22px">ðŸŽ¯</span>
@@ -602,7 +602,7 @@
             </div>
           </div>
 
-          <!-- COLUMNA DERECHA â€” Progreso vs Meta -->
+          <!-- COLUMNA DERECHA - Progreso vs Meta -->
           <div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
               <span style="font-size:22px">ðŸ“Š</span>
@@ -620,7 +620,7 @@
                   <span style="font-size:12px;font-weight:900;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em"><i class="fa-solid fa-circle" style="color:#16a34a;font-size:8px"></i> Ventas del Mes</span>
                   <div style="text-align:right">
                     <span style="font-size:20px;font-weight:900;color:#16a34a" id="pm-ventas-actual">$0.00</span>
-                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-ventas-meta">â€”</span></span>
+                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-ventas-meta">-</span></span>
                   </div>
                 </div>
                 <div style="height:12px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:6px">
@@ -638,7 +638,7 @@
                   <span style="font-size:12px;font-weight:900;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em"><i class="fa-solid fa-circle" style="color:#dc2626;font-size:8px"></i> Gastos Admin</span>
                   <div style="text-align:right">
                     <span style="font-size:20px;font-weight:900;color:#fb7185" id="pm-gadmin-actual">$0.00</span>
-                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-gadmin-meta">â€”</span></span>
+                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-gadmin-meta">-</span></span>
                   </div>
                 </div>
                 <div style="height:12px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:6px">
@@ -656,7 +656,7 @@
                   <span style="font-size:12px;font-weight:900;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em"><i class="fa-solid fa-circle" style="color:#f59e0b;font-size:8px"></i> Gastos Campo / Merma</span>
                   <div style="text-align:right">
                     <span style="font-size:20px;font-weight:900;color:#fbbf24" id="pm-gcampo-actual">$0.00</span>
-                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-gcampo-meta">â€”</span></span>
+                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-gcampo-meta">-</span></span>
                   </div>
                 </div>
                 <div style="height:12px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:6px">
@@ -674,7 +674,7 @@
                   <span style="font-size:12px;font-weight:900;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em"><i class="fa-solid fa-circle" style="color:#38bdf8;font-size:8px"></i> Utilidad Neta</span>
                   <div style="text-align:right">
                     <span style="font-size:20px;font-weight:900;color:#38bdf8" id="pm-utilidad-actual">$0.00</span>
-                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-utilidad-meta">â€”</span></span>
+                    <span style="font-size:12px;color:var(--m-muted)"> / <span id="pm-utilidad-meta">-</span></span>
                   </div>
                 </div>
                 <div style="height:12px;background:rgba(255,255,255,.07);border-radius:6px;overflow:hidden;margin-bottom:6px">
@@ -690,8 +690,8 @@
               <div id="pm-semaforo" class="tbl-card" style="padding:20px;text-align:center;display:none">
                 <div style="font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.08em;color:var(--m-muted);margin-bottom:10px">Estado General del Mes</div>
                 <div style="font-size:48px;margin-bottom:8px" id="pm-emoji">ðŸŸ¡</div>
-                <div style="font-size:18px;font-weight:900" id="pm-estado-txt">â€”</div>
-                <div style="font-size:12px;color:var(--m-muted);margin-top:4px" id="pm-estado-sub">â€”</div>
+                <div style="font-size:18px;font-weight:900" id="pm-estado-txt">-</div>
+                <div style="font-size:12px;color:var(--m-muted);margin-top:4px" id="pm-estado-sub">-</div>
               </div>
 
             </div>
@@ -705,7 +705,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:18px">
           <div>
             <div style="font-size:16px;font-weight:900">Ventas por Mesero</div>
-            <div style="font-size:12px;color:var(--m-muted);margin-top:3px" id="meseros-periodo-lbl">Rendimiento individual por servidor â€” período seleccionado</div>
+            <div style="font-size:12px;color:var(--m-muted);margin-top:3px" id="meseros-periodo-lbl">Rendimiento individual por servidor - período seleccionado</div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <!-- Selector de semana (visible solo en modo semana) -->
@@ -747,7 +747,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
           <div>
             <div style="font-size:16px;font-weight:900">Cierres de Caja</div>
-            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Historial de aperturas y cierres del POS â€” fuente: registros de cajas</div>
+            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Historial de aperturas y cierres del POS - fuente: registros de cajas</div>
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <input type="date" id="corte-filtro-dia" class="f-inp" style="width:155px" placeholder="Filtrar por día" onchange="cargarHistorialCortes()">
@@ -803,7 +803,7 @@
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
               <div class="tbl-card" style="padding:20px">
-                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Sistema â€” Ventas del Día</h3>
+                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Sistema - Ventas del Día</h3>
                 <div style="display:flex;flex-direction:column;gap:10px">
                   <div style="display:flex;justify-content:space-between"><span>Ventas en Efectivo</span><span style="font-weight:900;color:#16a34a" id="corte-efec-sistema">$0.00</span></div>
                   <div style="display:flex;justify-content:space-between"><span>Ventas Tarjeta</span><span style="font-weight:900" id="corte-tarj-sistema">$0.00</span></div>
@@ -814,7 +814,7 @@
                 </div>
               </div>
               <div class="tbl-card" style="padding:20px">
-                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Físico â€” Conteo Manual</h3>
+                <h3 style="font-size:13px;font-weight:900;margin-bottom:14px;color:var(--m-muted);text-transform:uppercase;letter-spacing:.06em">Físico - Conteo Manual</h3>
                 <div style="display:flex;flex-direction:column;gap:10px">
                   <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Efectivo contado en caja ($)</label><input type="number" id="corte-contado-efec" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
                   <div><label style="font-size:11px;font-weight:700;color:var(--m-muted)">Fondo de cambio inicial ($)</label><input type="number" id="corte-fondo" class="f-inp" style="margin-top:5px" placeholder="0.00" step="0.01" oninput="calcularDiferencia()"></div>
@@ -838,7 +838,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
           <div>
             <div style="font-size:16px;font-weight:900">Cierre de Mes</div>
-            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Resumen consolidado â€” P&amp;L del período seleccionado</div>
+            <div style="font-size:12px;color:var(--m-muted);margin-top:3px">Resumen consolidado - P&amp;L del período seleccionado</div>
           </div>
           <div style="display:flex;gap:10px">
             <button class="btn-m-out" onclick="exportarCierrePDF()"><i class="fa-solid fa-file-pdf"></i> Exportar Cierre</button>
@@ -1473,7 +1473,7 @@
       <div class="mb-head"><h2><i class="fa-solid fa-warehouse"></i> Bodega de Productos</h2><button class="mb-close" onclick="closeModal('mod-bodega')">&times;</button></div>
       <div class="mb-body">
         <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:10px 14px; margin-bottom:15px; font-size:12px; color:#1e3a8a; line-height:1.5">
-          <i class="fa-solid fa-circle-info"></i> Este stock <b>no se muestra ni se vende en el POS</b>. Úsalo para recibir mercadería (ej. bebidas) antes de pasarla al stock de venta. Ya no es necesario crear una categoría "Bodega" en el menú â€” usa este módulo con tus productos reales.
+          <i class="fa-solid fa-circle-info"></i> Este stock <b>no se muestra ni se vende en el POS</b>. Úsalo para recibir mercadería (ej. bebidas) antes de pasarla al stock de venta. Ya no es necesario crear una categoría "Bodega" en el menú - usa este módulo con tus productos reales.
         </div>
         <input type="text" class="f-inp" style="background:white; border-color:var(--m-border); color:var(--m-text); margin-bottom:15px" placeholder="ðŸ” Buscar producto por nombre..." oninput="filtrarBodega(this.value)">
         <div class="tbl-card" style="max-height:50vh; overflow-y:auto">
@@ -1665,7 +1665,7 @@
               <div class="pwc-id">#${o.orden||id.substring(0,8)}</div>
               <div class="pwc-badge ${tipoLabel}">${tipoEmoji} ${tipoLabel}</div>
             </div>
-            <div class="pwc-client"><i class="fa-solid fa-user" style="font-size:11px"></i> ${o.cliente||'â€”'} · ${o.telefono||'â€”'}</div>
+            <div class="pwc-client"><i class="fa-solid fa-user" style="font-size:11px"></i> ${o.cliente||'-'} · ${o.telefono||'-'}</div>
             ${o.direccion?`<div style="font-size:11px;color:#a78bfa"><i class="fa-solid fa-location-dot" style="font-size:10px"></i> ${o.direccion}</div>`:''}
             <div class="pwc-items">${itemsHtml}</div>
             <div style="display:flex;justify-content:space-between;align-items:center">
@@ -1801,6 +1801,30 @@
       const vals = [];
       
       snap.forEach(c => {
+        function parseLocalToTs(str) {
+          if (!str) return 0;
+          let ts = Date.parse(str);
+          if (!isNaN(ts)) return ts;
+          try {
+            let p1 = str.split(',');
+            if (p1.length === 2) {
+              let pDate = p1[0].trim().split('/');
+              if (pDate.length === 3) {
+                let d = pDate[0], m = pDate[1], y = pDate[2];
+                let pTime = p1[1].trim().match(/(\d+):(\d+):(\d+)\s*(a\.?\s*m\.?|p\.?\s*m\.?)/i);
+                if (pTime) {
+                  let hh = parseInt(pTime[1]), mm = parseInt(pTime[2]), ss = parseInt(pTime[3]);
+                  let ampm = pTime[4].toLowerCase().replace(/\./g, '').trim();
+                  if (ampm === 'pm' && hh < 12) hh += 12;
+                  if (ampm === 'am' && hh === 12) hh = 0;
+                  return new Date(y, m - 1, d, hh, mm, ss).getTime();
+                }
+              }
+            }
+          } catch(e) {}
+          return 0;
+        }
+
         if (c.key === 'movimientos_caja') {
           // Aplanar movimientos de caja provenientes del POS
           c.forEach(subC => {
@@ -1810,7 +1834,7 @@
               ref: subVal.concepto || 'Movimiento de Caja',
               tipo: (subVal.tipo || 'INGRESO').toUpperCase(),
               monto: parseFloat(subVal.monto || 0),
-              ts: subVal.timestamp || (subVal.fecha ? Date.parse(subVal.fecha) : Date.now())
+              ts: subVal.timestamp || (subVal.fecha ? parseLocalToTs(subVal.fecha) : Date.now())
             });
           });
         } else {
@@ -1821,7 +1845,7 @@
             ref: val.ref || 'Movimiento Financiero',
             tipo: (val.tipo || 'INGRESO').toUpperCase(),
             monto: parseFloat(val.monto || 0),
-            ts: val.ts || (val.fecha ? Date.parse(val.fecha) : Date.now())
+            ts: val.ts || (val.fecha ? parseLocalToTs(val.fecha) : Date.now())
           });
         }
       });
@@ -2008,7 +2032,7 @@
          const selCat = document.getElementById('p-cat');
          if(selCat) selCat.value = d._cat || d.categoria || '';
          if(selCat && !selCat.value && (d._cat||d.categoria)) {
-           // Categoria no existe en la lista â€” agregarla temporalmente
+           // Categoria no existe en la lista - agregarla temporalmente
            const opt = document.createElement('option');
            opt.value = d._cat||d.categoria;
            opt.textContent = d._cat||d.categoria;
@@ -2306,7 +2330,7 @@
             <td onclick="abrirFichaMenu('${idStr}')" style="font-weight:700; color:var(--m-blue); cursor:pointer">${p.nombre || '<span style="color:red">Indefinido</span>'}</td>
             <td>${p._cat}</td>
             <td style="text-align:right; font-weight:900">$${parseFloat(p.precio||0).toFixed(2)}</td>
-            <td style="text-align:center">${p.descuenta ? stockVal : 'â€”'}</td>
+            <td style="text-align:center">${p.descuenta ? stockVal : '-'}</td>
             <td><span class="${p.oculto?'badge-err':'badge-ok'}">${p.oculto?'OCULTO':'PÚBLICO'}</span></td>
             </tr>
         `;
@@ -2517,7 +2541,7 @@
     }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       4. AUDITORÍA FINANCIERA â€” LÓGICA COMPLETA
+       4. AUDITORÍA FINANCIERA - LÓGICA COMPLETA
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
     /* â”€â”€ Sub-tab switcher â”€â”€ */
@@ -2598,11 +2622,11 @@
       ]);
       gSnap.forEach(c => { totalEgresos += parseFloat(c.val().monto || 0); });
       mSnap.forEach(c => { totalEgresos += parseFloat(c.val().costo || 0); });
-      // totalDescuentos ya está descontado en v.total (precio final del POS) â€” no restar dos veces
+      // totalDescuentos ya está descontado en v.total (precio final del POS) - no restar dos veces
 
       const balance = totalIngresos - totalEgresos;
 
-      // KPIs y tablas â€” delegar al helper compartido
+      // KPIs y tablas - delegar al helper compartido
       _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, descRows);
       document.getElementById('rep-op-titulo').textContent = 'Operación del Mes';
       document.getElementById('resumen-periodo-lbl').textContent = 'Resumen mensual';
@@ -2749,7 +2773,7 @@
           ${data
             ? `<div style="font-size:9px;font-weight:700;color:#4ade80;margin-top:2px">$${data.ingresos.toFixed(0)}</div>
                <div style="font-size:9px;color:var(--m-muted)">${data.tickets} tkt</div>`
-            : `<div style="font-size:9px;color:var(--m-muted);margin-top:2px">â€”</div>`
+            : `<div style="font-size:9px;color:var(--m-muted);margin-top:2px">-</div>`
           }
         </div>`;
       }
@@ -2814,13 +2838,13 @@
           const hora = _getLocalISO(v) ? _getLocalISO(v).substring(11,16) : (v.hora||'—');
           const desc = parseFloat(v.descuento_monto||0);
           return `<tr>
-            <td style="font-weight:800;font-family:monospace">${v.orden||'â€”'}</td>
+            <td style="font-weight:800;font-family:monospace">${v.orden||'-'}</td>
             <td style="color:var(--m-muted)">${hora}</td>
             <td><span style="background:rgba(56,189,248,.15);color:#38bdf8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800">${(v.canal||'mesa').toUpperCase()}</span></td>
-            <td>${v.mesero||v.cajero||'â€”'}</td>
+            <td>${v.mesero||v.cajero||'-'}</td>
             <td style="font-size:11px">${v.forma_pago||'efectivo'}</td>
             <td align="center" style="color:var(--m-muted)">${(v.items||[]).length}</td>
-            <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'â€”'}</td>
+            <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'-'}</td>
             <td align="right" style="font-weight:900;color:#16a34a">$${parseFloat(v.total||0).toFixed(2)}</td>
           </tr>`;
         }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin ventas en este día</td></tr>';
@@ -2937,7 +2961,7 @@
       document.getElementById('rep-total-tickets').textContent = tickets;
       document.getElementById('rep-avg-ticket').textContent = '$'+(tickets>0?(totalIngresos/tickets).toFixed(2):'0.00');
       const bestChan = Object.entries(channelsMap).sort((a,b)=>b[1]-a[1])[0];
-      document.getElementById('rep-main-channel').textContent = bestChan ? bestChan[0].toUpperCase() : 'â€”';
+      document.getElementById('rep-main-channel').textContent = bestChan ? bestChan[0].toUpperCase() : '-';
 
       window._currentProdsArr = Object.values(prodsMap).sort((a,b)=>b.q-a.q);
       if(typeof renderReporteProductos === 'function') renderReporteProductos();
@@ -2959,9 +2983,9 @@
 
       document.getElementById('rep-tbl-descuentos').querySelector('tbody').innerHTML =
         descRows.map(v=>`<tr>
-          <td style="font-weight:700">${v.orden||'â€”'}</td>
-          <td>${v.descuento_motivo||'â€”'}</td>
-          <td style="font-family:monospace">${v.descuento_dui||'â€”'}</td>
+          <td style="font-weight:700">${v.orden||'-'}</td>
+          <td>${v.descuento_motivo||'-'}</td>
+          <td style="font-family:monospace">${v.descuento_dui||'-'}</td>
           <td align="right" style="font-weight:900;color:#f59e0b">$${parseFloat(v.descuento_monto||0).toFixed(2)}</td>
         </tr>`).join('') || '<tr><td colspan="4" align="center" style="color:var(--m-muted)">Sin descuentos aplicados</td></tr>';
     }
@@ -3054,7 +3078,7 @@
       document.getElementById('g-total').textContent = '$'+total.toFixed(2);
       document.getElementById('g-count').textContent = rows.length;
       const topCat = Object.entries(catsMap).sort((a,b)=>b[1]-a[1])[0];
-      document.getElementById('g-cat-top').textContent = topCat ? topCat[0] : 'â€”';
+      document.getElementById('g-cat-top').textContent = topCat ? topCat[0] : '-';
       
       document.getElementById('tbl-gastos').querySelector('tbody').innerHTML =
         rows.map(g => {
@@ -3078,10 +3102,10 @@
           }
           
           return `<tr>
-            <td>${g.fecha||'â€”'}</td>
+            <td>${g.fecha||'-'}</td>
             <td><span style="background:${badgeColor};color:${textColor};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800">${g.categoria}</span></td>
             <td style="font-weight:700">${g.descripcion}</td>
-            <td style="color:var(--m-muted)">${g.proveedor||'â€”'}</td>
+            <td style="color:var(--m-muted)">${g.proveedor||'-'}</td>
             <td align="right" style="font-weight:900;color:#dc2626">$${g.monto.toFixed(2)}</td>
             <td>${deleteBtn}</td>
           </tr>`;
@@ -3131,15 +3155,15 @@
       document.getElementById('m-total').textContent = '$'+total.toFixed(2);
       document.getElementById('m-count').textContent = rows.length;
       const topProd = Object.entries(prodsMap).sort((a,b)=>b[1]-a[1])[0];
-      document.getElementById('m-top').textContent = topProd ? topProd[0] : 'â€”';
+      document.getElementById('m-top').textContent = topProd ? topProd[0] : '-';
       const motivoColors = { "Caducado":'#dc2626', "Derramado":'#f59e0b', 'Mal preparado':'#7c3aed', "Dañado":'#ea580c', "Robo":'#dc2626', "Otro":'#94a3b8' };
       document.getElementById('tbl-merma').querySelector('tbody').innerHTML =
         rows.map(m => `<tr>
-          <td>${m.fecha||'â€”'}</td>
+          <td>${m.fecha||'-'}</td>
           <td style="font-weight:700">${m.producto}</td>
           <td><span style="background:rgba(220,38,38,.12);color:${motivoColors[m.motivo]||'#94a3b8'};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:800">${m.motivo}</span></td>
           <td align="center">${m.cantidad||0} ${m.unidad||''}</td>
-          <td style="color:var(--m-muted)">${m.responsable||'â€”'}</td>
+          <td style="color:var(--m-muted)">${m.responsable||'-'}</td>
           <td align="right" style="font-weight:900;color:#dc2626">$${parseFloat(m.costo||0).toFixed(2)}</td>
           <td><button onclick="eliminarMerma('${m._key}')" style="background:rgba(220,38,38,.15);border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:11px"><i class="fa-solid fa-trash"></i></button></td>
         </tr>`).join('') || '<tr><td colspan="7" align="center" style="color:var(--m-muted);padding:30px">Sin merma registrada</td></tr>';
@@ -3218,7 +3242,7 @@
       }
     }
 
-    /* â”€â”€ CARGA CORE DE MESEROS â€” acepta rango ISO fechaInicio..fechaFin â”€â”€ */
+    /* â”€â”€ CARGA CORE DE MESEROS - acepta rango ISO fechaInicio..fechaFin â”€â”€ */
     async function cargarMeseros(fechaInicio, fechaFin, labelPeriodo) {
       const snap = await db.ref(`negocios/${negocioID}/ventas`).once('value');
       const mMap = {};
@@ -3308,7 +3332,7 @@
       // Actualizar label de período
       if (labelPeriodo) {
         const lbl = document.getElementById('meseros-periodo-lbl');
-        if (lbl) lbl.textContent = `Rendimiento individual â€” ${labelPeriodo}`;
+        if (lbl) lbl.textContent = `Rendimiento individual - ${labelPeriodo}`;
       }
 
       // Barra de totales del período
@@ -3355,8 +3379,8 @@
             <td style="font-weight:800">${m.nombre}</td>
             <td align="center">${m.ordenes}</td>
             <td align="center">$${m.ordenes > 0 ? (m.total/m.ordenes).toFixed(2) : '0.00'}</td>
-            <td align="right" style="color:#f97316;font-weight:700">${m.descs>0?'-$'+m.descs.toFixed(2):'â€”'}</td>
-            <td align="right" style="color:#a78bfa;font-weight:700">${m.propinas>0?'$'+m.propinas.toFixed(2):'â€”'}</td>
+            <td align="right" style="color:#f97316;font-weight:700">${m.descs>0?'-$'+m.descs.toFixed(2):'-'}</td>
+            <td align="right" style="color:#a78bfa;font-weight:700">${m.propinas>0?'$'+m.propinas.toFixed(2):'-'}</td>
             <td align="center">${audit}</td>
             <td align="right" style="font-weight:900;color:#16a34a">$${m.total.toFixed(2)}</td>
           </tr>`;
@@ -3368,8 +3392,8 @@
         <td colspan="2" style="font-weight:900;color:var(--m-muted);text-transform:uppercase;font-size:10px;letter-spacing:.06em">TOTAL</td>
         <td align="center" style="font-weight:900">${granOrdenes}</td>
         <td align="center" style="color:var(--m-blue)">$${(granOrdenes > 0 ? granTotal/granOrdenes : 0).toFixed(2)}</td>
-        <td align="right" style="color:#f97316;font-weight:900">${totalDesc>0?'-$'+totalDesc.toFixed(2):'â€”'}</td>
-        <td align="right" style="color:#a78bfa;font-weight:900">${totalProps>0?'$'+totalProps.toFixed(2):'â€”'}</td>
+        <td align="right" style="color:#f97316;font-weight:900">${totalDesc>0?'-$'+totalDesc.toFixed(2):'-'}</td>
+        <td align="right" style="color:#a78bfa;font-weight:900">${totalProps>0?'$'+totalProps.toFixed(2):'-'}</td>
         <td></td>
         <td align="right" style="font-weight:900;color:#16a34a;font-size:15px">$${granTotal.toFixed(2)}</td>
       </tr>` : '';
@@ -3427,8 +3451,8 @@
       el.style.color = Math.abs(dif) < 0.01 ? '#16a34a' : dif > 0 ? '#fbbf24' : '#dc2626';
       const badge = document.getElementById('corte-estado-badge');
       if (Math.abs(dif) < 0.01) { badge.textContent='âœ… Cuadre Exacto'; badge.style.background='rgba(22,163,74,.2)'; badge.style.color='#16a34a'; }
-      else if (dif > 0) { badge.textContent='â¬† Sobrante â€” $'+dif.toFixed(2); badge.style.background='rgba(251,191,36,.2)'; badge.style.color='#fbbf24'; }
-      else { badge.textContent='â¬‡ Faltante â€” $'+Math.abs(dif).toFixed(2); badge.style.background='rgba(220,38,38,.2)'; badge.style.color='#dc2626'; }
+      else if (dif > 0) { badge.textContent='â¬† Sobrante - $'+dif.toFixed(2); badge.style.background='rgba(251,191,36,.2)'; badge.style.color='#fbbf24'; }
+      else { badge.textContent='â¬‡ Faltante - $'+Math.abs(dif).toFixed(2); badge.style.background='rgba(220,38,38,.2)'; badge.style.color='#dc2626'; }
     }
 
     async function guardarCorte() {
@@ -3481,12 +3505,12 @@
       }
 
       const _fmtTime = iso => {
-        if (!iso) return 'â€”';
-        try { return new Date(iso).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return 'â€”'; }
+        if (!iso) return '-';
+        try { return new Date(iso).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}); } catch(e){ return '-'; }
       };
       const _fmtDate = iso => {
-        if (!iso) return 'â€”';
-        try { return new Date(iso).toLocaleDateString('es-SV',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){ return 'â€”'; }
+        if (!iso) return '-';
+        try { return new Date(iso).toLocaleDateString('es-SV',{day:'2-digit',month:'2-digit',year:'numeric'}); } catch(e){ return '-'; }
       };
       const _fc = v => '$' + (parseFloat(v)||0).toFixed(2);
 
@@ -3533,16 +3557,16 @@
         const difColor = dif > 0 ? '#fbbf24' : dif < 0 ? '#dc2626' : '#16a34a';
 
         return `<tr>
-          <td style="font-weight:800">${c.usuario_apertura||c.cajero||'â€”'}</td>
+          <td style="font-weight:800">${c.usuario_apertura||c.cajero||'-'}</td>
           <td style="color:var(--m-muted);font-size:11px">${fechaDisplay} ${_fmtTime(c.fecha_apertura)}</td>
-          <td style="color:var(--m-muted);font-size:11px">${c.estado==='cerrada'?_fmtTime(c.fecha_cierre):'â€”'}</td>
+          <td style="color:var(--m-muted);font-size:11px">${c.estado==='cerrada'?_fmtTime(c.fecha_cierre):'-'}</td>
           <td align="right">${_fc(fondo)}</td>
           <td align="right" style="color:#16a34a">${_fc(vEfec)}</td>
           <td align="right">${_fc(vTarj)}</td>
           <td align="right" style="font-weight:800">${_fc(totalV)}</td>
           <td align="right" style="color:#38bdf8">${_fc(esperado)}</td>
-          <td align="right">${c.estado==='cerrada'?_fc(real):'â€”'}</td>
-          <td align="right" style="font-weight:900;color:${difColor}">${c.estado==='cerrada'?(dif>=0?'+':'')+_fc(dif):'â€”'}</td>
+          <td align="right">${c.estado==='cerrada'?_fc(real):'-'}</td>
+          <td align="right" style="font-weight:900;color:${difColor}">${c.estado==='cerrada'?(dif>=0?'+':'')+_fc(dif):'-'}</td>
           <td>${badge}</td>
         </tr>`;
       }).join('');
@@ -3639,7 +3663,7 @@
       document.getElementById('ci-total-egresos').textContent = '$'+totalEgresos.toFixed(2);
       document.getElementById('ci-resultado-neto').textContent= (neto>=0?'':'- ')+'$'+Math.abs(neto).toFixed(2);
       document.getElementById('ci-resultado-neto').style.color= neto>=0?'#16a34a':'#dc2626';
-      document.getElementById('ci-resultado-label').textContent = neto>=0?'ðŸ“ˆ Mes rentable â€” Margen '+margen.toFixed(1)+'%':'ðŸ“‰ Mes en pérdida â€” Revisar egresos';
+      document.getElementById('ci-resultado-label').textContent = neto>=0?'ðŸ“ˆ Mes rentable - Margen '+margen.toFixed(1)+'%':'ðŸ“‰ Mes en pérdida - Revisar egresos';
       document.getElementById('ci-resultado-label').style.color = neto>=0?'#16a34a':'#dc2626';
       document.getElementById('ci-margen').textContent   = margen.toFixed(1)+'%';
       document.getElementById('ci-dias').textContent     = dias;
@@ -3649,7 +3673,7 @@
     }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MOTOR DE REPORTES GERENCIALES â€” PARCHE SYS
+       MOTOR DE REPORTES GERENCIALES - PARCHE SYS
        Excel multi-hoja con formato VIP + PDF con diseño de marca
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -3679,7 +3703,7 @@
     }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       RECOLECTOR DE DATOS â€” lee Firebase para todos los módulos
+       RECOLECTOR DE DATOS - lee Firebase para todos los módulos
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     async function recolectarDatosReporte(mes, periodo) {
       // Calcular rango de fechas según período
@@ -3736,7 +3760,7 @@
           prodsMap[n].q += (it.cant||1);
           prodsMap[n].v += parseFloat(it.sub || ((it.cant||1) * (it.precio||0)));
         });
-        // Empleados â€” misma jerarquía que resolverNombreOp en cargarMeseros
+        // Empleados - misma jerarquía que resolverNombreOp en cargarMeseros
         var _emps = window._foodEmpleados || {};
         var empNombre = 'Sin asignar';
         if (v.emp_key    && _emps[v.emp_key])    empNombre = _emps[v.emp_key].nombre;
@@ -3841,7 +3865,7 @@
     }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       GENERADOR EXCEL â€” Multi-hoja con formato profesional
+       GENERADOR EXCEL - Multi-hoja con formato profesional
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     async function generarReportesExcel() {
       const mes    = document.getElementById('rpt-mes').value || document.getElementById('rep-mes').value;
@@ -3876,7 +3900,7 @@
       // â”€â”€ FINANZAS GENERAL â”€â”€
       if (tipos.includes('finanzas') || tipos.includes('ejecutivo')) {
         const rows = [
-          ['FINANZAS GENERAL â€” ' + mes + ' (' + periodo.toUpperCase() + ')'],[''],
+          ['FINANZAS GENERAL - ' + mes + ' (' + periodo.toUpperCase() + ')'],[''],
           ['INDICADOR','VALOR','OBSERVACIÓN'],
           ['Ingresos Totales (Ventas)', d.totalVentas, 'Suma de todas las ventas pagadas'],
           ['Total Gastos Fijos',  d.totalGastos,  'Renta, planilla, servicios, etc.'],
@@ -3910,7 +3934,7 @@
 
       // â”€â”€ VENTAS DETALLADAS â”€â”€
       if (tipos.includes('ventas') || tipos.includes('ejecutivo')) {
-        const diasRows = [['VENTAS POR DÍA â€” ' + mes],[''],
+        const diasRows = [['VENTAS POR DÍA - ' + mes],[''],
           ['Fecha','Total del Día'],
           ...Object.entries(d.ventaPorDia).sort().map(([dia,val])=>[dia, val]),
           ['',''],
@@ -3923,7 +3947,7 @@
 
       // â”€â”€ RENDIMIENTO EQUIPO â”€â”€
       if (tipos.includes('meseros') || tipos.includes('ejecutivo')) {
-        const empRows = [['RENDIMIENTO POR EMPLEADO â€” ' + mes],[''],
+        const empRows = [['RENDIMIENTO POR EMPLEADO - ' + mes],[''],
           ['Empleado / Cajero','Órdenes','Total Vendido','Ticket Prom.','Descuentos Aplicados'],
           ...Object.values(d.empleadosMap).sort((a,b)=>b.total-a.total).map(e=>[
             e.nombre, e.ordenes, e.total, e.ordenes>0?(e.total/e.ordenes):0, e.descuentos
@@ -3937,7 +3961,7 @@
       // â”€â”€ PRODUCTOS MÃS VENDIDOS â”€â”€
       if (tipos.includes('productos') || tipos.includes('ejecutivo')) {
         const topProds = Object.values(d.prodsMap).sort((a,b)=>b.q-a.q).slice(0,20);
-        const prodRows = [['TOP 20 PRODUCTOS â€” ' + mes],[''],
+        const prodRows = [['TOP 20 PRODUCTOS - ' + mes],[''],
           ['#','Platillo','Cantidad Vendida','Recaudado','% Recaudación'],
           ...topProds.map((p,i)=>[i+1, p.n, p.q, p.v, d.totalVentas>0?(p.v/d.totalVentas):0])
         ];
@@ -3948,12 +3972,12 @@
 
       // â”€â”€ INVENTARIO â”€â”€
       if (tipos.includes('inventario') || tipos.includes('ejecutivo')) {
-        const invRows = [['REPORTE DE INVENTARIO â€” ' + new Date().toLocaleDateString('es-SV')],[''],
+        const invRows = [['REPORTE DE INVENTARIO - ' + new Date().toLocaleDateString('es-SV')],[''],
           ['Código','Nombre','Tipo','Categoría','Stock','Unidad','Costo Unit.','Valorización','Estado'],
           ...d.inventario.map(i=>{
             const stk = parseFloat(i.stock||0), costo = parseFloat(i.costo||0);
             const estado = i.tipo==='SERVICIO'?'N/A': stk<=5?'âš  BAJO STOCK':'âœ… ÓPTIMO';
-            return [i.codigo||'â€”', i.nombre, i.tipo, i.categoria, stk, i.unidad||'', costo, stk*costo, estado];
+            return [i.codigo||'-', i.nombre, i.tipo, i.categoria, stk, i.unidad||'', costo, stk*costo, estado];
           })
         ];
         const wsI = XLSX.utils.aoa_to_sheet(invRows);
@@ -3963,9 +3987,9 @@
 
       // â”€â”€ MERMA â”€â”€
       if (tipos.includes('merma') || tipos.includes('ejecutivo')) {
-        const mermaRows = [['REPORTE DE MERMA â€” ' + mes],[''],
+        const mermaRows = [['REPORTE DE MERMA - ' + mes],[''],
           ['Fecha','Producto','Motivo','Cantidad','Unidad','Costo Est.','Responsable'],
-          ...d.mermas.map(m=>[m.fecha, m.producto, m.motivo, m.cantidad, m.unidad||'', parseFloat(m.costo||0), m.responsable||'â€”']),
+          ...d.mermas.map(m=>[m.fecha, m.producto, m.motivo, m.cantidad, m.unidad||'', parseFloat(m.costo||0), m.responsable||'-']),
           ['','','','','','',''],
           ['TOTAL MERMA','','','','', d.totalMerma, '']
         ];
@@ -3976,9 +4000,9 @@
 
       // â”€â”€ EGRESOS â”€â”€
       if (tipos.includes('egresos') || tipos.includes('ejecutivo')) {
-        const egRows = [['EGRESOS & GASTOS â€” ' + mes],[''],
+        const egRows = [['EGRESOS & GASTOS - ' + mes],[''],
           ['Fecha','Categoría','Descripción','Proveedor','Monto'],
-          ...d.gastos.map(g=>[g.fecha, g.categoria, g.descripcion, g.proveedor||'â€”', parseFloat(g.monto||0)]),
+          ...d.gastos.map(g=>[g.fecha, g.categoria, g.descripcion, g.proveedor||'-', parseFloat(g.monto||0)]),
           ['','','','',''],
           ['RESUMEN POR CATEGORÍA','','','',''],
           ['Categoría','','','','Total'],
@@ -3996,7 +4020,7 @@
     }
 
     /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-       GENERADOR PDF VIP â€” Diseño ejecutivo de marca PARCHE SYS
+       GENERADOR PDF VIP - Diseño ejecutivo de marca PARCHE SYS
     â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     async function generarReportesPDF() {
       const mes    = document.getElementById('rpt-mes').value || document.getElementById('rep-mes').value;
@@ -4198,7 +4222,7 @@
               ${d.inventario.slice(0,30).map(i=>{
                 const stk=parseFloat(i.stock||0); const bajo=i.tipo==='FISICO'&&stk<=5;
                 return `<tr ${bajo?'style="background:#fef2f2"':''}>
-                  <td style="font-size:9px;color:#64748b">${i.codigo||'â€”'}</td>
+                  <td style="font-size:9px;color:#64748b">${i.codigo||'-'}</td>
                   <td style="font-weight:600">${i.nombre}</td>
                   <td><span class="tag" style="background:#e0f2fe;color:#0369a1">${i.tipo}</span></td>
                   <td style="text-align:right;font-weight:800;color:${bajo?'#dc2626':'inherit'}">${i.tipo==='SERVICIO'?'N/A':stk}</td>
@@ -4219,7 +4243,7 @@
           <div class="kpi-grid kpi-grid-3" style="margin-bottom:18px">
             <div class="kpi red"><div class="kl">Costo Total Merma</div><div class="kv">${fmt(d.totalMerma)}</div></div>
             <div class="kpi amber"><div class="kl">Registros</div><div class="kv">${d.mermas.length}</div></div>
-            <div class="kpi blue"><div class="kl">Motivo Principal</div><div class="kv-sm" style="font-size:14px">${Object.entries(d.mermaPorMotivo).sort((a,b)=>b[1]-a[1])[0]?.[0]||'â€”'}</div></div>
+            <div class="kpi blue"><div class="kl">Motivo Principal</div><div class="kv-sm" style="font-size:14px">${Object.entries(d.mermaPorMotivo).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-'}</div></div>
           </div>
           <div style="margin-bottom:16px">
             ${Object.entries(d.mermaPorMotivo).sort((a,b)=>b[1]-a[1]).map(([motivo,val])=>{
@@ -4230,7 +4254,7 @@
           <table>
             <thead><tr><th>Fecha</th><th>Producto</th><th>Motivo</th><th style="text-align:center">Cant.</th><th>Unidad</th><th style="text-align:right">Costo</th><th>Responsable</th></tr></thead>
             <tbody>
-              ${d.mermas.map(m=>`<tr><td>${m.fecha||'â€”'}</td><td style="font-weight:600">${m.producto}</td><td><span class="badge-amber">${m.motivo}</span></td><td style="text-align:center">${m.cantidad}</td><td>${m.unidad||''}</td><td style="text-align:right;color:#dc2626;font-weight:800">${fmt(m.costo||0)}</td><td style="color:#64748b;font-size:11px">${m.responsable||'â€”'}</td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">Sin merma registrada</td></tr>'}
+              ${d.mermas.map(m=>`<tr><td>${m.fecha||'-'}</td><td style="font-weight:600">${m.producto}</td><td><span class="badge-amber">${m.motivo}</span></td><td style="text-align:center">${m.cantidad}</td><td>${m.unidad||''}</td><td style="text-align:right;color:#dc2626;font-weight:800">${fmt(m.costo||0)}</td><td style="color:#64748b;font-size:11px">${m.responsable||'-'}</td></tr>`).join('')||'<tr><td colspan="7" style="text-align:center;color:#94a3b8;padding:20px">Sin merma registrada</td></tr>'}
               ${d.mermas.length?`<tr style="background:#0f172a"><td colspan="5" style="color:white;font-weight:800">TOTAL</td><td style="text-align:right;color:#fb7185;font-weight:900">${fmt(d.totalMerma)}</td><td></td></tr>`:''}
             </tbody>
           </table>
@@ -4243,7 +4267,7 @@
           <div class="section-header"><span class="icon">ðŸ’¸</span><div><div class="title">Egresos & Gastos Administrativos</div><div class="sub">${periodoLabel} · ${mes}</div></div></div>
           <div class="kpi-grid kpi-grid-2" style="margin-bottom:18px">
             <div class="kpi red"><div class="kl">Total Gastos del Período</div><div class="kv">${fmt(d.totalGastos)}</div></div>
-            <div class="kpi amber"><div class="kl">Categoría con Mayor Gasto</div><div class="kv-sm" style="font-size:14px">${Object.entries(d.gastosPorCat).sort((a,b)=>b[1]-a[1])[0]?.[0]||'â€”'}</div></div>
+            <div class="kpi amber"><div class="kl">Categoría con Mayor Gasto</div><div class="kv-sm" style="font-size:14px">${Object.entries(d.gastosPorCat).sort((a,b)=>b[1]-a[1])[0]?.[0]||'-'}</div></div>
           </div>
           <div style="margin-bottom:18px">
             ${Object.entries(d.gastosPorCat).sort((a,b)=>b[1]-a[1]).map(([cat,val])=>{
@@ -4254,7 +4278,7 @@
           <table>
             <thead><tr><th>Fecha</th><th>Categoría</th><th>Descripción</th><th>Proveedor</th><th style="text-align:right">Monto</th></tr></thead>
             <tbody>
-              ${d.gastos.map(g=>`<tr><td>${g.fecha||'â€”'}</td><td><span class="tag" style="background:#ede9fe;color:#6d28d9">${g.categoria}</span></td><td style="font-weight:600">${g.descripcion}</td><td style="color:#64748b;font-size:11px">${g.proveedor||'â€”'}</td><td style="text-align:right;font-weight:800;color:#dc2626">${fmt(g.monto||0)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Sin gastos registrados</td></tr>'}
+              ${d.gastos.map(g=>`<tr><td>${g.fecha||'-'}</td><td><span class="tag" style="background:#ede9fe;color:#6d28d9">${g.categoria}</span></td><td style="font-weight:600">${g.descripcion}</td><td style="color:#64748b;font-size:11px">${g.proveedor||'-'}</td><td style="text-align:right;font-weight:800;color:#dc2626">${fmt(g.monto||0)}</td></tr>`).join('')||'<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:20px">Sin gastos registrados</td></tr>'}
               ${d.gastos.length?`<tr style="background:#0f172a"><td colspan="4" style="color:white;font-weight:800">TOTAL GASTOS</td><td style="text-align:right;color:#fb7185;font-weight:900">${fmt(d.totalGastos)}</td></tr>`:''}
             </tbody>
           </table>
@@ -4265,7 +4289,7 @@
       if (tipos.includes('ejecutivo')) {
         const esRentable = d.utilidad >= 0;
         html += `<div class="page">
-          <div class="section-header" style="background:linear-gradient(135deg,#3b82f6,#7c3aed)"><span class="icon">ðŸŽ¯</span><div><div class="title">Cierre Ejecutivo â€” P&L</div><div class="sub">Estado de Resultados · ${periodoLabel} · ${mes}</div></div></div>
+          <div class="section-header" style="background:linear-gradient(135deg,#3b82f6,#7c3aed)"><span class="icon">ðŸŽ¯</span><div><div class="title">Cierre Ejecutivo - P&L</div><div class="sub">Estado de Resultados · ${periodoLabel} · ${mes}</div></div></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
             <div>
               <div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:.06em;margin-bottom:10px;padding-bottom:6px;border-bottom:2px solid #0f172a">INGRESOS</div>
@@ -4307,7 +4331,7 @@
       w.document.write(html);
       w.document.close();
       setTimeout(() => { w.focus(); w.print(); }, 800);
-      showToast('âœ… PDF VIP generado â€” usa Ctrl+P para guardar como PDF');
+      showToast('âœ… PDF VIP generado - usa Ctrl+P para guardar como PDF');
     }
 
     /* â”€â”€ Mantener compatibilidad con botones Excel/PDF del header â”€â”€ */
@@ -4315,7 +4339,7 @@
       const d = window._repData;
       if (!d) { alert('Primero carga los datos del mes en la pestaña Resumen'); return; }
       const wb = XLSX.utils.book_new();
-      const resumen = [['AUDITORÍA FINANCIERA â€” ' + d.mes],[''],
+      const resumen = [['AUDITORÍA FINANCIERA - ' + d.mes],[''],
         ['Ingresos Totales', d.totalIngresos],['Egresos Totales', d.totalEgresos],
         ['Balance Neto', d.balance],['Descuentos', d.totalDescuentos],
         ['Tickets Emitidos', d.tickets],['Ticket Promedio', d.tickets>0?(d.totalIngresos/d.tickets):0]
@@ -4339,7 +4363,7 @@
       if (!d) { alert('Primero recalcula el cierre'); return; }
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Cierre ${d.mes}</title>
       <style>body{font-family:Arial,sans-serif;padding:30px;color:#111}h1{font-size:20px}table{width:100%;border-collapse:collapse;margin-top:10px}th,td{padding:10px;border-bottom:1px solid #eee}th{background:#f5f5f5;text-align:left}.total-row{font-weight:bold;font-size:16px}.result{text-align:center;padding:20px;margin:20px 0;border:2px solid ${d.neto>=0?'green':'red'}}</style></head>
-      <body><h1>CIERRE DE MES â€” ${d.mes}</h1><p>Generado: ${new Date().toLocaleString('es-SV')}</p>
+      <body><h1>CIERRE DE MES - ${d.mes}</h1><p>Generado: ${new Date().toLocaleString('es-SV')}</p>
       <table><tr><th>INGRESOS</th><th align="right">Monto</th></tr>
       <tr><td>Ventas Mesa</td><td align="right">$${d.ventaMesa.toFixed(2)}</td></tr>
       <tr><td>Ventas Para Llevar</td><td align="right">$${d.ventaLlevar.toFixed(2)}</td></tr>
@@ -4436,7 +4460,7 @@
     }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       PARCHE SYS â€” Permisos de módulos por empleado
+       PARCHE SYS - Permisos de módulos por empleado
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     function aplicarPermisosFood(modulos, rol) {
       var isElectron = ((window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron')) && !(window.electronAPI && window.electronAPI.isAdminApp);
@@ -4451,7 +4475,7 @@
         rol = 'empleado'; // Evitar retorno anticipado de isManager
       }
 
-      // Admin y propietario ven todo â€” sin restricciones
+      // Admin y propietario ven todo - sin restricciones
       var isManager = (rol === 'propietario' || rol === 'admin');
       if (isManager) return;
 
@@ -4551,7 +4575,7 @@
           if (tl) tl.classList.add('active');
         }
       } else {
-        // No tiene ningún panel interno â€” solo links externos
+        // No tiene ningún panel interno - solo links externos
         // Redirigir automáticamente al primer link externo permitido
         var primerExt = null;
         for (var j = 0; j < extLinks.length; j++) {
@@ -4588,7 +4612,7 @@
     }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       PARCHE SYS â€” Helpers de empleados para POS y Delivery
+       PARCHE SYS - Helpers de empleados para POS y Delivery
        Expuestos en window para uso desde pos-food.html, etc.
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
@@ -4613,7 +4637,7 @@
       return emps[empKey] ? emps[empKey].nombre : (empKey || 'Sin asignar');
     };
 
-    /** Verifica PIN de empleado â€” retorna {ok, empleado} */
+    /** Verifica PIN de empleado - retorna {ok, empleado} */
     window.verificarPINEmpleadoFood = function(dui, pin, callback) {
       var duiClean = String(dui).replace(/[^0-9]/g, '');
       db.ref('negocios/' + negocioID + '/empleados')
@@ -4644,7 +4668,7 @@
     };
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       METAS MENSUALES â€” Guardar, Cargar y Renderizar Progreso
+       METAS MENSUALES - Guardar, Cargar y Renderizar Progreso
     â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
     async function guardarMetas() {
@@ -4804,7 +4828,7 @@
 
       if (oks === 4) {
         emoji.textContent = 'ðŸŸ¢'; txt.textContent = 'Mes en excelente rumbo';
-        sub.textContent   = 'Todas las metas van en verde â€” sigue así';
+        sub.textContent   = 'Todas las metas van en verde - sigue así';
         sem.style.borderColor = 'rgba(22,163,74,.4)';
       } else if (oks >= 2) {
         emoji.textContent = 'ðŸŸ¡'; txt.textContent = 'Mes en ruta, con áreas a mejorar';
