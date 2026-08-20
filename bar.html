@@ -318,9 +318,24 @@ function renderBoard(){
         ${(o.items||[]).map((it,idx)=>{
           var isDrink = _esBarCat(it.cat);
           if(!isDrink) return ''; // Ocultar si no es bebida
+
+          // ── ÍTEM ANULADO DESDE EL POS ──
+          if (it.eliminado) {
+            var anuladoPor = it.eliminado_por ? ' por ' + it.eliminado_por : '';
+            return '<div class="item-line" style="opacity:0.75;background:rgba(239,68,68,0.08);border-radius:6px;padding:4px 6px;margin:2px 0;">'
+              + '<div class="item-cant" style="color:#ef4444;opacity:0.7;text-decoration:line-through;">' + it.cant + '</div>'
+              + '<div class="item-text" style="flex:1;">'
+              + '<div class="item-name" style="text-decoration:line-through;color:#9ca3af;opacity:0.85;">' + it.desc + '</div>'
+              + '<div style="font-size:10px;font-weight:900;color:#ef4444;letter-spacing:0.05em;margin-top:2px;display:flex;align-items:center;gap:4px;">'
+              + '<i class="fa-solid fa-ban" style="font-size:9px;"></i> ANULADO POR MESERO' + anuladoPor
+              + '</div>'
+              + '</div>'
+              + '</div>'
+              + (it.nota ? '<div class="item-note" style="text-decoration:line-through;opacity:0.5;">-- '+it.nota+'</div>' : '');
+          }
           
           var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
-          return '<div class="item-line"><div class="item-cant">'+it.cant+'</div><div class="item-text"><div class="item-name'+(isOk?' line-through opacity-50':'')+'" style="cursor:pointer;text-decoration:'+(isOk?'line-through':'none')+';opacity:'+(isOk?'0.5':'1')+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+'</div></div></div>'
+          return '<div class="item-line"><div class="item-cant">'+it.cant+'</div><div class="item-text"><div class="item-name'+(isOk?' line-through opacity-50':'')+'\" style=\"cursor:pointer;text-decoration:'+(isOk?'line-through':'none')+';opacity:'+(isOk?'0.5':'1')+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+'</div></div></div>'
           +(it.nota?'<div class="item-note">-- '+it.nota+'</div>':'');
         }).join('')}
         ${o.nota_cocina?'<div style="background:#0f172a;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
@@ -337,6 +352,7 @@ function renderBoard(){
 function toggleCheck(orderId,itemIdx){
   var o = _orders[orderId];
   if(!o || !o.items || !o.items[itemIdx]) return;
+  if(o.items[itemIdx].eliminado) return; // ítem anulado: no se puede marcar
   var currentVal = !!o.items[itemIdx].listo;
   var newVal = !currentVal;
   
@@ -370,8 +386,9 @@ function cambiarEstado(id,nestado){
   if(!o) return;
 
   if(nestado==='entregado'){
-    // BLOQUEAR despacho si hay bebidas sin tachar
+    // BLOQUEAR despacho si hay bebidas sin tachar (excluir anuladas)
     var tienePendientes = (o.items || []).some(function(it, idx) {
+      if (it.eliminado) return false; // ítem anulado no cuenta como pendiente
       var ck = id + '_' + idx;
       var isOk = it.listo || _itemChecks[ck];
       return _esBarCat(it.cat) && !isOk;

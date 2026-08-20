@@ -693,7 +693,22 @@ function renderBoard(){
         ${(o.items||[]).map((it,idx)=>{
           var isDrink = _esBarCat(it.cat);
           if(isDrink) return ''; // Ocultar bebidas en KDS Cocina
-          
+
+          // ── ÍTEM ANULADO DESDE EL POS ──
+          if (it.eliminado) {
+            var anuladoPor = it.eliminado_por ? ' por ' + it.eliminado_por : '';
+            return '<div class="item-line" style="opacity:0.75;background:rgba(239,68,68,0.08);border-radius:6px;padding:4px 6px;margin:2px 0;">'
+              + '<div class="item-cant" style="color:#ef4444;opacity:0.7;text-decoration:line-through;">' + it.cant + '</div>'
+              + '<div class="item-text" style="flex:1;">'
+              + '<div class="item-name" style="text-decoration:line-through;color:#9ca3af;opacity:0.85;">' + it.desc + '</div>'
+              + '<div style="font-size:10px;font-weight:900;color:#ef4444;letter-spacing:0.05em;margin-top:2px;display:flex;align-items:center;gap:4px;">'
+              + '<i class="fa-solid fa-ban" style="font-size:9px;"></i> ANULADO POR MESERO' + anuladoPor
+              + '</div>'
+              + '</div>'
+              + '</div>'
+              + (it.nota ? '<div class="item-note" style="text-decoration:line-through;opacity:0.5;">-- '+it.nota+'</div>' : '');
+          }
+
           var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
           var nuevoBadge = (it.esNuevo && !isOk) ? '<span style="background:#f59e0b;color:#000;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.05em;text-transform:uppercase;">NUEVO</span>' : '';
           var cantStyle = isOk ? 'opacity:0.4;' : 'color:#fff;font-weight:900;';
@@ -718,6 +733,7 @@ function renderBoard(){
 function toggleCheck(orderId,itemIdx){
   var o = _orders[orderId];
   if(!o || !o.items || !o.items[itemIdx]) return;
+  if(o.items[itemIdx].eliminado) return; // ítem anulado: no se puede marcar
   var currentVal = !!o.items[itemIdx].listo;
   var newVal = !currentVal;
   
@@ -754,8 +770,9 @@ function cambiarEstado(id,nestado){
   if(!o) return;
 
   if(nestado==='entregado'){
-    // BLOQUEAR despacho si hay platos de cocina sin tachar
+    // BLOQUEAR despacho si hay platos de cocina sin tachar (excluir anulados)
     var tienePendientes = (o.items || []).some(function(it, idx) {
+      if (it.eliminado) return false; // ítem anulado no cuenta como pendiente
       var ck = id + '_' + idx;
       var isOk = it.listo || _itemChecks[ck];
       return !_esBarCat(it.cat) && !isOk;
@@ -903,7 +920,13 @@ function cargarHistorialKDS(){
     }
 
     body.innerHTML=items.map(function(o){
-      var itemsList=(o.items||[]).map(function(it){ return it.cant+'× '+it.desc; }).join(', ');
+      var itemsList=(o.items||[]).map(function(it){
+        if (it.eliminado) {
+          return '<span style="text-decoration:line-through;color:#9ca3af;opacity:0.7;">' + it.cant + '× ' + it.desc + '</span>'
+            + '<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px;">❌ ANULADO' + (it.eliminado_por ? ' por ' + it.eliminado_por : '') + '</span>';
+        }
+        return '<span>' + it.cant + '× ' + it.desc + '</span>';
+      }).join('<br>');
       var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
       return '<div class="hist-card">'
         +'<div class="hist-card-head">'
@@ -911,12 +934,13 @@ function cargarHistorialKDS(){
         +'<div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:'')+'</div>'
         +'</div>'
         +'<div class="hist-card-info">'+tipoLabel+(o.fire?' 🔥 FIRE':'')+'</div>'
-        +'<div class="hist-card-items">'+itemsList+'</div>'
+        +'<div class="hist-card-items" style="line-height:1.8;">'+itemsList+'</div>'
         +(o.nota_cocina?'<div style="font-size:11px;color:#facc15;margin-top:4px">📝 '+o.nota_cocina+'</div>':'')
         +'</div>';
     }).join('');
   });
 }
+
 
 /* ─── CLOCK ─── */
 function updateClock(){

@@ -4327,6 +4327,38 @@ function removeItem(idx){
     db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL+'/pedido').set(pedido);
   }
 
+  // ── Sincronizar eliminación al KDS (cocina_orders) en tiempo real ──
+  // Si el ítem ya estaba enviado a cocina/bar, actualizar cocina_orders
+  // para que el KDS muestre el ítem como ANULADO inmediatamente.
+  if (ORDEN && (item.enviado || item.estado_cocina)) {
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN+'/items').once('value', function(kSnap) {
+      if (!kSnap.exists()) return;
+      var kItems = kSnap.val();
+      // kItems puede ser array o null
+      if (!Array.isArray(kItems)) return;
+      // Buscar el ítem en cocina_orders por índice o por desc+cant
+      var targetIdx = -1;
+      if (kItems[idx] && (kItems[idx].desc === item.desc || kItems[idx].nombre === item.desc)) {
+        targetIdx = idx;
+      } else {
+        // Buscar por descripción
+        for (var ki = 0; ki < kItems.length; ki++) {
+          if (kItems[ki] && (kItems[ki].desc === item.desc || kItems[ki].nombre === item.desc) && !kItems[ki].eliminado) {
+            targetIdx = ki;
+            break;
+          }
+        }
+      }
+      if (targetIdx >= 0) {
+        db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN+'/items/'+targetIdx).update({
+          eliminado: true,
+          eliminado_por: meseroName,
+          fecha_eliminacion: item.fecha_eliminacion
+        });
+      }
+    });
+  }
+
   renderCart();
 }
 
@@ -4388,16 +4420,17 @@ function renderCart(){
   }
   c.innerHTML = pedido.map(function(item, i){
     if (item.eliminado) {
-      return '<div class="item-row item-eliminado" style="opacity:0.6">'+
+      return '<div class="item-row item-eliminado" style="opacity:0.7; background: rgba(239, 68, 68, 0.05); border: 1px dashed rgba(239, 68, 68, 0.4);">'+
         '<div class="item-row-top">'+
-          '<div class="item-num" style="text-decoration:line-through">'+(i+1)+'</div>'+
+          '<div class="item-num" style="text-decoration:line-through; background:rgba(239,68,68,0.15); color:#ef4444">'+(i+1)+'</div>'+
           '<div class="item-info">'+
-            '<div class="item-name" style="text-decoration:line-through; color:#dc2626">'+item.desc+'</div>'+
+            '<div class="item-name" style="text-decoration:line-through; color:#ef4444">'+item.desc+'</div>'+
             '<div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">'+
-              '<span class="item-status-badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca"><i class="fa-solid fa-trash-can"></i> Anulado</span>'+
+              '<span class="item-status-badge" style="background:rgba(239,68,68,0.15); color:#ef4444; border:1px solid rgba(239,68,68,0.3)"><i class="fa-solid fa-trash-can"></i> Anulado'+(item.eliminado_por ? ' por ' + item.eliminado_por : '')+'</span>'+
+              '<span style="font-size:11px; color:var(--text-muted); text-decoration:line-through;">'+item.cant+'× $'+parseFloat(item.precio||0).toFixed(2)+'</span>'+
             '</div>'+
           '</div>'+
-          '<div></div>'+
+          '<div style="font-size:13px; font-weight:800; color:#ef4444; text-decoration:line-through;">$'+(item.cant*item.precio).toFixed(2)+'</div>'+
         '</div>'+
       '</div>';
     }
