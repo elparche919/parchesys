@@ -5241,10 +5241,6 @@ function procesarOrden(tipoAccion){
   });
 
   function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap, prevItems){
-    // Determinar si hay ítems nuevos de cocina y bar basado en cantidades respecto a Firebase
-    var tieneNuevoFood = false;
-    var tieneNuevoBar = false;
-
     var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
     function _esBarCatLocal(cat){
       var c = (cat||'').trim().toUpperCase();
@@ -5257,16 +5253,32 @@ function procesarOrden(tipoAccion){
       return false;
     }
 
-    // Cuenta la cantidad de un ítem en un arreglo para comparar adiciones
+    // 1. Detección directa por flag enviado de cada ítem no eliminado
+    var tieneNuevoFood = false;
+    var tieneNuevoBar = false;
+
+    (pedido || []).forEach(function(item) {
+      if (item.eliminado) return;
+      if (!item.enviado) {
+        if (_esBarCatLocal(item.cat)) {
+          tieneNuevoBar = true;
+        } else {
+          tieneNuevoFood = true;
+        }
+      }
+    });
+
+    // 2. Detección complementaria por cantidades activas (excluyendo eliminados)
     function getTotalItems(arr) {
       var totals = {};
       (arr || []).forEach(function(item) {
-        var desc = item.desc || "";
-        var key = item.nombre + '|' + desc;
+        if (item.eliminado) return;
+        var desc = item.desc || item.nombre || "";
+        var key = (item.id || desc) + '|' + desc;
         if (!totals[key]) {
           totals[key] = { cant: 0, cat: item.cat };
         }
-        totals[key].cant += item.cant;
+        totals[key].cant += (item.cant || 1);
       });
       return totals;
     }
@@ -5286,69 +5298,22 @@ function procesarOrden(tipoAccion){
       }
     }
 
-    // Marcar todos los ítems actuales como enviados
-    pedido = pedido.map(function(item) {
-      item.enviado = true;
-      return item;
-    });
-
-    var estado = tipoAccion==='guardar' ? 'en_curso' : 'pagado';
-    var v = {
-      orden:ORDEN, canal:CANAL,
-      cliente:cliente, telefono:telefono,
-      mesa_num:mesa_num, mesero:mesero || localStorage.getItem('meseroId') || 'Desconocido', personas:personas,
-      direccion:direccion, repartidor_id:repartidor||null,
-      items:pedido,
-      subtotal:sub.toFixed(2),
-      descuento_monto: descMonto > 0 ? descMonto.toFixed(2) : '0.00',
-      descuento_pct:   descMonto > 0 ? (_descPct||0) : 0,
-      descuento_motivo: _descMotivo || '',
-      descuento_dui:   _descDUI || '',
-      total:total.toFixed(2),
-      propina:tip.toFixed(2),
-      abono:abono.toFixed(2),
-      vuelto:Math.max(0,abono-total).toFixed(2),
-      forma_pago:_payModalActual||'efectivo',
-      pax_auth: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.auth : null,
-      pax_brand: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.brand : null,
-      pax_last4: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.last4 : null,
-      pax_rrn: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.rrn : null,
-      dte_tipo:_dteModalActual||'TIQ',
-      dte_nit:nit, dte_razon:razon,
-      // Campos fiscales desacoplados (DteEngine)
-      tipoDte: (typeof DteEngine !== 'undefined') ? DteEngine.TIPOS_DTE[(_dteModalActual==='CCF'?'03':'01')] && (_dteModalActual==='CCF'?'03':'01') : '01',
-      operacionEspecial: (_dteModalActual==='TIQ') ? '02' : null,
-      estadoFiscal: 'pendiente',
-      contingencia: false,
-      nota_cocina:_notaCocina,
-      estado:estado,
-      fecha:new Date().toLocaleDateString('es-SV'),
-      fecha_iso:new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
-      timestamp:ts,
-      caja_num:_cajaActual
-    };
-
-    var estCocinaExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
-    var estBarExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
-
-    // Si la orden no existía antes (completamente nueva), los estados por defecto deben ser entregado a menos que haya nuevos.
+    // Si es una orden nueva o no existía previamente en Firebase
     if (!orderSnap || !orderSnap.exists()) {
-      estCocinaExistente = 'entregado';
-      estBarExistente = 'entregado';
+      if (pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat); })) tieneNuevoFood = true;
+      if (pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat); })) tieneNuevoBar = true;
     }
 
-    if (tieneNuevoFood) {
-      v.estado_cocina = 'pendiente';
-    } else {
-      v.estado_cocina = estCocinaExistente;
+    // Si en cocina_orders la orden no existe (porque cocina ya la había entregado y limpiado),
+    // pero el pedido tiene platillos de cocina activos no marcados listos:
+    if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat) && !i.listo; })) {
+      tieneNuevoFood = true;
+    }
+    if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat) && !i.listo; })) {
+      tieneNuevoBar = true;
     }
 
-    if (tieneNuevoBar) {
-      v.estado_bar = 'pendiente';
-    } else {
-      v.estado_bar = estBarExistente;
-    }
-
+    // Items existentes en cocina para preservar estados listo previos
     var cocinaItems = [];
     if (existeEnCocina && cocSnap && cocSnap.val() && cocSnap.val().items) {
       cocinaItems = cocSnap.val().items;
@@ -5359,97 +5324,135 @@ function procesarOrden(tipoAccion){
     var pool = (cocinaItems || []).slice();
     var cocinaPedido = pedido.map(function(item, idx) {
       var copy = Object.assign({}, item);
-      var iDesc = item.nombre || item.desc || '';
-      
-      // Intentar encontrar el item exacto en el mismo indice
-      if (pool[idx] && pool[idx].desc === iDesc && pool[idx].cant === copy.cant) {
-        if (pool[idx].listo !== undefined) copy.listo = pool[idx].listo;
-        if (pool[idx].esNuevo !== undefined) copy.esNuevo = pool[idx].esNuevo;
-        pool[idx] = null; // consumido
-      } else {
-        // Buscar el primero que coincida y no haya sido consumido (misma cantidad)
-        var foundIdx = pool.findIndex(function(ci) { 
-          return ci && ci.desc === iDesc && ci.cant === copy.cant; 
+      var iDesc = item.desc || item.nombre || '';
+
+      if (item.eliminado) {
+        copy.listo = false;
+        copy.esNuevo = false;
+        copy.eliminado = true;
+        return copy;
+      }
+
+      // Si el ítem no estaba enviado antes, es definitivamente NUEVO y pendiente
+      if (!item.enviado) {
+        copy.listo = false;
+        copy.esNuevo = true;
+        return copy;
+      }
+
+      // Si ya estaba enviado, intentar heredar estado de preparación de cocina_orders
+      var foundIdx = pool.findIndex(function(ci) {
+        return ci && !ci.eliminado && (ci.desc === iDesc || ci.nombre === iDesc) && ci.cant === copy.cant;
+      });
+      if (foundIdx === -1) {
+        foundIdx = pool.findIndex(function(ci) {
+          return ci && !ci.eliminado && (ci.desc === iDesc || ci.nombre === iDesc);
         });
-        if (foundIdx === -1) {
-          // Si no hay de la misma cantidad, buscar por descripcion
-          foundIdx = pool.findIndex(function(ci) { 
-            return ci && ci.desc === iDesc; 
-          });
-        }
-        
-        if (foundIdx !== -1) {
-          // Si la cantidad no aumentó, heredamos el estado listo
-          if (copy.cant <= pool[foundIdx].cant) {
-            if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
-            if (pool[foundIdx].esNuevo !== undefined) copy.esNuevo = pool[foundIdx].esNuevo;
-          } else {
-            copy.listo = false; // Aumentó la cantidad, por lo tanto no está listo
-            copy.esNuevo = true;
-          }
-          pool[foundIdx] = null; // consumido
-        } else {
-          // Ítem completamente nuevo agregado en esta ronda
-          copy.listo = false;
-          copy.esNuevo = true;
-        }
+      }
+
+      if (foundIdx !== -1) {
+        if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
+        if (pool[foundIdx].esNuevo !== undefined) copy.esNuevo = pool[foundIdx].esNuevo;
+        pool[foundIdx] = null; // consumido
+      } else {
+        copy.listo = false;
+        copy.esNuevo = false;
       }
       return copy;
     });
 
-    v.items = cocinaPedido; // Keep pedidos items synchronized with KDS ready statuses
+    // Marcar todos los ítems actuales como enviados
+    pedido = pedido.map(function(item) {
+      item.enviado = true;
+      return item;
+    });
+
+    var estCocinaExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
+    var estBarExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
+
+    var finalEstadoCocina = estCocinaExistente;
+    if (tieneNuevoFood || (estCocinaExistente === 'entregado' && pedido.some(function(i){ return !i.eliminado && !_esBarCatLocal(i.cat); }))) {
+      finalEstadoCocina = 'pendiente';
+    }
+
+    var finalEstadoBar = estBarExistente;
+    if (tieneNuevoBar || (estBarExistente === 'entregado' && pedido.some(function(i){ return !i.eliminado && _esBarCatLocal(i.cat); }))) {
+      finalEstadoBar = 'pendiente';
+    }
 
     var kdsTimestamp = ts;
     if (cocSnap && cocSnap.exists() && cocSnap.val().timestamp) {
       kdsTimestamp = cocSnap.val().timestamp;
     }
-    
-    // Reiniciar contador de KDS si se agrega algo nuevo
-    if (tieneNuevoFood || tieneNuevoBar || !orderSnap || !orderSnap.exists()) {
+    if (tieneNuevoFood || tieneNuevoBar || !existeEnCocina) {
       kdsTimestamp = Date.now();
     }
 
     var cocinaOrderUpdate = {
-      orden:ORDEN, items:cocinaPedido,
-      estado:tipoAccion==='guardar'?'pendiente':'pagado',
-      tipo:CANAL, mesa_num:mesa_num, cliente:cliente,
+      orden: ORDEN,
+      items: cocinaPedido,
+      estado: tipoAccion==='guardar' ? 'pendiente' : 'pagado',
+      estado_cocina: finalEstadoCocina,
+      estado_bar: finalEstadoBar,
+      tipo: CANAL,
+      mesa_num: mesa_num,
+      cliente: cliente,
       mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
-      nota_cocina:_notaCocina, timestamp:kdsTimestamp
+      nota_cocina: _notaCocina,
+      timestamp: kdsTimestamp
     };
 
-    if (tieneNuevoFood) {
-      if (estCocinaExistente === 'entregado') {
-        cocinaOrderUpdate.estado_cocina = 'pendiente';
-      } else {
-        cocinaOrderUpdate.estado_cocina = estCocinaExistente;
-      }
-    } else {
-      cocinaOrderUpdate.estado_cocina = estCocinaExistente;
-    }
-
-    if (tieneNuevoBar) {
-      if (estBarExistente === 'entregado') {
-        cocinaOrderUpdate.estado_bar = 'pendiente';
-      } else {
-        cocinaOrderUpdate.estado_bar = estBarExistente;
-      }
-    } else {
-      cocinaOrderUpdate.estado_bar = estBarExistente;
-    }
+    var estado = tipoAccion==='guardar' ? 'en_curso' : 'pagado';
+    var v = {
+      orden: ORDEN, canal: CANAL,
+      cliente: cliente, telefono: telefono,
+      mesa_num: mesa_num, mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido', personas: personas,
+      direccion: direccion, repartidor_id: repartidor||null,
+      items: cocinaPedido,
+      subtotal: sub.toFixed(2),
+      descuento_monto: descMonto > 0 ? descMonto.toFixed(2) : '0.00',
+      descuento_pct: descMonto > 0 ? (_descPct||0) : 0,
+      descuento_motivo: _descMotivo || '',
+      descuento_dui: _descDUI || '',
+      total: total.toFixed(2),
+      propina: tip.toFixed(2),
+      abono: abono.toFixed(2),
+      vuelto: Math.max(0, abono-total).toFixed(2),
+      forma_pago: _payModalActual||'efectivo',
+      pax_auth: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.auth : null,
+      pax_brand: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.brand : null,
+      pax_last4: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.last4 : null,
+      pax_rrn: window._pagoTarjetaDetalles ? window._pagoTarjetaDetalles.rrn : null,
+      dte_tipo: _dteModalActual||'TIQ',
+      dte_nit: nit, dte_razon: razon,
+      tipoDte: (typeof DteEngine !== 'undefined') ? DteEngine.TIPOS_DTE[(_dteModalActual==='CCF'?'03':'01')] && (_dteModalActual==='CCF'?'03':'01') : '01',
+      operacionEspecial: (_dteModalActual==='TIQ') ? '02' : null,
+      estadoFiscal: 'pendiente',
+      contingencia: false,
+      nota_cocina: _notaCocina,
+      estado: estado,
+      estado_cocina: finalEstadoCocina,
+      estado_bar: finalEstadoBar,
+      fecha: new Date().toLocaleDateString('es-SV'),
+      fecha_iso: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
+      timestamp: ts,
+      caja_num: _cajaActual
+    };
 
     const btnCocina = document.querySelector('.send-kitchen-btn');
     const originalHtml = btnCocina ? btnCocina.innerHTML : '';
     if(btnCocina && tipoAccion==='guardar') {
-        btnCocina.disabled = true;
-        btnCocina.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+      btnCocina.disabled = true;
+      btnCocina.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
     }
 
     var saves = [];
     try {
       saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
 
-      if (existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
-        saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(cocinaOrderUpdate));
+      var tieneItemsCocinaOBar = cocinaPedido.some(function(i) { return !i.eliminado; });
+      if (tieneItemsCocinaOBar || existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+        saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
       }
 
       if(tipoAccion==='cobrar'){
