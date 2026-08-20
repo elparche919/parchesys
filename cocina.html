@@ -512,7 +512,7 @@ function iniciar(){
       var v=c.val();
       if(v) {
         var estCocina = v.estado_cocina || 'pendiente';
-        if(estCocina!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+        if(estCocina!=='entregado' && v.estado!=='anulada' && v.estado!=='pagado') _orders[c.key]=v;
       }
     });
     var newCount=Object.keys(_orders).length;
@@ -810,8 +810,7 @@ function cambiarEstado(id,nestado){
       db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
       toast('Pedido entregado y limpiado de KDS','ok');
     } else {
-      // Bar pendiente: archivar en historial y ELIMINAR de cocina_orders
-      // (evita que writes del POS reactiven la orden en el KDS)
+      // Bar pendiente: archivar parte de cocina y actualizar estado_cocina a 'entregado'
       updates['estado_cocina'] = 'entregado';
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
         estado:'cocina_entregada',
@@ -820,7 +819,7 @@ function cambiarEstado(id,nestado){
         fecha_entrega:fecha,
         ts_entrega:Date.now()
       }));
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
       db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
       toast('Parte de cocina entregada y limpiada. Esperando al KDS Bar.','ok');
     }
