@@ -3,7 +3,9 @@
 $targetDirs = @(
     "parchesys-app-android/app/src/main/assets",
     "parchesys-inventario-android/app/src/main/assets",
-    "parchesys-mapa-mesas-android/app/src/main/assets"
+    "parchesys-mapa-mesas-android/app/src/main/assets",
+    "parchesys-empleado-android/app/src/main/assets",
+    "parchesys-mesero-android/app/src/main/assets"
 )
 
 # Files to copy
@@ -11,6 +13,7 @@ $files = @(
     "LOGOPARCHESYS.png",
     "PARCHESYS-APP.html",
     "bar.html",
+    "cocina.html",
     "dte-adapter.js",
     "dte-engine.js",
     "firebase-app-compat.js",
@@ -24,6 +27,8 @@ $files = @(
     "modus-design.css",
     "negocio-id.js",
     "portal-food.html",
+    "pos-delivery-movil.html",
+    "pos-food-movil.html",
     "pos-food-tablet.css",
     "pos-food-tablet.html",
     "pos-food.html",

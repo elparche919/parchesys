@@ -34,17 +34,12 @@ localStorage.setItem('modus_food_negocio', NEGOCIO_ID);
 localStorage.setItem('negocioID', NEGOCIO_ID);
 negocioID = NEGOCIO_ID;
 
-// Redirigir al login si no hay sesión activa
+// Redirigir al login (PIN de empleado) si no hay sesión activa
 if (!localStorage.getItem('food_session_' + NEGOCIO_ID)) {
     if (!window.location.pathname.includes('login') &&
         !window.location.pathname.endsWith('index.html')) {
-        if (window.location.protocol === 'file:') {
-            // En local (WebView / Android), redirigir a login.html
-            var currentFile = window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1);
-            window.top.location.href = 'login.html?redirect=' + encodeURIComponent(currentFile);
-        } else {
-            window.top.location.href = 'index.html';
-        }
+        var currentFile = window.location.pathname.substring(window.location.pathname.lastIndexOf('/') + 1) || 'pos-food-tablet.html';
+        window.top.location.href = 'login.html?redirect=' + encodeURIComponent(currentFile);
     }
 }
 

@@ -695,7 +695,11 @@ function renderBoard(){
           if(isDrink) return ''; // Ocultar bebidas en KDS Cocina
           
           var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
-          return '<div class="item-line"><div class="item-cant">'+it.cant+'</div><div class="item-text"><div class="item-name'+(isOk?' line-through opacity-50':'')+'" style="cursor:pointer;text-decoration:'+(isOk?'line-through':'none')+';opacity:'+(isOk?'0.5':'1')+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+'</div></div></div>'
+          var nuevoBadge = (it.esNuevo && !isOk) ? '<span style="background:#f59e0b;color:#000;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.05em;text-transform:uppercase;">NUEVO</span>' : '';
+          var cantStyle = isOk ? 'opacity:0.4;' : 'color:#fff;font-weight:900;';
+          var nameStyle = isOk ? 'cursor:pointer;text-decoration:line-through;opacity:0.45;color:#9ca3af;' : 'cursor:pointer;text-decoration:none;opacity:1;color:#fff;font-weight:700;';
+          
+          return '<div class="item-line"><div class="item-cant" style="'+cantStyle+'">'+it.cant+'</div><div class="item-text"><div class="item-name" style="'+nameStyle+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+nuevoBadge+'</div></div></div>'
           +(it.nota?'<div class="item-note">-- '+it.nota+'</div>':'');
         }).join('')}
         ${o.nota_cocina?'<div style="background:#444;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
@@ -789,10 +793,19 @@ function cambiarEstado(id,nestado){
       db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
       toast('Pedido entregado y limpiado de KDS','ok');
     } else {
+      // Bar pendiente: archivar en historial y ELIMINAR de cocina_orders
+      // (evita que writes del POS reactiven la orden en el KDS)
       updates['estado_cocina'] = 'entregado';
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
+      db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
+        estado:'cocina_entregada',
+        estado_cocina:'entregado',
+        hora_entrega:hora,
+        fecha_entrega:fecha,
+        ts_entrega:Date.now()
+      }));
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
       db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
-      toast('Parte de cocina entregada. Esperando al KDS Bar.','ok');
+      toast('Parte de cocina entregada y limpiada. Esperando al KDS Bar.','ok');
     }
   } else {
     // Update state for other transitions
@@ -866,7 +879,7 @@ function toast(m,t){
 function abrirHistorial(){
   document.getElementById('hist-overlay').classList.add('open');
   // Default to today
-  var today=new Date().toISOString().split('T')[0];
+  var today=new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1).split('T')[0];
   document.getElementById('hist-fecha').value=today;
   cargarHistorialKDS();
 }

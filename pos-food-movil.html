@@ -321,7 +321,7 @@ function renderGrid() {
 
 function addCart(id,cat){
     const p=_prods.find(x=>x.id===id&&x.cat===cat);
-    const ex=_cart.find(x=>x.id===id&&x.cat===cat);
+    const ex=_cart.find(x=>x.id===id&&x.cat===cat && x.nuevo);
     if(ex){ 
         ex.cant++; ex.sub=ex.p*ex.cant; 
     } else { 
@@ -391,6 +391,108 @@ async function enviarCocina() {
     btn.disabled = true;
     btn.textContent = 'ENVIANDO...';
 
+    const ordID = _activeOrderID || 'F-' + Date.now().toString().slice(-6);
+
+    const refPed = db.ref(`negocios/${negID}/pedidos/${ordID}`);
+    const refCoc = db.ref(`negocios/${negID}/cocina_orders/${ordID}`);
+    
+    let orderSnap, cocSnap;
+    try {
+        const results = await Promise.all([refPed.once('value'), refCoc.once('value')]);
+        orderSnap = results[0];
+        cocSnap = results[1];
+    } catch(e) {
+        console.error("Error fetching order status:", e);
+    }
+    
+    const existeEnCocina = cocSnap && cocSnap.exists();
+    const prevItems = orderSnap && orderSnap.exists() ? (orderSnap.val().items || []) : [];
+    const cocinaItems = (cocSnap && cocSnap.exists() && cocSnap.val().items) ? cocSnap.val().items : (orderSnap && orderSnap.exists() && orderSnap.val().items ? orderSnap.val().items : []);
+
+    const _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
+    function _esBarCatLocal(cat){
+      var c = (cat||'').trim().toUpperCase();
+      var parts = c.split(/[-/:]/);
+      var parent = parts[0].trim();
+      if (_BAR_CATS.indexOf(c) !== -1) return true;
+      if (_BAR_CATS.indexOf(parent) !== -1) return true;
+      if (c.indexOf('BEBIDA') !== -1 || c.indexOf('CERVEZA') !== -1 || c.indexOf('COCTEL') !== -1 || c.indexOf('LICOR') !== -1) return true;
+      if (parent.indexOf('BEBIDA') !== -1 || parent.indexOf('CERVEZA') !== -1 || parent.indexOf('COCTEL') !== -1 || parent.indexOf('LICOR') !== -1) return true;
+      return false;
+    }
+
+    function getTotalItems(arr) {
+      let totals = {};
+      (arr || []).forEach(item => {
+        if (!item) return;
+        let desc = item.desc || item.nombre || "";
+        let key = (item.id || item.nombre) + '|' + desc;
+        if (!totals[key]) {
+          totals[key] = { cant: 0, cat: item.cat };
+        }
+        totals[key].cant += item.cant;
+      });
+      return totals;
+    }
+
+    let currentTotals = getTotalItems(_cart);
+    let prevTotals = getTotalItems(prevItems);
+
+    let tieneNuevoFood = false;
+    let tieneNuevoBar = false;
+
+    for (let key in currentTotals) {
+      let currItem = currentTotals[key];
+      let prevQty = prevTotals[key] ? prevTotals[key].cant : 0;
+      if (currItem.cant > prevQty) {
+        if (_esBarCatLocal(currItem.cat)) {
+          tieneNuevoBar = true;
+        } else {
+          tieneNuevoFood = true;
+        }
+      }
+    }
+
+    let pool = (cocinaItems || []).slice();
+    const itemsParaGuardar = _cart.map((item, idx) => {
+        const copy = {...item};
+        delete copy.nuevo;
+        const iDesc = item.nombre || item.desc || '';
+        copy.desc = iDesc;
+        
+        // Intentar encontrar el item exacto en el mismo indice
+        if (pool[idx] && pool[idx].desc === iDesc && pool[idx].cant === copy.cant) {
+          if (pool[idx].listo !== undefined) copy.listo = pool[idx].listo;
+          if (pool[idx].esNuevo !== undefined) copy.esNuevo = pool[idx].esNuevo;
+          pool[idx] = null; // consumido
+        } else {
+          // Buscar el primero que coincida y no haya sido consumido (misma cantidad)
+          let foundIdx = pool.findIndex(ci => ci && ci.desc === iDesc && ci.cant === copy.cant);
+          if (foundIdx === -1) {
+            // Si no hay de la misma cantidad, buscar por descripcion
+            foundIdx = pool.findIndex(ci => ci && ci.desc === iDesc);
+          }
+          
+          if (foundIdx !== -1) {
+            // Si la cantidad no aumentó, heredamos el estado listo
+            if (copy.cant <= pool[foundIdx].cant) {
+              if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
+              if (pool[foundIdx].esNuevo !== undefined) copy.esNuevo = pool[foundIdx].esNuevo;
+            } else {
+              copy.listo = false; // Aumentó la cantidad, por lo tanto no está listo
+              copy.esNuevo = true;
+            }
+            pool[foundIdx] = null; // consumido
+          } else {
+            copy.listo = false;
+            copy.esNuevo = true;
+          }
+        }
+        return copy;
+    });
+
+    const ts = (orderSnap && orderSnap.exists() && orderSnap.val().timestamp) ? orderSnap.val().timestamp : Date.now();
+
     const v = {
         orden: ordID,
         mesa: _mesaSel,
@@ -399,27 +501,77 @@ async function enviarCocina() {
         tipo: 'mesa',
         mesero: mesero,
         personas: personas,
-        items: itemsParaGuardar.map(it => ({...it, desc: it.nombre})), // Normalize for KDS
+        items: itemsParaGuardar,
         total: _cart.reduce((s,it)=>s+it.sub,0).toFixed(2),
         estado: 'en_curso',
         nota_cocina: document.getElementById('ord-nota').value,
-        timestamp: Date.now()
+        timestamp: ts
     };
+
+    const estCocinaExistente = (existeEnCocina && cocSnap) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
+    const estBarExistente = (existeEnCocina && cocSnap) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
+
+    if (tieneNuevoFood) {
+      v.estado_cocina = 'pendiente';
+    } else {
+      v.estado_cocina = estCocinaExistente;
+    }
+
+    if (tieneNuevoBar) {
+      v.estado_bar = 'pendiente';
+    } else {
+      v.estado_bar = estBarExistente;
+    }
+
+    let kdsTimestamp = ts;
+    if (cocSnap && cocSnap.exists() && cocSnap.val().timestamp) {
+      kdsTimestamp = cocSnap.val().timestamp;
+    }
     
+    // Reiniciar contador de KDS si se agrega algo nuevo
+    if (tieneNuevoFood || tieneNuevoBar || !orderSnap || !orderSnap.exists()) {
+      kdsTimestamp = Date.now();
+    }
+
+    const cocinaOrderUpdate = {
+        orden: ordID, 
+        items: itemsParaGuardar,
+        estado: 'pendiente',
+        tipo: 'mesa', 
+        mesa_num: _mesaSel, 
+        cliente: 'Mesa ' + _mesaSel,
+        nota_cocina: v.nota_cocina, 
+        timestamp: kdsTimestamp
+    };
+
+    if (tieneNuevoFood) {
+      if (estCocinaExistente === 'entregado') {
+        cocinaOrderUpdate.estado_cocina = 'pendiente';
+      } else {
+        cocinaOrderUpdate.estado_cocina = estCocinaExistente;
+      }
+    } else {
+      cocinaOrderUpdate.estado_cocina = estCocinaExistente;
+    }
+
+    if (tieneNuevoBar) {
+      if (estBarExistente === 'entregado') {
+        cocinaOrderUpdate.estado_bar = 'pendiente';
+      } else {
+        cocinaOrderUpdate.estado_bar = estBarExistente;
+      }
+    } else {
+      cocinaOrderUpdate.estado_bar = estBarExistente;
+    }
+
     const saves = [
         db.ref(`negocios/${negID}/pedidos/${ordID}`).update(v),
-        db.ref(`negocios/${negID}/cocina_orders/${ordID}`).update({
-            orden: ordID, 
-            items: v.items.map(it => ({...it, desc: it.nombre})),
-            estado: 'pendiente',
-            tipo: 'mesa', 
-            mesa_num: _mesaSel, 
-            cliente: 'Mesa ' + _mesaSel,
-            nota_cocina: v.nota_cocina, 
-            timestamp: v.timestamp
-        }),
         db.ref(`negocios/${negID}/mesas/${_mesaSel}`).update({ estado: 'ocupada', pedido_activo_id: ordID })
     ];
+
+    if (existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+        saves.push(db.ref(`negocios/${negID}/cocina_orders/${ordID}`).update(cocinaOrderUpdate));
+    }
 
     Promise.all(saves).then(() => {
         toast('🔥 COMANDA ENVIADA');
@@ -429,6 +581,7 @@ async function enviarCocina() {
         btn.textContent = originalText;
         abrirCarrito();
     }).catch(e => {
+        console.error(e);
         toast('❌ Error al enviar', 'err');
         btn.disabled = false;
         btn.textContent = originalText;
@@ -461,7 +614,7 @@ async function finalizarVenta(tot) {
     try {
         await db.ref(`negocios/${negID}/ventas/${ordID}`).set(v);
         await db.ref(`negocios/${negID}/pedidos/${ordID}`).remove();
-        await db.ref(`negocios/${negID}/mesas/${_mesaSel}`).update({ estado: 'libre', pedido_activo_id: null });
+        await db.ref(`negocios/${negID}/mesas/${_mesaSel}`).update({ numero: _mesaSel, estado: 'libre', pedido_activo_id: null, mesero: '', personas: 1, timestamp: 0 });
         
         toast('✅ VENTA FINALIZADA');
         _cart = []; _mesaSel = null; _activeOrderID = null;

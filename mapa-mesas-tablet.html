@@ -745,7 +745,7 @@
     var _isDragging = false;
     var _currentDragMesa = null;
     var _offset = { x: 0, y: 0 };
-    var _currentZona = "INTERIOR";
+    var _currentZona = "SALON GENERAL";
     var _isTablet = true;
     
     const CANVAS_WIDTH = 2400;
@@ -838,95 +838,71 @@
       });
     });
 
-    // ── INICIALIZACIÓN POR DEFECTO DE LOS 4 SALONES ──
+    // ── INICIALIZACIÓN POR DEFECTO — SALON GENERAL ÚNICO ──
     function inicializarMapaMesasPorDefecto() {
       const defaultMesas = {};
-      
-      // 1. INTERIOR (Mesas 1 a 10)
-      const interiorMesas = [
-        { id: 1, forma: 'square', x: 150, y: 120, cap: 4 },
-        { id: 2, forma: 'square', x: 280, y: 120, cap: 4 },
-        { id: 3, forma: 'square', x: 410, y: 120, cap: 4 },
-        { id: 4, forma: 'square', x: 540, y: 120, cap: 4 },
-        { id: 5, forma: 'square', x: 670, y: 120, cap: 4 },
-        { id: 6, forma: 'horiz',  x: 150, y: 260, cap: 6 },
-        { id: 7, forma: 'horiz',  x: 340, y: 260, cap: 6 },
-        { id: 8, forma: 'horiz',  x: 530, y: 260, cap: 6 },
-        { id: 9, forma: 'vert',   x: 720, y: 230, cap: 6 },
-        { id: 10, forma: 'vert',  x: 850, y: 230, cap: 6 }
-      ];
-      interiorMesas.forEach(m => {
-        defaultMesas[m.id] = {
-          capacidad: m.cap,
-          estado: 'libre',
-          forma: m.forma,
-          x: m.x,
-          y: m.y,
-          zona: 'INTERIOR'
-        };
-      });
 
-      // 2. MIRADOR (Mesas 11 a 15)
-      const miradorMesas = [
+      // Mesas 1–10 (fila superior)
+      const fila1 = [
+        { id: 1,  forma: 'square', x: 150, y: 120, cap: 4 },
+        { id: 2,  forma: 'square', x: 280, y: 120, cap: 4 },
+        { id: 3,  forma: 'square', x: 410, y: 120, cap: 4 },
+        { id: 4,  forma: 'square', x: 540, y: 120, cap: 4 },
+        { id: 5,  forma: 'square', x: 670, y: 120, cap: 4 },
+        { id: 6,  forma: 'horiz',  x: 150, y: 260, cap: 6 },
+        { id: 7,  forma: 'horiz',  x: 340, y: 260, cap: 6 },
+        { id: 8,  forma: 'horiz',  x: 530, y: 260, cap: 6 },
+        { id: 9,  forma: 'vert',   x: 720, y: 230, cap: 6 },
+        { id: 10, forma: 'vert',   x: 850, y: 230, cap: 6 }
+      ];
+
+      // Mesas 11–15 (fila media)
+      const fila2 = [
         { id: 11, forma: 'round',  x: 200, y: 450, cap: 4 },
         { id: 12, forma: 'round',  x: 350, y: 450, cap: 4 },
         { id: 13, forma: 'round',  x: 500, y: 450, cap: 4 },
         { id: 14, forma: 'square', x: 650, y: 450, cap: 4 },
         { id: 15, forma: 'square', x: 800, y: 450, cap: 4 }
       ];
-      miradorMesas.forEach(m => {
-        defaultMesas[m.id] = {
-          capacidad: m.cap,
-          estado: 'libre',
-          forma: m.forma,
-          x: m.x,
-          y: m.y,
-          zona: 'MIRADOR'
-        };
-      });
 
-      // 3. AREA GENERAL (Mesas 20 a 35) - Rejilla amplia en el centro
+      // Mesas 20–35 (rejilla)
+      const fila3 = [];
       let mesaNum = 20;
       for (let row = 0; row < 4; row++) {
         for (let col = 0; col < 4; col++) {
-          defaultMesas[mesaNum] = {
-            capacidad: 4,
-            estado: 'libre',
-            forma: 'square',
-            x: 180 + col * 180,
-            y: 180 + row * 150,
-            zona: 'AREA GENERAL'
-          };
+          fila3.push({ id: mesaNum, forma: 'square', x: 180 + col * 180, y: 600 + row * 150, cap: 4 });
           mesaNum++;
         }
       }
 
-      // 4. MESAS FRENTE A PISTA (Mesas 40 a 48) - Sector izquierdo
-      const pistaMesas = [
-        { id: 40, forma: 'square', x: 120, y: 150, cap: 4 },
-        { id: 41, forma: 'square', x: 120, y: 280, cap: 4 },
-        { id: 42, forma: 'square', x: 120, y: 410, cap: 4 },
-        { id: 43, forma: 'square', x: 120, y: 540, cap: 4 },
-        { id: 44, forma: 'round',  x: 280, y: 150, cap: 4 },
-        { id: 45, forma: 'round',  x: 280, y: 280, cap: 4 },
-        { id: 46, forma: 'round',  x: 280, y: 410, cap: 4 },
-        { id: 47, forma: 'round',  x: 280, y: 540, cap: 4 },
-        { id: 48, forma: 'large',  x: 440, y: 300, cap: 8 }
+      // Mesas 40–48 (sector derecho)
+      const fila4 = [
+        { id: 40, forma: 'square', x: 1000, y: 150, cap: 4 },
+        { id: 41, forma: 'square', x: 1000, y: 280, cap: 4 },
+        { id: 42, forma: 'square', x: 1000, y: 410, cap: 4 },
+        { id: 43, forma: 'square', x: 1000, y: 540, cap: 4 },
+        { id: 44, forma: 'round',  x: 1160, y: 150, cap: 4 },
+        { id: 45, forma: 'round',  x: 1160, y: 280, cap: 4 },
+        { id: 46, forma: 'round',  x: 1160, y: 410, cap: 4 },
+        { id: 47, forma: 'round',  x: 1160, y: 540, cap: 4 },
+        { id: 48, forma: 'large',  x: 1320, y: 300, cap: 8 }
       ];
-      pistaMesas.forEach(m => {
+
+      // Todas al mismo salón SALON GENERAL
+      [...fila1, ...fila2, ...fila3, ...fila4].forEach(m => {
         defaultMesas[m.id] = {
           capacidad: m.cap,
           estado: 'libre',
           forma: m.forma,
           x: m.x,
           y: m.y,
-          zona: 'MESAS FRENTE A PISTA'
+          zona: 'SALON GENERAL'
         };
       });
 
       // Guardar todo en Firebase
       db.ref(`negocios/${negocioID}/mesas`).set(defaultMesas).then(() => {
-        console.log("Salones y mesas inicializados.");
+        console.log("Plano inicializado — SALON GENERAL.");
       });
     }
 
@@ -1292,15 +1268,13 @@
         if(m.zona) zones.add(m.zona);
       });
       
+      // Si no hay zonas definidas, usar SALON GENERAL como único salón por defecto
       if(zones.size === 0) {
-        zones.add('INTERIOR');
-        zones.add('MIRADOR');
-        zones.add('AREA GENERAL');
-        zones.add('MESAS FRENTE A PISTA');
+        zones.add('SALON GENERAL');
       }
       
       if(!zones.has(_currentZona)) {
-        _currentZona = Array.from(zones)[0] || 'INTERIOR';
+        _currentZona = Array.from(zones)[0] || 'SALON GENERAL';
       }
 
       let html = '<div style="font-size:10px; color:var(--accent); padding-right:8px; font-weight:800; display:flex; align-items:center; gap:5px; border-right:1px solid var(--bd); margin-right:6px"><i class="fa-solid fa-door-open" style="font-size:12px"></i> SALONES</div>';

@@ -3841,8 +3841,8 @@ function ejecutarSelMesa(n){
       db.ref('negocios/'+negocioID+'/pedidos/'+m.pedido_activo_id).once('value', function(ps){
         var pd = ps.val();
         
-        // Guard against fast switching
-        if (MESA_SEL !== n || CANAL !== 'mesa' || _mesas[n].pedido_activo_id !== m.pedido_activo_id) return;
+        // Guard against fast switching (solo verifica mesa y canal, no el caché _mesas que puede estar desactualizado)
+        if (MESA_SEL !== n || CANAL !== 'mesa') return;
         
         if(pd && pd.items && pd.estado !== 'pagado'){
           var loadedItems = (pd.items || []).map(function(item) {
@@ -5188,6 +5188,8 @@ function procesarOrden(tipoAccion){
     var cocinaItems = [];
     if (existeEnCocina && cocSnap && cocSnap.val() && cocSnap.val().items) {
       cocinaItems = cocSnap.val().items;
+    } else if (orderSnap && orderSnap.exists() && orderSnap.val().items) {
+      cocinaItems = orderSnap.val().items;
     }
 
     var pool = (cocinaItems || []).slice();
@@ -5198,6 +5200,7 @@ function procesarOrden(tipoAccion){
       // Intentar encontrar el item exacto en el mismo indice
       if (pool[idx] && pool[idx].desc === iDesc && pool[idx].cant === copy.cant) {
         if (pool[idx].listo !== undefined) copy.listo = pool[idx].listo;
+        if (pool[idx].esNuevo !== undefined) copy.esNuevo = pool[idx].esNuevo;
         pool[idx] = null; // consumido
       } else {
         // Buscar el primero que coincida y no haya sido consumido (misma cantidad)
@@ -5215,10 +5218,16 @@ function procesarOrden(tipoAccion){
           // Si la cantidad no aumentó, heredamos el estado listo
           if (copy.cant <= pool[foundIdx].cant) {
             if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
+            if (pool[foundIdx].esNuevo !== undefined) copy.esNuevo = pool[foundIdx].esNuevo;
           } else {
             copy.listo = false; // Aumentó la cantidad, por lo tanto no está listo
+            copy.esNuevo = true;
           }
           pool[foundIdx] = null; // consumido
+        } else {
+          // Ítem completamente nuevo agregado en esta ronda
+          copy.listo = false;
+          copy.esNuevo = true;
         }
       }
       return copy;
@@ -5323,21 +5332,25 @@ function procesarOrden(tipoAccion){
       if(CANAL==='mesa' && MESA_SEL){
         if (tipoAccion==='guardar') {
           saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-            mesa_num:mesa_num,
+            numero: MESA_SEL,
+            mesa_num: mesa_num,
             mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
-            personas:personas,
+            personas: personas,
+            cliente_nombre: cliente_nombre || '',
             estado: 'ocupada',
             pedido_activo_id: ORDEN,
             timestamp: ts
           }));
         } else if (!_procesandoSplit) {
           saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-            mesa_num:'',
+            numero: MESA_SEL,
+            mesa_num: mesa_num,
             mesero: '',
-            personas:1,
+            personas: 1,
+            cliente_nombre: '',
             estado: 'libre',
             pedido_activo_id: null,
-            timestamp: ts
+            timestamp: 0
           }));
         }
       }
