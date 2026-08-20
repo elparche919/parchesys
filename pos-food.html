@@ -5253,67 +5253,69 @@ function procesarOrden(tipoAccion){
       return false;
     }
 
-    // 1. Detección directa por flag enviado de cada ítem no eliminado
+    // 1. Detección directa por flag enviado de cada ítem no eliminado (solo al guardar / enviar a cocina)
     var tieneNuevoFood = false;
     var tieneNuevoBar = false;
 
-    (pedido || []).forEach(function(item) {
-      if (item.eliminado) return;
-      if (!item.enviado) {
-        if (_esBarCatLocal(item.cat)) {
-          tieneNuevoBar = true;
-        } else {
-          tieneNuevoFood = true;
-        }
-      }
-    });
-
-    // 2. Detección complementaria por cantidades activas (excluyendo eliminados)
-    function getTotalItems(arr) {
-      var totals = {};
-      (arr || []).forEach(function(item) {
+    if (tipoAccion === 'guardar') {
+      (pedido || []).forEach(function(item) {
         if (item.eliminado) return;
-        var desc = item.desc || item.nombre || "";
-        var key = (item.id || desc) + '|' + desc;
-        if (!totals[key]) {
-          totals[key] = { cant: 0, cat: item.cat };
+        if (!item.enviado) {
+          if (_esBarCatLocal(item.cat)) {
+            tieneNuevoBar = true;
+          } else {
+            tieneNuevoFood = true;
+          }
         }
-        totals[key].cant += (item.cant || 1);
       });
-      return totals;
-    }
 
-    var currentTotals = getTotalItems(pedido);
-    var prevTotals = getTotalItems(prevItems);
+      // 2. Detección complementaria por cantidades activas (excluyendo eliminados)
+      function getTotalItems(arr) {
+        var totals = {};
+        (arr || []).forEach(function(item) {
+          if (item.eliminado) return;
+          var desc = item.desc || item.nombre || "";
+          var key = (item.id || desc) + '|' + desc;
+          if (!totals[key]) {
+            totals[key] = { cant: 0, cat: item.cat };
+          }
+          totals[key].cant += (item.cant || 1);
+        });
+        return totals;
+      }
 
-    for (var key in currentTotals) {
-      var currItem = currentTotals[key];
-      var prevQty = prevTotals[key] ? prevTotals[key].cant : 0;
-      if (currItem.cant > prevQty) {
-        if (_esBarCatLocal(currItem.cat)) {
-          tieneNuevoBar = true;
-        } else {
-          tieneNuevoFood = true;
+      var currentTotals = getTotalItems(pedido);
+      var prevTotals = getTotalItems(prevItems);
+
+      for (var key in currentTotals) {
+        var currItem = currentTotals[key];
+        var prevQty = prevTotals[key] ? prevTotals[key].cant : 0;
+        if (currItem.cant > prevQty) {
+          if (_esBarCatLocal(currItem.cat)) {
+            tieneNuevoBar = true;
+          } else {
+            tieneNuevoFood = true;
+          }
         }
+      }
+
+      // Si es una orden nueva o no existía previamente en Firebase
+      if (!orderSnap || !orderSnap.exists()) {
+        if (pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat); })) tieneNuevoFood = true;
+        if (pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat); })) tieneNuevoBar = true;
+      }
+
+      // Si en cocina_orders la orden no existe (porque cocina ya la había entregado y limpiado),
+      // pero el pedido tiene platillos de cocina activos no marcados listos:
+      if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat) && !i.listo; })) {
+        tieneNuevoFood = true;
+      }
+      if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat) && !i.listo; })) {
+        tieneNuevoBar = true;
       }
     }
 
-    // Si es una orden nueva o no existía previamente en Firebase
-    if (!orderSnap || !orderSnap.exists()) {
-      if (pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat); })) tieneNuevoFood = true;
-      if (pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat); })) tieneNuevoBar = true;
-    }
-
-    // Si en cocina_orders la orden no existe (porque cocina ya la había entregado y limpiado),
-    // pero el pedido tiene platillos de cocina activos no marcados listos:
-    if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat) && !i.listo; })) {
-      tieneNuevoFood = true;
-    }
-    if (!existeEnCocina && pedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat) && !i.listo; })) {
-      tieneNuevoBar = true;
-    }
-
-    // Items existentes en cocina para preservar estados listo previos
+    // Items existentes en cocina/bar para preservar estados listo previos
     var cocinaItems = [];
     if (existeEnCocina && cocSnap && cocSnap.val() && cocSnap.val().items) {
       cocinaItems = cocSnap.val().items;
@@ -5333,14 +5335,21 @@ function procesarOrden(tipoAccion){
         return copy;
       }
 
-      // Si el ítem no estaba enviado antes, es definitivamente NUEVO y pendiente
-      if (!item.enviado) {
+      // Si el ítem no estaba enviado antes (al guardar), es definitivamente NUEVO y no preparado
+      if (!item.enviado && tipoAccion === 'guardar') {
         copy.listo = false;
         copy.esNuevo = true;
         return copy;
       }
 
-      // Si ya estaba enviado, intentar heredar estado de preparación de cocina_orders
+      // Si el item ya fue marcado como listo previamente en este pedido, preservarlo
+      if (item.listo === true) {
+        copy.listo = true;
+        copy.esNuevo = false;
+        return copy;
+      }
+
+      // Intentar heredar estado de preparación previo de cocina_orders
       var foundIdx = pool.findIndex(function(ci) {
         return ci && !ci.eliminado && (ci.desc === iDesc || ci.nombre === iDesc) && ci.cant === copy.cant;
       });
@@ -5367,16 +5376,35 @@ function procesarOrden(tipoAccion){
       return item;
     });
 
-    var estCocinaExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_cocina || 'pendiente') : 'entregado';
-    var estBarExistente = (existeEnCocina && cocSnap && cocSnap.val()) ? (cocSnap.val().estado_bar || 'pendiente') : 'entregado';
+    // Determinar si quedan comidas/bebidas pendientes de preparar (no listas y no eliminadas)
+    var tieneBebidasPendientes = cocinaPedido.some(function(i) { return !i.eliminado && _esBarCatLocal(i.cat) && !i.listo; });
+    var tieneComidaPendiente   = cocinaPedido.some(function(i) { return !i.eliminado && !_esBarCatLocal(i.cat) && !i.listo; });
 
-    var finalEstadoCocina = estCocinaExistente;
-    if (tieneNuevoFood || (estCocinaExistente === 'entregado' && pedido.some(function(i){ return !i.eliminado && !_esBarCatLocal(i.cat); }))) {
+    var estCocinaExistente = 'entregado';
+    if (cocSnap && cocSnap.exists() && cocSnap.val().estado_cocina) {
+      estCocinaExistente = cocSnap.val().estado_cocina;
+    } else if (orderSnap && orderSnap.exists() && orderSnap.val().estado_cocina) {
+      estCocinaExistente = orderSnap.val().estado_cocina;
+    } else if (!orderSnap || !orderSnap.exists()) {
+      estCocinaExistente = tieneComidaPendiente ? 'pendiente' : 'entregado';
+    }
+
+    var estBarExistente = 'entregado';
+    if (cocSnap && cocSnap.exists() && cocSnap.val().estado_bar) {
+      estBarExistente = cocSnap.val().estado_bar;
+    } else if (orderSnap && orderSnap.exists() && orderSnap.val().estado_bar) {
+      estBarExistente = orderSnap.val().estado_bar;
+    } else if (!orderSnap || !orderSnap.exists()) {
+      estBarExistente = tieneBebidasPendientes ? 'pendiente' : 'entregado';
+    }
+
+    var finalEstadoCocina = tieneComidaPendiente ? (estCocinaExistente === 'entregado' ? (tieneNuevoFood ? 'pendiente' : 'entregado') : estCocinaExistente) : 'entregado';
+    if (tipoAccion === 'guardar' && tieneNuevoFood) {
       finalEstadoCocina = 'pendiente';
     }
 
-    var finalEstadoBar = estBarExistente;
-    if (tieneNuevoBar || (estBarExistente === 'entregado' && pedido.some(function(i){ return !i.eliminado && _esBarCatLocal(i.cat); }))) {
+    var finalEstadoBar = tieneBebidasPendientes ? (estBarExistente === 'entregado' ? (tieneNuevoBar ? 'pendiente' : 'entregado') : estBarExistente) : 'entregado';
+    if (tipoAccion === 'guardar' && tieneNuevoBar) {
       finalEstadoBar = 'pendiente';
     }
 
@@ -5384,7 +5412,7 @@ function procesarOrden(tipoAccion){
     if (cocSnap && cocSnap.exists() && cocSnap.val().timestamp) {
       kdsTimestamp = cocSnap.val().timestamp;
     }
-    if (tieneNuevoFood || tieneNuevoBar || !existeEnCocina) {
+    if ((tieneNuevoFood || tieneNuevoBar) && tipoAccion === 'guardar') {
       kdsTimestamp = Date.now();
     }
 
@@ -5450,11 +5478,26 @@ function procesarOrden(tipoAccion){
     try {
       saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
 
-      var tieneItemsCocinaOBar = cocinaPedido.some(function(i) { return !i.eliminado; });
-      if (tieneItemsCocinaOBar || existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
-        saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
+      if (tipoAccion === 'cobrar') {
+        // Al cobrar, si cocina y bar ya entregaron (o no hay nada pendiente), retirar orden de cocina_orders
+        var ambosEntregados = (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado');
+        if (ambosEntregados) {
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
+        } else if (existeEnCocina) {
+          // Si queda pendiente bar, solo actualizar estado a pagado sin revivir cocina
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({
+            estado: 'pagado',
+            estado_cocina: finalEstadoCocina,
+            estado_bar: finalEstadoBar
+          }));
+        }
+      } else {
+        // Al guardar / enviar comanda
+        var tieneItemsCocinaOBar = cocinaPedido.some(function(i) { return !i.eliminado; });
+        if (tieneItemsCocinaOBar || existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
+        }
       }
-
       if(tipoAccion==='cobrar'){
         saves.push(db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(v));
         // Registrar payload fiscal en dte_pendientes via DteEngine

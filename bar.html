@@ -228,7 +228,8 @@ function iniciar(){
       var v=c.val();
       if(v) {
         var estBar = v.estado_bar || 'pendiente';
-        if(estBar!=='entregado' && v.estado!=='anulada') _orders[c.key]=v;
+        var tieneBebidasValidas = (v.items || []).some(function(i) { return !i.eliminado && _esBarCat(i.cat); });
+        if(estBar!=='entregado' && v.estado!=='anulada' && tieneBebidasValidas) _orders[c.key]=v;
       }
     });
     var newCount=Object.keys(_orders).length;
@@ -243,8 +244,8 @@ function iniciar(){
         Object.entries(_orders).forEach(([id, o]) => {
           var p = prev[id];
           if (p) {
-            var prevDrinks = (p.items || []).filter(function(i) { return _esBarCat(i.cat); }).length;
-            var curDrinks = (o.items || []).filter(function(i) { return _esBarCat(i.cat); }).length;
+            var prevDrinks = (p.items || []).filter(function(i) { return !i.eliminado && _esBarCat(i.cat); }).length;
+            var curDrinks = (o.items || []).filter(function(i) { return !i.eliminado && _esBarCat(i.cat); }).length;
             if (curDrinks > prevDrinks) {
               modified = true;
             }
@@ -282,11 +283,11 @@ function renderBoard(){
   var entries=Object.entries(_orders).sort((a,b)=>(a[1].timestamp||0)-(b[1].timestamp||0));
   if(_filtroActual!=='all') entries=entries.filter(e=>e[1].tipo===_filtroActual);
 
-  // Filtrar órdenes que contengan al menos una bebida
+  // Filtrar órdenes que contengan al menos una bebida activa
   entries = entries.filter(function(e) {
     var items = e[1].items || [];
     return items.some(function(it) {
-      return _esBarCat(it.cat);
+      return !it.eliminado && _esBarCat(it.cat);
     });
   });
 
