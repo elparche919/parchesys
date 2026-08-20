@@ -221,6 +221,10 @@
           <div class="sc-val" id="stat-caja-val" style="font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Cargando...</div>
           <div class="sc-lbl" id="stat-caja-lbl">Caja Activa</div>
         </div>
+        <div class="stat-card" style="cursor:pointer; background:var(--m-surface); border:1px solid var(--m-border); border-left: 4px solid var(--m-red, #ef4444);" onclick="document.getElementById('link-reportes').click(); setTimeout(()=>document.querySelector('[data-tab=eliminaciones]').click(), 100);">
+          <div class="sc-val" id="stat-eliminados" style="color:#ef4444">0</div>
+          <div class="sc-lbl" style="color:#ef4444">Eliminados Hoy</div>
+        </div>
       </div>
 
       <div class="hd" style="margin-top:20px; margin-bottom:15px;">
@@ -315,6 +319,7 @@
       <div style="display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--m-border);padding-bottom:0;overflow-x:auto">
         <button class="rep-tab active" data-tab="resumen"    onclick="switchRepTab(this,'resumen')">   <i class="fa-solid fa-chart-pie"></i>     Resumen</button>
         <button class="rep-tab"        data-tab="egresos"    onclick="switchRepTab(this,'egresos')">   <i class="fa-solid fa-arrow-trend-down"></i> Egresos</button>
+        <button class="rep-tab"        data-tab="eliminaciones" onclick="switchRepTab(this,'eliminaciones')"> <i class="fa-solid fa-trash-can"></i> Eliminación de Items (v2)</button>
         <button class="rep-tab"        data-tab="meseros"    onclick="switchRepTab(this,'meseros')">   <i class="fa-solid fa-user-tie"></i>      Ventas x Mesero</button>
         <button class="rep-tab"        data-tab="corte"      onclick="switchRepTab(this,'corte')">     <i class="fa-solid fa-cash-register"></i> Corte de Caja</button>
         <button class="rep-tab"        data-tab="cierre"     onclick="switchRepTab(this,'cierre')">    <i class="fa-solid fa-calendar-check"></i> Cierre de Mes</button>
@@ -536,6 +541,66 @@
           <table id="tbl-merma">
             <thead><tr><th>Fecha</th><th>Producto</th><th>Motivo</th><th style="text-align:center">Cantidad</th><th>Responsable</th><th style="text-align:right">Costo</th><th></th></tr></thead>
             <tbody><tr><td colspan="7" align="center" style="color:var(--m-muted);padding:30px">Sin merma registrada para este mes</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ══ TAB: ELIMINACIÓN DE ITEMS (auditoría) ══ -->
+      <div class="rep-panel" id="rep-tab-eliminaciones" style="display:none">
+        <div style="margin-bottom:20px;">
+          <h2 style="font-size:24px; font-weight:900; color:var(--m-text); display:flex; align-items:center; gap:10px;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;background:rgba(220,38,38,0.1);color:#ef4444;border-radius:8px;font-size:18px"><i class="fa-solid fa-trash-can"></i></span>
+            Auditoría de Anulaciones
+          </h2>
+          <p style="color:var(--m-muted); margin-top:5px; font-size:14px;">Historial completo de ítems eliminados desde las tablets o anulados por los cajeros, adaptado a la nueva versión donde los ítems permanecen en los tickets como anulados.</p>
+        </div>
+
+        <!-- KPIs -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;margin-bottom:24px">
+          <div class="rep-kpi" style="border-top-color:#ef4444">
+            <div class="rep-kpi-lbl">Items Anulados</div>
+            <div class="rep-kpi-val" id="ei-count" style="color:#ef4444">0</div>
+          </div>
+          <div class="rep-kpi" style="border-top-color:#ef4444">
+            <div class="rep-kpi-lbl">Monto Total Afectado</div>
+            <div class="rep-kpi-val" id="ei-total" style="color:#ef4444">$0.00</div>
+          </div>
+          <div class="rep-kpi" style="border-top-color:var(--m-amber)">
+            <div class="rep-kpi-lbl">Mesero con más anulaciones</div>
+            <div class="rep-kpi-val" style="font-size:16px; color:var(--m-amber)" id="ei-top-mesero">-</div>
+          </div>
+          <div class="rep-kpi" style="border-top-color:var(--m-amber)">
+            <div class="rep-kpi-lbl">Producto más anulado</div>
+            <div class="rep-kpi-val" style="font-size:16px; color:var(--m-amber)" id="ei-top-producto">-</div>
+          </div>
+        </div>
+
+        <!-- Cabecera / filtro -->
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:15px; background:var(--m-surface); padding:15px; border-radius:12px; border:1px solid var(--m-border);">
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="font-size:14px; font-weight:800; color:var(--m-text);">Registro Detallado</span>
+            <span style="background:rgba(255,255,255,0.05); color:var(--m-muted); padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;"><span id="ei-count-inline">0</span> registros este mes</span>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <i class="fa-solid fa-magnifying-glass" style="color:var(--m-muted)"></i>
+            <input type="text" id="ei-buscar" placeholder="Buscar por mesero, orden, o producto..." class="f-inp" style="width:280px; padding:8px 12px; background:rgba(255,255,255,0.05); border-color:var(--m-border);" onkeyup="renderEliminacionesItems()">
+          </div>
+        </div>
+        
+        <div class="tbl-card" style="border-radius:12px; overflow:hidden; border:1px solid var(--m-border);">
+          <table id="tbl-eliminaciones" style="width:100%; border-collapse:collapse;">
+            <thead style="background:rgba(255,255,255,0.05);">
+              <tr>
+                <th style="padding:12px; text-align:left; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Fecha / Hora</th>
+                <th style="padding:12px; text-align:left; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Orden/Mesa</th>
+                <th style="padding:12px; text-align:left; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Producto</th>
+                <th style="padding:12px; text-align:center; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Cant.</th>
+                <th style="padding:12px; text-align:right; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Monto</th>
+                <th style="padding:12px; text-align:left; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Origen / Solicitante</th>
+                <th style="padding:12px; text-align:left; font-size:11px; color:var(--m-muted); text-transform:uppercase;">Motivo</th>
+              </tr>
+            </thead>
+            <tbody><tr><td colspan="7" align="center" style="color:var(--m-muted);padding:40px">Sin anulaciones registradas para este mes</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1650,8 +1715,43 @@
     });
       // Categorias del menú
       db.ref(`negocios/${negocioID}/menu_categorias`).on('value', renderCategorias);
-      // â”€â”€â”€ Órdenes Web Entrantes (Panóptico) â”€â”€â”€
+      // 🔥 Órdenes Web Entrantes (Panóptico) 🔥
       db.ref(`negocios/${negocioID}/ordenes_web`).on('value', renderPortalWebOrders);
+      
+      // Listener para notificaciones de ítems eliminados
+      var tsInicioAuditoria = Date.now();
+
+      // Update widget by listening to 'pedidos' for today's active/recent orders
+      db.ref(`negocios/${negocioID}/pedidos`).on('value', snap => {
+        let eliminadosHoy = 0;
+        const dHoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/El_Salvador' }));
+        const currentDia = dHoy.getFullYear() + '-' + String(dHoy.getMonth()+1).padStart(2,'0') + '-' + String(dHoy.getDate()).padStart(2,'0');
+        
+        snap.forEach(c => {
+          let v = c.val();
+          let fechaV = v.fecha_iso ? v.fecha_iso.substring(0,10) : v.fecha;
+          if (fechaV === currentDia && v.items) {
+             v.items.forEach(it => {
+                if (it.eliminado) eliminadosHoy += parseInt(it.cant || 1);
+             });
+          }
+        });
+        
+        const el = document.getElementById('stat-eliminados');
+        if (el) el.textContent = eliminadosHoy;
+      });
+
+      db.ref(`negocios/${negocioID}/log_eliminaciones_items`).orderByChild('ts').startAt(tsInicioAuditoria).on('child_added', function(snap) {
+        var r = snap.val();
+        if (r && r.producto) {
+          showToast('⚠️ Ítem eliminado: ' + r.producto + ' (Mesa ' + (r.mesa || r.ordenId) + ') por ' + (r.solicitado_por||'Desconocido'));
+          // Si estamos en la pestaña de auditoría, recargar la vista.
+          if (typeof cargarEliminacionesItems === 'function') {
+            const currentMes = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/El_Salvador' })).toISOString().slice(0, 7);
+            cargarEliminacionesItems(currentMes);
+          }
+        }
+      });
     });
 
     /* --- ORDENES WEB ENTRANTES --- */
@@ -2584,7 +2684,7 @@
        4. AUDITORÍA FINANCIERA - LÓGICA COMPLETA
     ------------------------------------------------ */
 
-    /* â”€â”€ Sub-tab switcher â”€â”€ */
+    /* ── Sub-tab switcher ── */
     function switchRepTab(el, tab) {
       document.querySelectorAll('.rep-tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.rep-panel').forEach(p => p.style.display = 'none');
@@ -2594,6 +2694,7 @@
       const mes = document.getElementById('rep-mes').value;
       if (!mes) return;
       if (tab === 'egresos')  { cargarGastos(mes); cargarMerma(mes); }
+      if (tab === 'eliminaciones') { cargarEliminacionesItems(mes); }
       if (tab === 'meseros')  cargarMeserosPorGranularidad();
       if (tab === 'corte')    cargarHistorialCortes();
       if (tab === 'cierre')   calcularCierre();
@@ -2877,16 +2978,41 @@
         ordenes.map(v => {
           const hora = _getLocalISO(v) ? _getLocalISO(v).substring(11,16) : (v.hora||'—');
           const desc = parseFloat(v.descuento_monto||0);
-          return `<tr>
-            <td style="font-weight:800;font-family:monospace">${v.orden||'-'}</td>
+          const list = v.items || [];
+          let hasDeleted = list.some(it => it.eliminado);
+          let alertIcon = hasDeleted ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:8px;" title="Contiene ítems anulados"></i>' : '';
+          
+          let itemsHtml = '<div style="padding:15px; border-left:3px solid var(--m-blue);">';
+          itemsHtml += '<div style="font-size:11px; font-weight:800; color:var(--m-muted); margin-bottom:8px; text-transform:uppercase;">Detalle Completo del Pedido</div>';
+          itemsHtml += '<table style="background:transparent; margin:0; width:100%;"><thead><tr><th style="padding:4px 0; text-align:left;">Cant</th><th style="padding:4px 0; text-align:left;">Producto</th><th style="padding:4px 0; text-align:right;">Precio</th><th style="padding:4px 0; text-align:right;">Total</th><th style="padding:4px 0; text-align:right;">Estado</th></tr></thead><tbody>';
+          
+          list.forEach(it => {
+            const isElim = !!it.eliminado;
+            const rowStyle = isElim ? 'text-decoration:line-through; opacity:0.6;' : '';
+            const estadoBadge = isElim ? '<span style="color:#ef4444;font-size:10px;font-weight:900;">ANULADO</span>' : '<span style="color:#16a34a;font-size:10px;font-weight:900;">SERVIDO</span>';
+            const itemTotal = (it.cant || 1) * (it.precio || it.price || 0);
+            
+            itemsHtml += `<tr style="${rowStyle}">
+              <td style="padding:4px 0; border:none; background:transparent;">${it.cant || 1}</td>
+              <td style="padding:4px 0; border:none; background:transparent;">${it.nombre || it.desc || 'Platillo'}</td>
+              <td style="padding:4px 0; border:none; text-align:right; background:transparent;">$${parseFloat(it.precio || it.price || 0).toFixed(2)}</td>
+              <td style="padding:4px 0; border:none; text-align:right; background:transparent;">$${itemTotal.toFixed(2)}</td>
+              <td style="padding:4px 0; border:none; text-align:right; background:transparent;">${estadoBadge}</td>
+            </tr>`;
+          });
+          itemsHtml += '</tbody></table></div>';
+          const rowId = v.orden || v.id || Math.random().toString(36).substr(2, 9);
+          return `<tr style="cursor:pointer;" onclick="var d=document.getElementById('dd-det-${rowId}'); if(d) d.style.display = d.style.display==='none'?'table-row':'none';">
+            <td style="font-weight:800;font-family:monospace">${v.orden||'—'}${alertIcon}</td>
             <td style="color:var(--m-muted)">${hora}</td>
             <td><span style="background:rgba(56,189,248,.15);color:#38bdf8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800">${(v.canal||'mesa').toUpperCase()}</span></td>
-            <td>${v.mesero||v.cajero||'-'}</td>
+            <td>${v.mesero||v.cajero||'—'}</td>
             <td style="font-size:11px">${v.forma_pago||'efectivo'}</td>
-            <td align="center" style="color:var(--m-muted)">${(v.items||[]).length}</td>
-            <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'-'}</td>
+            <td align="center" style="color:var(--m-muted)">${list.length}</td>
+            <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'—'}</td>
             <td align="right" style="font-weight:900;color:#16a34a">$${parseFloat(v.total||0).toFixed(2)}</td>
-          </tr>`;
+          </tr>
+          <tr id="dd-det-${rowId}" style="display:none; background:#1e2430;"><td colspan="8" style="padding:0;">${itemsHtml}</td></tr>`;
         }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin ventas en este día</td></tr>';
 
       // Platillos del día
@@ -3215,7 +3341,151 @@
       cargarMerma(document.getElementById('rep-mes').value);
     }
 
-    /* â”€â”€ VENTAS POR MESERO / CAJERO â”€â”€ */
+    /* ── AUDITORÍA: ELIMINACIÓN DE ITEMS ENVIADOS A COCINA ── */
+    window._eliminacionesItemsData = [];
+
+    async function cargarEliminacionesItems(mes) {
+      if (!mes) {
+        mes = document.getElementById('rep-mes').value || new Date(new Date().toLocaleString('en-US', { timeZone: 'America/El_Salvador' })).toISOString().slice(0, 7);
+      }
+      
+      const countInline = document.getElementById('ei-count-inline');
+      if (countInline) countInline.textContent = "Escaneando tickets...";
+      
+      try {
+        const [pedidosSnap, ventasSnap] = await Promise.all([
+          db.ref(`negocios/${negocioID}/pedidos`).once('value'),
+          db.ref(`negocios/${negocioID}/ventas`).once('value')
+        ]);
+        
+        let rows = [];
+        let keyCounter = 0;
+        
+        function processOrder(v) {
+          if (!v) return;
+          const fechaV = (v.fecha_iso || v.fecha || '').substring(0, 7);
+          // Solo procesar si pertenece al mes seleccionado
+          if (fechaV && fechaV !== mes) return;
+          
+          if (v.items && Array.isArray(v.items)) {
+            v.items.forEach(it => {
+              if (it.eliminado) {
+                const ts = it.fecha_eliminacion || v.ts || Date.now();
+                const dObj = new Date(ts);
+                const fechaStr = dObj.getFullYear() + '-' + String(dObj.getMonth()+1).padStart(2,'0') + '-' + String(dObj.getDate()).padStart(2,'0');
+                
+                rows.push({
+                  _key: 'ext_' + (keyCounter++),
+                  fecha: fechaStr,
+                  ts: ts,
+                  ordenId: v.orden || v.id || '?',
+                  mesa: v.origen || v.mesa || v.mesa_num || '',
+                  producto: it.desc || it.nombre || 'Desconocido',
+                  cantidad: it.cant || 1,
+                  total: (it.cant || 1) * (it.precio || it.price || 0),
+                  solicitado_por: it.eliminado_por || v.mesero || v.tomada_por || 'Desconocido',
+                  motivo: "Anulado desde " + (v.origen || v.mesa || v.mesa_num ? "Mesa " + (v.origen||v.mesa||v.mesa_num) : "Caja")
+                });
+              }
+            });
+          }
+        }
+        
+        pedidosSnap.forEach(c => processOrder(c.val()));
+        ventasSnap.forEach(c => processOrder(c.val()));
+        
+        // Ordenar por ts (más reciente primero)
+        rows.sort((a,b) => (b.ts||0) - (a.ts||0));
+        
+        window._eliminacionesItemsData = rows;
+        renderEliminacionesItems();
+      } catch (err) {
+        console.error("Error al extraer eliminaciones de tickets:", err);
+        const countInline = document.getElementById('ei-count-inline');
+        if (countInline) countInline.textContent = "Error de conexión";
+      }
+    }
+
+    function renderEliminacionesItems() {
+      const rows = window._eliminacionesItemsData || [];
+      const buscarInput = document.getElementById('ei-buscar');
+      const buscar = (buscarInput ? buscarInput.value : '').trim().toLowerCase();
+      const filtradas = buscar
+        ? rows.filter(r =>
+            (r.solicitado_por||'').toLowerCase().includes(buscar) ||
+            (r.autorizado_por||'').toLowerCase().includes(buscar) ||
+            (r.producto||'').toLowerCase().includes(buscar) ||
+            (r.motivo||'').toLowerCase().includes(buscar))
+        : rows;
+
+      let total = 0, meseroMap = {}, prodMap = {}, totalItems = 0;
+      rows.forEach(r => {
+        total += parseFloat(r.total||0);
+        let cant = parseInt(r.cantidad||1);
+        totalItems += cant;
+        if (r.solicitado_por) meseroMap[r.solicitado_por] = (meseroMap[r.solicitado_por]||0)+cant;
+        if (r.producto) prodMap[r.producto] = (prodMap[r.producto]||0)+cant;
+      });
+
+      const elCount = document.getElementById('ei-count');
+      if (elCount) elCount.textContent = totalItems;
+      const elCountInline = document.getElementById('ei-count-inline');
+      if (elCountInline) elCountInline.textContent = totalItems + " (Filas: " + rows.length + ", Mostradas: " + filtradas.length + ")";
+      const elTotal = document.getElementById('ei-total');
+      if (elTotal) elTotal.textContent = '$'+total.toFixed(2);
+      const topMesero = Object.entries(meseroMap).sort((a,b)=>b[1]-a[1])[0];
+      const topProd = Object.entries(prodMap).sort((a,b)=>b[1]-a[1])[0];
+      const elTopMesero = document.getElementById('ei-top-mesero');
+      if (elTopMesero) elTopMesero.textContent = topMesero ? `${topMesero[0]} (${topMesero[1]})` : '-';
+      const elTopProd = document.getElementById('ei-top-producto');
+      if (elTopProd) elTopProd.textContent = topProd ? `${topProd[0]} (${topProd[1]})` : '-';
+
+      const tbl = document.getElementById('tbl-eliminaciones');
+      if (!tbl) return;
+      const tbody = tbl.querySelector('tbody');
+      if (!tbody) return;
+
+      tbody.innerHTML =
+        filtradas.map(r => {
+          let fechaStr = '-';
+          try {
+            if (r.ts) {
+              let d = new Date(r.ts);
+              if (isNaN(d.getTime())) d = new Date(Number(r.ts) || 0);
+              if (!isNaN(d.getTime())) {
+                fechaStr = d.toLocaleString('es-SV', { timeZone: 'America/El_Salvador', dateStyle: 'short', timeStyle: 'short' });
+              } else if (r.fecha) {
+                fechaStr = r.fecha;
+              }
+            } else if (r.fecha) {
+              fechaStr = r.fecha;
+            }
+          } catch(e) {
+            fechaStr = r.fecha || '-';
+          }
+          
+          let ordenBadge = '-';
+          if (r.ordenId) ordenBadge = `<span style="font-weight:900; font-family:monospace; color:var(--m-text);">${r.ordenId}</span>`;
+          if (r.mesa) ordenBadge += `<br><span style="font-size:11px; color:var(--m-muted);">Mesa ${r.mesa}</span>`;
+
+          const solicitante = r.solicitado_por || 'Mesero no identificado';
+          const auth = r.autorizado_por ? `<br><span style="font-size:10px; color:#38bdf8;"><i class="fa-solid fa-check-circle"></i> Auth: ${r.autorizado_por}</span>` : '';
+
+          return `<tr style="border-bottom:1px solid var(--m-border);">
+          <td style="padding:12px; color:var(--m-muted);">${fechaStr}</td>
+          <td style="padding:12px;">${ordenBadge}</td>
+          <td style="padding:12px; font-weight:700; color:var(--m-text);">${r.producto||'-'}</td>
+          <td style="padding:12px; text-align:center;">
+            <span style="background:rgba(220,38,38,0.15); color:#ef4444; padding:2px 8px; border-radius:12px; font-weight:800;">${r.cantidad||0}</span>
+          </td>
+          <td style="padding:12px; text-align:right; font-weight:900; color:#ef4444;">$${parseFloat(r.total||0).toFixed(2)}</td>
+          <td style="padding:12px; color:var(--m-text);">${solicitante}${auth}</td>
+          <td style="padding:12px; color:var(--m-muted); font-size:12px;">${r.motivo||'Anulación general'}</td>
+        </tr>`;
+        }).join('') || '<tr><td colspan="7" align="center" style="color:var(--m-muted);padding:40px">Sin anulaciones registradas para este mes</td></tr>';
+    }
+
+    /* ── VENTAS POR MESERO / CAJERO ── */
     /* â”€â”€ GRANULARIDAD DE MESEROS: switches y helpers â”€â”€ */
     window._meseroGranularidad = 'mes';
 

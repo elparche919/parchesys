@@ -4289,7 +4289,44 @@ function addItem(id, selectedVariant){
 }
 
 function removeItem(idx){
-  pedido.splice(idx, 1);
+  var item = pedido[idx];
+  var meseroName = localStorage.getItem('mesero') || localStorage.getItem('meseroId') || 'Desconocido';
+
+  if (item.enviado || item.estado_cocina) {
+    if (!confirm('Este platillo ya fue enviado a cocina o bar. ¿Seguro que deseas anularlo?')) {
+      return;
+    }
+  }
+
+  // Registrar SIEMPRE en log_eliminaciones_items
+  var logRef = db.ref('negocios/'+negocioID+'/log_eliminaciones_items').push();
+  logRef.set({
+    fecha: getLocalDateString(new Date()),
+    ts: Date.now(),
+    detectado_automaticamente: true,
+    ordenId: ORDEN || MESA_SEL || 'Caja',
+    mesa: MESA_SEL || '',
+    producto: item.desc,
+    cantidad: item.cant,
+    total: item.precio * item.cant,
+    solicitado_por: meseroName,
+    motivo: "Anulado desde POS Tablet (Mesa " + (MESA_SEL || '?') + ")"
+  });
+
+  // SIEMPRE marcar como eliminado en lugar de hacer splice, 
+  // para que permanezca en el carrito/ticket como anulado (y aparezca en el Panóptico)
+  item.eliminado = true;
+  item.eliminado_por = meseroName;
+  item.fecha_eliminacion = Date.now();
+  
+  // Sincronizar inmediatamente el pedido a Firebase
+  if (ORDEN) {
+    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/items').set(pedido);
+  }
+  if (MESA_SEL) {
+    db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL+'/pedido').set(pedido);
+  }
+
   renderCart();
 }
 
@@ -4298,6 +4335,16 @@ function updateCant(idx, val){
   if(n <= 0){ removeItem(idx); return; }
   if(idx < 0 || idx >= pedido.length) return;
   var item = pedido[idx];
+  if(item.enviado || item.estado_cocina) {
+    // Si ya está enviado, no permitir reducir la cantidad para evitar inconsistencias
+    if(n < item.cant) {
+      if(confirm('No puedes reducir la cantidad de un ítem ya enviado. ¿Deseas anularlo por completo?')) {
+        removeItem(idx);
+      }
+      return;
+    }
+  }
+  
   var p = _prods[item.id];
   if(p && p.descuenta){
     var stockMax = (item.variante && item.variante.index !== undefined && p.variantes && p.variantes[item.variante.index])
@@ -4309,9 +4356,20 @@ function updateCant(idx, val){
       if (n <= 0) { removeItem(idx); return; }
     }
   }
-  pedido[idx].cant = n;
-  pedido[idx].total = n * pedido[idx].precio;
-  calcTotales();
+  item.cant = n;
+  item.total = n * item.precio;
+  
+  if (CANAL === 'mesa' && MESA_SEL) {
+    var unsaved = pedido.filter(function(i) { return !i.enviado && !i.eliminado; });
+    if (unsaved.length > 0) {
+      localStorage.setItem('unsaved_items_' + negocioID + '_' + MESA_SEL, JSON.stringify(unsaved));
+    } else {
+      try {
+        localStorage.removeItem('unsaved_items_' + negocioID + '_' + MESA_SEL);
+      } catch(e) {}
+    }
+  }
+  renderCart();
 }
 
 function renderCart(){
@@ -4329,6 +4387,20 @@ function renderCart(){
     return;
   }
   c.innerHTML = pedido.map(function(item, i){
+    if (item.eliminado) {
+      return '<div class="item-row item-eliminado" style="opacity:0.6">'+
+        '<div class="item-row-top">'+
+          '<div class="item-num" style="text-decoration:line-through">'+(i+1)+'</div>'+
+          '<div class="item-info">'+
+            '<div class="item-name" style="text-decoration:line-through; color:#dc2626">'+item.desc+'</div>'+
+            '<div style="display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap;">'+
+              '<span class="item-status-badge" style="background:#fef2f2; color:#dc2626; border:1px solid #fecaca"><i class="fa-solid fa-trash-can"></i> Anulado</span>'+
+            '</div>'+
+          '</div>'+
+          '<div></div>'+
+        '</div>'+
+      '</div>';
+    }
     var notaHtml = item.nota
       ? '<div class="item-note" style="margin-top:0">📝 '+item.nota+'</div>'
       : '<div class="item-note" style="margin-top:0">+ nota</div>';
@@ -4364,7 +4436,7 @@ function renderCart(){
   actualizarGuiaMesaBar();
   
   if (CANAL === 'mesa' && MESA_SEL) {
-    var unsaved = pedido.filter(function(i) { return !i.enviado; });
+    var unsaved = pedido.filter(function(i) { return !i.enviado && !i.eliminado; });
     try {
       if (unsaved.length > 0) {
         localStorage.setItem('unsaved_items_' + negocioID + '_' + MESA_SEL, JSON.stringify(unsaved));
@@ -4499,7 +4571,10 @@ function cerrarMod(){ document.getElementById('mod-overlay').classList.remove('o
    TOTALS
 ═══════════════════════════════════════ */
 function calcTotales(){
-  var sub = pedido.reduce(function(a,i){ return a + i.cant*i.precio; }, 0);
+  var sub = pedido.reduce(function(a,i){ 
+    if (i.eliminado) return a;
+    return a + i.cant*i.precio; 
+  }, 0);
   _totalBase = sub;
   document.getElementById('r-sub').textContent = '$'+sub.toFixed(2);
   document.getElementById('r-total').textContent = '$'+sub.toFixed(2);
@@ -4798,7 +4873,7 @@ function imprimirSolicitudCuenta(){
   const hora   = ahora.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
   const canalTxt = {mesa:'Mesa '+(MESA_SEL||''),llevar:'Para Llevar',domicilio:'Domicilio'}[CANAL] || CANAL;
 
-  const sub       = pedido.reduce((s,it) => s + (it.cant * it.precio), 0);
+  const sub       = pedido.reduce((s,it) => it.eliminado ? s : s + (it.cant * it.precio), 0);
   const descMonto = _descuentoAplicado || 0;
   const totalPrev = Math.max(0, sub - descMonto);
 
@@ -4822,9 +4897,9 @@ function imprimirSolicitudCuenta(){
     +'</style></head><body>';
 
   /* --- ENCABEZADO --- */
-  if (bizN.toUpperCase().includes("EL PARCHE") || bizN.toUpperCase().includes("PARCHE")) {
+  if (bizN.toUpperCase().includes("MODUS FOOD") || bizN.toUpperCase().includes("PARCHE")) {
     html += '<div class="c" style="margin-bottom:8px;">'
-      + '<div class="b" style="font-size:16px;">EL PARCHE</div>'
+      + '<div class="b" style="font-size:16px;">MODUS FOOD</div>'
       + '<div class="xs">EREGUAYQUIN , USULUTAN</div>'
       + '<div class="xs">TEL. 7854-7797</div>'
       + '<div class="xs">NRC 384588-5</div>'
@@ -4850,6 +4925,7 @@ function imprimirSolicitudCuenta(){
     +'<th class="r" style="width:65px">Total</th>'
     +'</tr></thead><tbody>';
   pedido.forEach(function(it){
+    if(it.eliminado) return;
     html += '<tr><td>'+it.cant+'</td><td>'+it.desc+'</td>'
       +'<td class="r">$'+(it.cant*it.precio).toFixed(2)+'</td></tr>';
     if(it.nota){
@@ -5017,7 +5093,7 @@ function procesarOrden(tipoAccion){
   var saveCanal = CANAL;
   var saveOrden = ORDEN;
 
-  var sub = pedido.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
+  var sub = pedido.reduce(function(a,i){ if(i.eliminado) return a; return a+i.cant*i.precio; }, 0);
   var tip = tipoAccion==='cobrar' ? (parseFloat(document.getElementById('ck-tip-input').value)||0) : 0;
   var descMonto = _descuentoAplicado || 0;
   var total = Math.max(0, sub - descMonto) + tip;
@@ -5582,7 +5658,7 @@ async function imprimirTicket(soloImprimir){
   const logoUrl = (t['ticket-logo'] && biz.logo_print) ? biz.logo_print
                 : (t['ticket-logo'] && biz.logo_url)   ? biz.logo_url : '';
 
-  const sub       = pedido.reduce((s,it) => s + (it.cant * it.precio), 0);
+  const sub       = pedido.reduce((s,it) => it.eliminado ? s : s + (it.cant * it.precio), 0);
   const descMonto = _descuentoAplicado || 0;
   const baseDesc  = Math.max(0, sub - descMonto);
   const iva       = +(baseDesc * 0.13).toFixed(2);
@@ -5612,7 +5688,7 @@ async function imprimirTicket(soloImprimir){
     if(CANAL==='domicilio')clienteNombre=(document.getElementById('dom-cliente')||{}).value||'CONSUMIDOR FINAL';
   }
 
-  const bizNombre = biz.nombre_comercial||biz.nombre||'PARCHE SYS';
+  const bizNombre = biz.nombre_comercial||biz.nombre||'MODUS FOOD';
   const bizRazon  = biz.razon_social||'';
   const bizNit    = biz.nit||'';
   const bizNrc    = biz.nrc||'';
@@ -5685,8 +5761,8 @@ async function imprimirTicket(soloImprimir){
   /* 1. ENCABEZADO */
   html += '<div class="c">';
   if(logoUrl) html += '<img src="'+logoUrl+'" class="logo"><br>';
-  if (bizNombre.includes("EL PARCHE") || bizNombre.includes("PARCHE")) {
-    html += '<div class="b" style="font-size:18px">EL PARCHE</div>'
+  if (bizNombre.includes("MODUS FOOD") || bizNombre.includes("PARCHE")) {
+    html += '<div class="b" style="font-size:18px">MODUS FOOD</div>'
       + '<div class="xs">EREGUAYQUIN , USULUTAN</div>'
       + '<div class="xs">TEL. 7854-7797</div>'
       + '<div class="xs">NRC 384588-5</div>';
@@ -5731,6 +5807,7 @@ async function imprimirTicket(soloImprimir){
     +'<th class="td-r" style="width:65px">Total</th>'
     +'</tr></thead><tbody>';
   pedido.forEach(function(it){
+    if(it.eliminado) return;
     html += '<tr><td>'+it.cant+'</td><td>'+it.desc+'</td>'
       +'<td class="td-r">$'+parseFloat(it.precio).toFixed(2)+'</td>'
       +'<td class="td-r">$'+(it.cant*it.precio).toFixed(2)+'</td></tr>';
@@ -5817,7 +5894,7 @@ function formatTicket57mm() {
   const biz = _biz || {};
   const t = (biz.ticket_config || {});
   
-  const sub       = pedido.reduce((s,it) => s + (it.cant * it.precio), 0);
+  const sub       = pedido.reduce((s,it) => it.eliminado ? s : s + (it.cant * it.precio), 0);
   const descMonto = _descuentoAplicado || 0;
   const baseDesc  = Math.max(0, sub - descMonto);
   const iva       = +(baseDesc * 0.13).toFixed(2);
@@ -5839,7 +5916,7 @@ function formatTicket57mm() {
     if(CANAL==='domicilio')clienteNombre=(document.getElementById('dom-cliente')||{}).value||'CONSUMIDOR FINAL';
   }
   
-  const bizNombre = (biz.nombre_comercial||biz.nombre||'EL PARCHE').toUpperCase();
+  const bizNombre = (biz.nombre_comercial||biz.nombre||'MODUS FOOD').toUpperCase();
   const bizDir    = biz.direccion||biz.dir||'';
   const bizTel    = biz.tel||biz.telefono||'';
   const bizNit    = biz.nit||'';
@@ -5856,8 +5933,8 @@ function formatTicket57mm() {
   var text = "";
   
   // Header
-  if (bizNombre.includes("EL PARCHE") || bizNombre.includes("PARCHE")) {
-    text += "[C][B][D]EL PARCHE[/D][/B]\n";
+  if (bizNombre.includes("MODUS FOOD") || bizNombre.includes("PARCHE")) {
+    text += "[C][B][D]MODUS FOOD[/D][/B]\n";
     text += "[C]EREGUAYQUIN , USULUTAN\n";
     text += "[C]TEL. 7854-7797\n";
     text += "[C]NRC 384588-5\n";
@@ -5886,6 +5963,7 @@ function formatTicket57mm() {
   text += "CANT  PRODUCTO           TOTAL\n";
   text += "[HR]\n";
   pedido.forEach(function(it){
+    if (it.eliminado) return;
     var desc = it.desc;
     var lineTotal = (it.cant * it.precio).toFixed(2);
     
