@@ -5479,8 +5479,20 @@ function procesarOrden(tipoAccion){
       saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
 
       if (tipoAccion === 'cobrar') {
-        // Al cobrar la orden en caja, se retira definitivamente del tablero KDS de cocina y bar
-        saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
+        // Al cobrar la orden en caja:
+        // Si tanto cocina como bar ya habían marcado entregado (o no aplican), retirar orden de cocina_orders
+        var ambosEntregados = (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado');
+        if (ambosEntregados) {
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
+        } else if (existeEnCocina) {
+          // Si cocina o bar aún no han terminado de preparar / entregar, MANTENER en cocina_orders
+          // marcando estado = 'pagado' pero preservando sus estados individuales de preparación
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({
+            estado: 'pagado',
+            estado_cocina: finalEstadoCocina,
+            estado_bar: finalEstadoBar
+          }));
+        }
       } else {
         // Al guardar / enviar comanda
         var tieneItemsCocinaOBar = cocinaPedido.some(function(i) { return !i.eliminado; });

@@ -512,7 +512,8 @@ function iniciar(){
       var v=c.val();
       if(v) {
         var estCocina = v.estado_cocina || 'pendiente';
-        if(estCocina!=='entregado' && v.estado!=='anulada' && v.estado!=='pagado') _orders[c.key]=v;
+        var tieneComidaValida = (v.items || []).some(function(i) { return !i.eliminado && !_esBarCat(i.cat); });
+        if(estCocina!=='entregado' && v.estado!=='anulada' && tieneComidaValida) _orders[c.key]=v;
       }
     });
     var newCount=Object.keys(_orders).length;
@@ -624,17 +625,9 @@ function tomarOrdenWeb(id){
   updates['negocios/'+negocioID+'/pedidos/'+id+'/tomada_por'] = mesero;
 
   db.ref().update(updates).then(()=>{
-    toast('✅ Orden tomada por '+mesero+' — ingresada al POS','ok');
-  }).catch(e=>{ toast('Error al tomar la orden','err'); console.error(e); });
 }
 
-function ignorarOrdenWeb(id){
-  if(!confirm('¿Descartar esta orden web? Se eliminará del listado.')) return;
-  db.ref('negocios/'+negocioID+'/ordenes_web/'+id+'/tomada_por').set('IGNORADA').then(()=>{
-    toast('Orden descartada','ok');
-  });
-}
-
+/* ─── Categorías que van al Bar KDS (excluidas de Cocina) ─── */
 var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
 function _esBarCat(cat){
   var c = (cat||'').trim().toUpperCase();
@@ -656,9 +649,8 @@ function renderBoard(){
   // Filtrar órdenes que contengan al menos un producto que no sea bebida
   entries = entries.filter(function(e) {
     var items = e[1].items || [];
-    // Debe tener al menos un producto de cocina (no bebida)
     return items.some(function(it) {
-      return !_esBarCat(it.cat);
+      return !it.eliminado && !_esBarCat(it.cat);
     });
   });
 
@@ -676,12 +668,13 @@ function renderBoard(){
     var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
     var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
     var fireTag=o.fire?'<span class="fire-badge"><i class="fa-solid fa-fire"></i> FIRE</span>':'';
+    var pagadoBadge=o.estado==='pagado'?'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px">PAGADO</span>':'';
     // Override card border if fire active
     var cardStyle=o.fire?'border:2px solid #ff4500;box-shadow:0 0 16px rgba(255,69,0,.4)':'';
     var estCocina = o.estado_cocina || 'pendiente';
     return `<div class="ord-card state-${estCocina}" style="${cardStyle}">
       <div class="card-head ${tc}">
-        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}${fireTag}</div>
+        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}${fireTag}${pagadoBadge}</div>
         <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
       </div>
       <div class="card-info">

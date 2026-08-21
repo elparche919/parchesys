@@ -229,15 +229,18 @@ function iniciar(){
       if(v) {
         var estBar = v.estado_bar || 'pendiente';
         var tieneBebidasValidas = (v.items || []).some(function(i) { return !i.eliminado && _esBarCat(i.cat); });
-        if(estBar!=='entregado' && v.estado!=='anulada' && v.estado!=='pagado' && tieneBebidasValidas) _orders[c.key]=v;
+        if(estBar!=='entregado' && v.estado!=='anulada' && tieneBebidasValidas) _orders[c.key]=v;
       }
     });
     var newCount=Object.keys(_orders).length;
 
     if(!firstLoad){
       if(newCount>prevCount){
-        playNewOrderSound();
-        toast('🍹 ¡Nueva comanda de bebidas!','ok');
+        var hayNuevasPendientes = Object.values(_orders).some(function(o){ return !prev[o.orden||''] && o.estado !== 'pagado'; });
+        if(hayNuevasPendientes){
+          playNewOrderSound();
+          toast('🍹 ¡Nueva comanda de bebidas!','ok');
+        }
       } else {
         // Detectar si se agregaron bebidas nuevas a órdenes existentes
         var modified = false;
@@ -304,10 +307,11 @@ function renderBoard(){
     var mins=Math.floor(diff/60000);
     var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
     var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
+    var pagadoBadge=o.estado==='pagado'?'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px">PAGADO</span>':'';
     var estBar = o.estado_bar || 'pendiente';
     return `<div class="ord-card state-${estBar}">
       <div class="card-head ${tc}">
-        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}</div>
+        <div class="ord-id" style="display:flex;align-items:center;gap:6px">#${o.orden||id.substring(0,6)}${webTag}${pagadoBadge}</div>
         <div class="ord-timer">${mins}:${String(Math.floor((diff%60000)/1000)).padStart(2,'0')}</div>
       </div>
       <div class="card-info">
