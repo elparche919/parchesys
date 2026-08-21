@@ -4720,7 +4720,7 @@ function abrirCheckout(){
     }
   }
 
-  _totalBase = pedido.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
+  _totalBase = pedido.reduce(function(a,i){ if(i.eliminado) return a; return a+i.cant*i.precio; }, 0);
   document.getElementById('ck-total-display').textContent = '$'+_totalBase.toFixed(2);
   document.getElementById('ck-orden-lbl').textContent = ORDEN;
   document.getElementById('ck-cash-input').value = '';
@@ -5719,7 +5719,7 @@ function _actualizarBadgeOffline() {
 function acumularOrdenOffline() {
   if(!pedido.length) { toast('Agrega al menos un platillo','err'); return; }
 
-  var sub = pedido.reduce(function(a,i){ return a+i.cant*i.precio; }, 0);
+  var sub = pedido.reduce(function(a,i){ if(i.eliminado) return a; return a+i.cant*i.precio; }, 0);
   var descMonto = _descuentoAplicado || 0;
   var total = Math.max(0, sub - descMonto);
   var mesa_num = MESA_SEL || null;
@@ -6197,7 +6197,7 @@ async function generarPDF() {
   doc.text('Fecha: ' + new Date().toLocaleDateString(), 110, startContentY + 11);
   doc.text('Canal: ' + CANAL.toUpperCase(), 110, startContentY + 16);
   
-  const tableData = pedido.map((it, idx) => [
+  const tableData = pedido.filter(it => !it.eliminado).map((it, idx) => [
     idx + 1,
     it.desc + (it.nota ? '\n  Nota: ' + it.nota : ''),
     it.cant,
@@ -6216,7 +6216,7 @@ async function generarPDF() {
   });
 
   const finalY = doc.lastAutoTable.finalY + 15;
-  const sub = pedido.reduce((s, it) => s + (it.cant * it.precio), 0);
+  const sub = pedido.reduce((s, it) => it.eliminado ? s : s + (it.cant * it.precio), 0);
   const tip = parseFloat(document.getElementById('ck-tip-input')?.value || 0);
   const total = sub + tip;
 
@@ -6251,8 +6251,8 @@ async function generarPDF() {
 
 function enviarWhatsApp(){
   var tel = (document.getElementById('ll-tel')||document.getElementById('dom-tel')||{value:''}).value||'503';
-  var items = pedido.map(function(i){ return i.cant+'x '+i.desc+' $'+(i.cant*i.precio).toFixed(2); }).join('%0A');
-  var msg = encodeURIComponent('🍽️ ORDEN '+ORDEN+'\n'+pedido.map(function(i){ return i.cant+'x '+i.desc+' $'+(i.cant*i.precio).toFixed(2); }).join('\n')+'\\n----\\nTOTAL: $'+_totalBase.toFixed(2)+'\\nPARCHE SYS · '+(_biz.nombre||''));
+  var items = pedido.filter(function(i){ return !i.eliminado; }).map(function(i){ return i.cant+'x '+i.desc+' $'+(i.cant*i.precio).toFixed(2); }).join('%0A');
+  var msg = encodeURIComponent('🍽️ ORDEN '+ORDEN+'\n'+pedido.filter(function(i){ return !i.eliminado; }).map(function(i){ return i.cant+'x '+i.desc+' $'+(i.cant*i.precio).toFixed(2); }).join('\n')+'\n----\nTOTAL: $'+_totalBase.toFixed(2)+'\nPARCHE SYS · '+(_biz.nombre||''));
   window.open('https://wa.me/'+tel+'?text='+msg,'_blank');
 }
 
@@ -6634,6 +6634,7 @@ function renderSplit(){
   // Expandir pedido por cantidad (un chip por unidad)
   var sourceItems = [];
   pedido.forEach(function(it, idx){
+    if (it.eliminado) return;
     var cant = it.cant || 1;
     for(var q=0; q<cant; q++){
       var key = 'item_'+idx+'_'+q;
@@ -6773,7 +6774,7 @@ function bindDropZone(el, type, ticketIdx){
 
 function cobrarTicketsSplit(){
   var totalAsignado = _splitTickets.flatMap(t=>t.items).length;
-  var totalItems = pedido.reduce(function(s,i){ return s+(i.cant||1); },0);
+  var totalItems = pedido.reduce(function(s,i){ if(i.eliminado) return s; return s+(i.cant||1); },0);
 
   if(totalAsignado < totalItems){
     if(!confirm('Hay '+(totalItems - totalAsignado)+' productos sin asignar. ¿Continuar de todas formas?')) return;
