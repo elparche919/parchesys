@@ -525,13 +525,16 @@ function iniciar(){
         toast('🔔 ¡Nuevo pedido!','ok');
       } else {
         // Detectar modificaciones en órdenes existentes
-        var modified=false;
+        var modifiedFood=false;
         Object.entries(_orders).forEach(([id,o])=>{
           var p=prev[id];
           if(p){
-            var prevItems=(p.items||[]).length;
-            var curItems=(o.items||[]).length;
-            if(curItems>prevItems){ modified=true; }
+            // Contar alimentos y bebidas no eliminados
+            var prevFood = (p.items||[]).filter(i=>!i.eliminado && !_esBarCat(i.cat)).length;
+            var curFood = (o.items||[]).filter(i=>!i.eliminado && !_esBarCat(i.cat)).length;
+            var prevDrinks = (p.items||[]).filter(i=>!i.eliminado && _esBarCat(i.cat)).length;
+            var curDrinks = (o.items||[]).filter(i=>!i.eliminado && _esBarCat(i.cat)).length;
+            if(curFood>prevFood){ modifiedFood=true; }
             // Detectar FIRE recién activado
             if(o.fire && !p.fire){
               beepFire();
@@ -539,11 +542,15 @@ function iniciar(){
             }
           }
         });
-        if(modified){ beepCambio(); toast('✏️ Orden modificada — nuevo producto agregado','ok'); }
-      }
-    }
-    firstLoad=false;
-    renderBoard(); updateStats();
+        if(modifiedFood){
+          beepCambio();
+          toast('✏️ Orden modificada — nuevo producto agregado','ok');
+          renderBoard();
+        } else {
+          // Solo bebidas modificadas: no re‑renderizar la tabla de cocina, pero sí actualizar contadores
+          updateStats();
+        }
+        firstLoad=false;
   });
 
   // ── ORDENES WEB ENTRANTES ──
