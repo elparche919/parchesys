@@ -375,7 +375,8 @@ if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
 
 // NegocioID fijo para este despliegue
 var params   = new URLSearchParams(window.location.search);
-var negocioID = params.get('negocio') || 'negocio_food_sv_demo';
+var negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+if (!negocioID || negocioID === '') negocioID = 'elparche';
 </script>
 <script>
 var _orders      = {};
@@ -625,6 +626,17 @@ function tomarOrdenWeb(id){
   updates['negocios/'+negocioID+'/pedidos/'+id+'/tomada_por'] = mesero;
 
   db.ref().update(updates).then(()=>{
+    renderWebInbox();
+    updateStats();
+  });
+}
+
+function ignorarOrdenWeb(id){
+  if(!confirm('¿Descartar esta orden web?')) return;
+  db.ref('negocios/'+negocioID+'/ordenes_web/'+id+'/tomada_por').set('IGNORADA').then(()=>{
+    renderWebInbox();
+    updateStats();
+  });
 }
 
 /* ─── Categorías que van al Bar KDS (excluidas de Cocina) ─── */

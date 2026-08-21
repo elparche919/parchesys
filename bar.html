@@ -158,7 +158,8 @@ if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
 /* Firebase centralizado en firebase-config.js */
 
 var params = new URLSearchParams(window.location.search);
-var negocioID = params.get('negocio') || 'negocio_food_sv_demo';
+var negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+if (!negocioID || negocioID === '') negocioID = 'elparche';
 </script>
 <script>
 var _orders      = {};
