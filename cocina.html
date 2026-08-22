@@ -369,7 +369,14 @@ body.tv-mode-active .board {
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
+/* Firebase centralizado en firebase-config.js */
+if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
+/* Firebase centralizado en firebase-config.js */
 
+// NegocioID fijo para este despliegue
+var params   = new URLSearchParams(window.location.search);
+var negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+if (!negocioID || negocioID === '') negocioID = 'elparche';
 </script>
 <script>
 var _orders      = {};
@@ -473,9 +480,7 @@ function activarSonido(){
 
 /* ─── INICIAR ─── */
 function iniciar(){
-  // Ensure Firebase connection is active
-  if (db && typeof db.goOnline === 'function') { db.goOnline(); }
-  // Detect if runs in Electron KDS
+  // Detectar si corre en Electron KDS
   var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
   if (isElectron) {
     document.body.classList.add('tv-mode-active');
@@ -487,30 +492,16 @@ function iniciar(){
     document.getElementById('tb-neg-name').textContent = (s.val()||{}).nombre||'PARCHE SYS';
   });
 
-  // Firebase connection status listener with debug logging
-  db.ref('.info/connected').on('value', snap => {
-    console.log('Firebase .info/connected value:', snap.val());
-    var el = document.getElementById('conn-status');
-    if (snap.val()) {
-      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
-      el.style.color = 'var(--green)';
+  db.ref('.info/connected').on('value',snap=>{
+    var el=document.getElementById('conn-status');
+    if(snap.val()){
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
+      el.style.color='var(--green)';
     } else {
-      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
-      el.style.color = 'var(--red)';
+      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
+      el.style.color='var(--red)';
     }
   });
-    // Escucha cambios de conectividad del navegador
-    window.addEventListener('online', () => {
-      const el = document.getElementById('conn-status');
-      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
-      el.style.color = 'var(--green)';
-    });
-    window.addEventListener('offline', () => {
-      const el = document.getElementById('conn-status');
-      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
-      el.style.color = 'var(--red)';
-    });
-
 
   // ── COCINA ORDERS (KDS normal) ──
   var firstLoad=true;
@@ -534,16 +525,13 @@ function iniciar(){
         toast('🔔 ¡Nuevo pedido!','ok');
       } else {
         // Detectar modificaciones en órdenes existentes
-        var modifiedFood=false;
+        var modified=false;
         Object.entries(_orders).forEach(([id,o])=>{
           var p=prev[id];
           if(p){
-            // Contar alimentos y bebidas no eliminados
-            var prevFood = (p.items||[]).filter(i=>!i.eliminado && !_esBarCat(i.cat)).length;
-            var curFood = (o.items||[]).filter(i=>!i.eliminado && !_esBarCat(i.cat)).length;
-            var prevDrinks = (p.items||[]).filter(i=>!i.eliminado && _esBarCat(i.cat)).length;
-            var curDrinks = (o.items||[]).filter(i=>!i.eliminado && _esBarCat(i.cat)).length;
-            if(curFood>prevFood){ modifiedFood=true; }
+            var prevItems=(p.items||[]).length;
+            var curItems=(o.items||[]).length;
+            if(curItems>prevItems){ modified=true; }
             // Detectar FIRE recién activado
             if(o.fire && !p.fire){
               beepFire();
@@ -551,16 +539,11 @@ function iniciar(){
             }
           }
         });
-        if(modifiedFood){
-          beepCambio();
-          toast('✏️ Orden modificada — nuevo producto agregado','ok');
-          renderBoard();
-        } else {
-          // Solo bebidas modificadas: no re‑renderizar la tabla de cocina, pero sí actualizar contadores
-          updateStats();
-        }
-        firstLoad=false;
+        if(modified){ beepCambio(); toast('✏️ Orden modificada — nuevo producto agregado','ok'); }
+      }
     }
+    firstLoad=false;
+    renderBoard(); updateStats();
   });
 
   // ── ORDENES WEB ENTRANTES ──
