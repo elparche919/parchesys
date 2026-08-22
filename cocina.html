@@ -369,12 +369,7 @@ body.tv-mode-active .board {
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-  // NegocioID fijo para este despliegue
-  const params = new URLSearchParams(window.location.search);
-  let negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
-  if (!negocioID) negocioID = 'elparche';
-  // Guardar en localStorage para futuras sesiones
-  localStorage.setItem('food_negocioID', negocioID);
+
 </script>
 <script>
 var _orders      = {};
@@ -504,6 +499,18 @@ function iniciar(){
       el.style.color = 'var(--red)';
     }
   });
+    // Escucha cambios de conectividad del navegador
+    window.addEventListener('online', () => {
+      const el = document.getElementById('conn-status');
+      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
+      el.style.color = 'var(--green)';
+    });
+    window.addEventListener('offline', () => {
+      const el = document.getElementById('conn-status');
+      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
+      el.style.color = 'var(--red)';
+    });
+
 
   // ── COCINA ORDERS (KDS normal) ──
   var firstLoad=true;
