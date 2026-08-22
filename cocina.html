@@ -369,14 +369,12 @@ body.tv-mode-active .board {
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script>
-/* Firebase centralizado en firebase-config.js */
-if (!firebase.apps.length) /* Firebase centralizado en firebase-config.js */
-/* Firebase centralizado en firebase-config.js */
-
-// NegocioID fijo para este despliegue
-var params   = new URLSearchParams(window.location.search);
-var negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
-if (!negocioID || negocioID === '') negocioID = 'elparche';
+  // NegocioID fijo para este despliegue
+  const params = new URLSearchParams(window.location.search);
+  let negocioID = params.get('negocio') || localStorage.getItem('food_negocioID') || 'elparche';
+  if (!negocioID) negocioID = 'elparche';
+  // Guardar en localStorage para futuras sesiones
+  localStorage.setItem('food_negocioID', negocioID);
 </script>
 <script>
 var _orders      = {};
@@ -480,7 +478,9 @@ function activarSonido(){
 
 /* ─── INICIAR ─── */
 function iniciar(){
-  // Detectar si corre en Electron KDS
+  // Ensure Firebase connection is active
+  if (db && typeof db.goOnline === 'function') { db.goOnline(); }
+  // Detect if runs in Electron KDS
   var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
   if (isElectron) {
     document.body.classList.add('tv-mode-active');
@@ -492,14 +492,16 @@ function iniciar(){
     document.getElementById('tb-neg-name').textContent = (s.val()||{}).nombre||'PARCHE SYS';
   });
 
-  db.ref('.info/connected').on('value',snap=>{
-    var el=document.getElementById('conn-status');
-    if(snap.val()){
-      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
-      el.style.color='var(--green)';
+  // Firebase connection status listener with debug logging
+  db.ref('.info/connected').on('value', snap => {
+    console.log('Firebase .info/connected value:', snap.val());
+    var el = document.getElementById('conn-status');
+    if (snap.val()) {
+      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--green)"></i> En línea (Real-time)';
+      el.style.color = 'var(--green)';
     } else {
-      el.innerHTML='<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
-      el.style.color='var(--red)';
+      el.innerHTML = '<i class="fa-solid fa-circle" style="font-size:6px;color:var(--red)"></i> Desconectado';
+      el.style.color = 'var(--red)';
     }
   });
 
