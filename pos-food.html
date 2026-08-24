@@ -3927,6 +3927,27 @@ function ejecutarSelMesa(n){
               document.getElementById('tb-clock').textContent = String(m2).padStart(2,'0')+':'+String(s).padStart(2,'0');
             },1000);
           }
+        } else if (pd && pd.estado === 'pagado') {
+          // AUTOCURACIÓN: una mesa nunca debe seguir enlazada a una venta ya pagada.
+          // Si quedó un pedido_activo_id residual por una carrera o corte de conexión,
+          // liberamos el vínculo y generamos una orden nueva sin tocar la venta histórica.
+          db.ref('negocios/'+negocioID+'/mesas/'+n).update({
+            estado: 'libre',
+            pedido_activo_id: null,
+            mesero: '',
+            personas: 1,
+            cliente_nombre: '',
+            timestamp: 0,
+            ultimo_pedido_cobrado: m.pedido_activo_id,
+            ultimo_cobro_ts: Date.now()
+          });
+          pedido = [];
+          _notaCocina = '';
+          _descuentoAplicado = 0;
+          _descDUI = '';
+          generarOrden(n, 'mesa');
+          renderCart();
+          toast('✅ Mesa conciliada — la cuenta anterior ya estaba pagada','ok');
         } else {
           // Si el pedido no tiene ítems o no existe aún en Firebase, recuperar borrador local
           var localUnsaved = [];
@@ -5398,15 +5419,20 @@ function procesarOrden(tipoAccion){
       estBarExistente = tieneBebidasPendientes ? 'pendiente' : 'entregado';
     }
 
-    var finalEstadoCocina = tieneComidaPendiente ? (estCocinaExistente === 'entregado' ? (tieneNuevoFood ? 'pendiente' : 'entregado') : estCocinaExistente) : 'entregado';
-    if (tipoAccion === 'guardar' && tieneNuevoFood) {
-      finalEstadoCocina = 'pendiente';
+    // El estado operativo se deriva de los ítems pendientes, no del estado de pago.
+    // CRÍTICO: si una tanda anterior ya fue entregada pero existe al menos un ítem nuevo
+    // sin preparar, la comanda debe REVIVIR incluso cuando la acción actual sea COBRAR.
+    function resolverEstadoAreaKds(hayPendientes, estadoExistente, hayNuevos) {
+      if (!hayPendientes) return 'entregado';
+      if (hayNuevos) return 'pendiente';
+      if (estadoExistente === 'en_prep') return 'en_prep';
+      // "listo" o "entregado" con ítems no listos significa que entró una nueva tanda.
+      if (estadoExistente === 'listo' || estadoExistente === 'entregado') return 'pendiente';
+      return 'pendiente';
     }
 
-    var finalEstadoBar = tieneBebidasPendientes ? (estBarExistente === 'entregado' ? (tieneNuevoBar ? 'pendiente' : 'entregado') : estBarExistente) : 'entregado';
-    if (tipoAccion === 'guardar' && tieneNuevoBar) {
-      finalEstadoBar = 'pendiente';
-    }
+    var finalEstadoCocina = resolverEstadoAreaKds(tieneComidaPendiente, estCocinaExistente, tieneNuevoFood);
+    var finalEstadoBar = resolverEstadoAreaKds(tieneBebidasPendientes, estBarExistente, tieneNuevoBar);
 
     var kdsTimestamp = ts;
     if (cocSnap && cocSnap.exists() && cocSnap.val().timestamp) {
@@ -5420,6 +5446,7 @@ function procesarOrden(tipoAccion){
       orden: ORDEN,
       items: cocinaPedido,
       estado: tipoAccion==='guardar' ? 'pendiente' : 'pagado',
+      estado_servicio: (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado') ? 'entregado' : 'en_proceso',
       estado_cocina: finalEstadoCocina,
       estado_bar: finalEstadoBar,
       tipo: CANAL,
@@ -5459,6 +5486,8 @@ function procesarOrden(tipoAccion){
       contingencia: false,
       nota_cocina: _notaCocina,
       estado: estado,
+      // Estado financiero/cuenta (estado) y estado operativo del servicio quedan separados.
+      estado_servicio: (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado') ? 'entregado' : 'en_proceso',
       estado_cocina: finalEstadoCocina,
       estado_bar: finalEstadoBar,
       fecha: new Date().toLocaleDateString('es-SV'),
@@ -5484,14 +5513,15 @@ function procesarOrden(tipoAccion){
         var ambosEntregados = (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado');
         if (ambosEntregados) {
           saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
-        } else if (existeEnCocina) {
-          // Si cocina o bar aún no han terminado de preparar / entregar, MANTENER en cocina_orders
-          // marcando estado = 'pagado' pero preservando sus estados individuales de preparación
-          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({
-            estado: 'pagado',
-            estado_cocina: finalEstadoCocina,
-            estado_bar: finalEstadoBar
-          }));
+        } else {
+          // Si hay trabajo operativo pendiente, la comanda debe existir aunque haya sido cobrada.
+          // Esto cubre también el caso en que una tanda anterior fue retirada del KDS y luego
+          // se agregaron nuevos ítems antes del cobro.
+          cocinaOrderUpdate.estado = 'pagado';
+          cocinaOrderUpdate.estado_servicio = 'en_proceso';
+          cocinaOrderUpdate.estado_cocina = finalEstadoCocina;
+          cocinaOrderUpdate.estado_bar = finalEstadoBar;
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
         }
       } else {
         // Al guardar / enviar comanda
@@ -5586,7 +5616,32 @@ function procesarOrden(tipoAccion){
       return;
     }
 
+    function asegurarMesaLiberadaTrasCobro() {
+      if (tipoAccion !== 'cobrar' || saveCanal !== 'mesa' || !saveMesa || _procesandoSplit) return Promise.resolve();
+      var mesaRef = db.ref('negocios/'+negocioID+'/mesas/'+saveMesa);
+      return mesaRef.once('value').then(function(ms){
+        var mv = ms.val() || {};
+        // Solo liberar si la mesa todavía apunta a ESTA orden; nunca pisar una orden nueva.
+        if (mv.pedido_activo_id === saveOrden || String(mv.pedido_activo_id || '') === String(saveOrden)) {
+          return mesaRef.update({
+            numero: saveMesa,
+            mesa_num: saveMesa,
+            mesero: '',
+            personas: 1,
+            cliente_nombre: '',
+            estado: 'libre',
+            pedido_activo_id: null,
+            timestamp: 0,
+            ultimo_pedido_cobrado: saveOrden,
+            ultimo_cobro_ts: Date.now()
+          });
+        }
+      });
+    }
+
     Promise.all(saves).then(function(){
+      return asegurarMesaLiberadaTrasCobro();
+    }).then(function(){
       if(btnCocina) {
           btnCocina.disabled = false;
           btnCocina.innerHTML = originalHtml;

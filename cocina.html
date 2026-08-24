@@ -803,31 +803,60 @@ function cambiarEstado(id,nestado){
       }
     });
 
-    if (barEntregado) {
+    // Finalización protegida contra carreras: si entra un ítem nuevo mientras Cocina
+    // despacha, una transacción vuelve a evaluar la comanda antes de retirarla del KDS.
+    var indicesDespachados = {};
+    (o.items || []).forEach(function(it, idx) {
+      if (!it.eliminado && !_esBarCat(it.cat)) indicesDespachados[idx] = true;
+    });
+
+    var kdsRef = db.ref('negocios/'+negocioID+'/cocina_orders/'+id);
+    kdsRef.transaction(function(cur) {
+      if (!cur) return cur;
+      cur.items = cur.items || [];
+      Object.keys(indicesDespachados).forEach(function(k) {
+        var idx = parseInt(k, 10);
+        if (cur.items[idx] && !cur.items[idx].eliminado && !_esBarCat(cur.items[idx].cat)) {
+          cur.items[idx].listo = true;
+        }
+      });
+      var cocinaPendiente = cur.items.some(function(it){ return !it.eliminado && !_esBarCat(it.cat) && !it.listo; });
+      var tieneBarActual = cur.items.some(function(it){ return !it.eliminado && _esBarCat(it.cat); });
+      cur.estado_cocina = cocinaPendiente ? 'pendiente' : 'entregado';
+      if (!tieneBarActual) cur.estado_bar = 'entregado';
+      cur.estado_servicio = (cur.estado_cocina === 'entregado' && cur.estado_bar === 'entregado') ? 'entregado' : 'en_proceso';
+      // Solo retirar del KDS si ambas áreas terminaron y no apareció trabajo nuevo.
+      return cur.estado_servicio === 'entregado' ? null : cur;
+    }, function(err) {
+      if (err) { toast('Error al despachar en Cocina: '+err.message,'err'); return; }
+
+      var pedRef = db.ref('negocios/'+negocioID+'/pedidos/'+id);
+      pedRef.transaction(function(cur) {
+        if (!cur) return cur;
+        cur.items = cur.items || [];
+        Object.keys(indicesDespachados).forEach(function(k) {
+          var idx = parseInt(k, 10);
+          if (cur.items[idx] && !cur.items[idx].eliminado && !_esBarCat(cur.items[idx].cat)) cur.items[idx].listo = true;
+        });
+        var cocinaPendiente = cur.items.some(function(it){ return !it.eliminado && !_esBarCat(it.cat) && !it.listo; });
+        var tieneBarActual = cur.items.some(function(it){ return !it.eliminado && _esBarCat(it.cat); });
+        cur.estado_cocina = cocinaPendiente ? 'pendiente' : 'entregado';
+        if (!tieneBarActual) cur.estado_bar = 'entregado';
+        cur.estado_servicio = (cur.estado_cocina === 'entregado' && cur.estado_bar === 'entregado') ? 'entregado' : 'en_proceso';
+        // Nunca convertir una venta PAGADA nuevamente en una orden meramente ENTREGADA.
+        if (cur.estado !== 'pagado') cur.estado = cur.estado_servicio === 'entregado' ? 'entregado' : 'en_curso';
+        return cur;
+      });
+
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
-        estado:'entregado',
+        estado_servicio:'cocina_despachada',
         estado_cocina:'entregado',
         hora_entrega:hora,
         fecha_entrega:fecha,
         ts_entrega:Date.now()
       }));
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
-      toast('Pedido entregado y limpiado de KDS','ok');
-    } else {
-      // Bar pendiente: archivar parte de cocina y actualizar estado_cocina a 'entregado'
-      updates['estado_cocina'] = 'entregado';
-      db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
-        estado:'cocina_entregada',
-        estado_cocina:'entregado',
-        hora_entrega:hora,
-        fecha_entrega:fecha,
-        ts_entrega:Date.now()
-      }));
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
-      toast('Parte de cocina entregada y limpiada. Esperando al KDS Bar.','ok');
-    }
+      toast(barEntregado ? 'Pedido despachado; KDS conciliado.' : 'Parte de cocina despachada. Esperando al Bar.','ok');
+    }, false);
   } else {
     // Update state for other transitions
     db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado_cocina:nestado});

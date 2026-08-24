@@ -420,23 +420,56 @@ function cambiarEstado(id,nestado){
       }
     });
 
-    if (cocinaEntregada) {
+    // Finalización protegida contra carreras: si entra una bebida nueva mientras Bar
+    // despacha, la transacción impide retirar una comanda todavía activa.
+    var indicesDespachados = {};
+    (o.items || []).forEach(function(it, idx) {
+      if (!it.eliminado && _esBarCat(it.cat)) indicesDespachados[idx] = true;
+    });
+
+    var kdsRef = db.ref('negocios/'+negocioID+'/cocina_orders/'+id);
+    kdsRef.transaction(function(cur) {
+      if (!cur) return cur;
+      cur.items = cur.items || [];
+      Object.keys(indicesDespachados).forEach(function(k) {
+        var idx = parseInt(k, 10);
+        if (cur.items[idx] && !cur.items[idx].eliminado && _esBarCat(cur.items[idx].cat)) cur.items[idx].listo = true;
+      });
+      var barPendiente = cur.items.some(function(it){ return !it.eliminado && _esBarCat(it.cat) && !it.listo; });
+      var tieneCocinaActual = cur.items.some(function(it){ return !it.eliminado && !_esBarCat(it.cat); });
+      cur.estado_bar = barPendiente ? 'pendiente' : 'entregado';
+      if (!tieneCocinaActual) cur.estado_cocina = 'entregado';
+      cur.estado_servicio = (cur.estado_cocina === 'entregado' && cur.estado_bar === 'entregado') ? 'entregado' : 'en_proceso';
+      return cur.estado_servicio === 'entregado' ? null : cur;
+    }, function(err) {
+      if (err) { toast('Error al despachar en Bar: '+err.message,'err'); return; }
+
+      var pedRef = db.ref('negocios/'+negocioID+'/pedidos/'+id);
+      pedRef.transaction(function(cur) {
+        if (!cur) return cur;
+        cur.items = cur.items || [];
+        Object.keys(indicesDespachados).forEach(function(k) {
+          var idx = parseInt(k, 10);
+          if (cur.items[idx] && !cur.items[idx].eliminado && _esBarCat(cur.items[idx].cat)) cur.items[idx].listo = true;
+        });
+        var barPendiente = cur.items.some(function(it){ return !it.eliminado && _esBarCat(it.cat) && !it.listo; });
+        var tieneCocinaActual = cur.items.some(function(it){ return !it.eliminado && !_esBarCat(it.cat); });
+        cur.estado_bar = barPendiente ? 'pendiente' : 'entregado';
+        if (!tieneCocinaActual) cur.estado_cocina = 'entregado';
+        cur.estado_servicio = (cur.estado_cocina === 'entregado' && cur.estado_bar === 'entregado') ? 'entregado' : 'en_proceso';
+        if (cur.estado !== 'pagado') cur.estado = cur.estado_servicio === 'entregado' ? 'entregado' : 'en_curso';
+        return cur;
+      });
+
       db.ref('negocios/'+negocioID+'/historial_kds').push(Object.assign({},o,{
-        estado:'entregado',
+        estado_servicio:'bar_despachado',
         estado_bar:'entregado',
         hora_entrega:hora,
         fecha_entrega:fecha,
         ts_entrega:Date.now()
       }));
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).remove();
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(Object.assign({estado:'entregado'}, updates));
-      toast('Bebidas entregadas y orden retirada de KDS','ok');
-    } else {
-      updates['estado_bar'] = 'entregado';
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update(updates);
-      db.ref('negocios/'+negocioID+'/pedidos/'+id).update(updates);
-      toast('Bebidas despachadas. Esperando al KDS Cocina.','ok');
-    }
+      toast(cocinaEntregada ? 'Bebidas despachadas; KDS conciliado.' : 'Bebidas despachadas. Esperando a Cocina.','ok');
+    }, false);
   } else {
     db.ref('negocios/'+negocioID+'/cocina_orders/'+id).update({estado_bar:nestado});
     if(nestado==='listo'){
