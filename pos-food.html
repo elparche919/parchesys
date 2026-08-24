@@ -5531,10 +5531,15 @@ function procesarOrden(tipoAccion){
           saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
         }
       } else {
-        // Al guardar / enviar comanda
-        var tieneItemsCocinaOBar = cocinaPedido.some(function(i) { return !i.eliminado; });
-        if (tieneItemsCocinaOBar || existeEnCocina || tieneNuevoFood || tieneNuevoBar) {
+        // Al guardar / enviar comanda: SOLO mantener/recrear el KDS si existe trabajo real pendiente.
+        // Una mesa puede seguir abierta después de haber sido servida; eso NO debe revivir la comanda.
+        var hayTrabajoKdsPendiente = tieneComidaPendiente || tieneBebidasPendientes;
+        if (hayTrabajoKdsPendiente) {
           saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
+        } else if (existeEnCocina) {
+          // Autocuración: si quedó una tarjeta residual pero todos los ítems ya están listos/entregados,
+          // retirarla del KDS en vez de volver a escribirla.
+          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
         }
       }
       if(tipoAccion==='cobrar'){
@@ -6401,63 +6406,77 @@ function dividirCuenta(){ abrirSplit(); }
 var _fireActivo = false;
 
 function activarFire(){
-  if(!ORDEN || !pedido.length){ 
-    toast('No se puede activar FIRE: La orden está vacía','err'); 
-    return; 
+  if(!ORDEN || !pedido.length){
+    toast('No se puede activar FIRE: La orden está vacía','err');
+    return;
   }
 
-  _fireActivo = !_fireActivo;
   var btn = document.getElementById('btn-fire');
   var mesaLabel = CANAL==='mesa' && MESA_SEL ? 'Mesa '+MESA_SEL : (CANAL==='llevar'?'Para Llevar':'Domicilio');
   var meseroNombre = _loggedMesero || 'Mesero';
 
+  // Desactivar FIRE sí es una operación simple sobre una comanda que ya existe.
   if(_fireActivo){
-    btn.classList.add('active');
-    btn.innerHTML = '<i class="fa-solid fa-fire"></i> 🔥 FIRE ACTIVO — Cocina Notificada';
-    
-    var fireData = {
-      fire: true,
-      fire_hora: new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}),
-      fire_mesero: meseroNombre,
-      fire_mesa: mesaLabel,
-      fire_orden: ORDEN
-    };
+    _fireActivo = false;
+    if(btn){
+      btn.classList.remove('active');
+      btn.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora';
+    }
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({ fire:false, fire_hora:null, fire_mesero:null, fire_mesa:null });
+    toast('FIRE desactivado','ok');
+    return;
+  }
 
-    // Verify if order exists in cocina_orders; if not, initialize it with current items/details
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).once('value', function(snap){
-      var exists = snap.exists();
-      if (!exists) {
-        fireData.items = pedido;
-        fireData.orden = ORDEN;
-        fireData.tipo = CANAL;
-        fireData.mesa_num = MESA_SEL;
-        fireData.cliente = CANAL==='mesa' ? 'Mesa '+MESA_SEL : '';
-        fireData.mesero = meseroNombre;
-        fireData.estado = 'pendiente';
-        fireData.timestamp = Date.now();
+  // IMPORTANTE: FIRE nunca debe crear/recrear una comanda.
+  // Solo puede marcar como urgente una comanda ACTIVA que ya exista en KDS y tenga platillos pendientes.
+  var refKds = db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN);
+  refKds.once('value').then(function(snap){
+    if(!snap.exists()){
+      toast('⚠️ FIRE no puede reactivar una orden ya servida. Si agregaste platillos nuevos, primero envíalos a Cocina.','err');
+      return;
+    }
 
-        // Also sync state to general pedidos
-        db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update({
-          orden: ORDEN, items: pedido, estado: 'en_curso', canal: CANAL, mesa_num: MESA_SEL,
-          cliente: CANAL==='mesa' ? 'Mesa '+MESA_SEL : '', mesero: meseroNombre, timestamp: Date.now()
-        });
+    var kds = snap.val() || {};
+    var barCats = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
+    function esBarFire(cat){
+      var c=(cat||'').trim().toUpperCase();
+      var parent=c.split(/[-/:]/)[0].trim();
+      return barCats.indexOf(c)!==-1 || barCats.indexOf(parent)!==-1 ||
+        c.indexOf('BEBIDA')!==-1 || c.indexOf('CERVEZA')!==-1 || c.indexOf('COCTEL')!==-1 || c.indexOf('LICOR')!==-1 ||
+        parent.indexOf('BEBIDA')!==-1 || parent.indexOf('CERVEZA')!==-1 || parent.indexOf('COCTEL')!==-1 || parent.indexOf('LICOR')!==-1;
+    }
 
-        if (CANAL === 'mesa' && MESA_SEL) {
-          db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-            mesa_num: MESA_SEL, mesero: meseroNombre, estado: 'ocupada', pedido_activo_id: ORDEN, timestamp: Date.now()
-          });
-        }
-      }
+    var pendientesCocina=(kds.items||[]).some(function(it){
+      return it && !it.eliminado && !esBarFire(it.cat) && !it.listo;
+    });
 
-      db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update(fireData);
+    if(!pendientesCocina || kds.estado_cocina==='entregado'){
+      toast('✅ Cocina ya despachó esta orden. FIRE no puede volver a abrirla.','err');
+      // Si por alguna razón quedó una tarjeta residual totalmente servida, limpiarla.
+      var hayPendientesArea=(kds.items||[]).some(function(it){ return it && !it.eliminado && !it.listo; });
+      if(!hayPendientesArea && kds.estado_bar==='entregado') refKds.remove();
+      return;
+    }
+
+    _fireActivo = true;
+    if(btn){
+      btn.classList.add('active');
+      btn.innerHTML = '<i class="fa-solid fa-fire"></i> 🔥 FIRE ACTIVO — Cocina Notificada';
+    }
+
+    return refKds.update({
+      fire:true,
+      fire_hora:new Date().toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'}),
+      fire_mesero:meseroNombre,
+      fire_mesa:mesaLabel,
+      fire_orden:ORDEN
+    }).then(function(){
       toast('🔥 FIRE enviado a cocina — '+mesaLabel+' ('+meseroNombre+')','ok');
     });
-  } else {
-    btn.classList.remove('active');
-    btn.innerHTML = '<i class="fa-solid fa-fire"></i> FIRE — Preparar Ahora';
-    db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).update({ fire: false, fire_hora: null, fire_mesero: null, fire_mesa: null });
-    toast('FIRE desactivado','ok');
-  }
+  }).catch(function(err){
+    console.error('FIRE:',err);
+    toast('No se pudo verificar la comanda antes de activar FIRE','err');
+  });
 }
 
 /* ═══════════════════════════════════════
