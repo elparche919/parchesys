@@ -942,6 +942,19 @@ function toast(m,t){
   clearTimeout(el._t); el._t=setTimeout(()=>{ el.style.transform='translateX(-50%) translateY(100px)'; el.style.opacity='0'; },3000);
 }
 
+
+function _fechaLocalISO(ts){
+  var d = ts ? new Date(Number(ts)) : new Date();
+  if(isNaN(d.getTime())) d = new Date();
+  var local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+function _estadoItemHist(it){
+  if(it.eliminado) return 'anulado';
+  if(it.listo) return 'servido';
+  return 'pendiente';
+}
+
 /* ─── HISTORIAL KDS ─── */
 function abrirHistorial(){
   document.getElementById('hist-overlay').classList.add('open');
@@ -959,44 +972,90 @@ function cargarHistorialKDS(){
   if(!fecha){ body.innerHTML='<div class="hist-empty">Selecciona una fecha</div>'; return; }
   body.innerHTML='<div class="hist-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
 
+  // ACTIVAS: salen del mismo objeto en memoria que alimenta la pantalla del KDS.
+  // Esto permite auditar una tarjeta "renacida" sin esperar a que sea despachada.
+  var activas = Object.entries(_orders).map(function(par){
+    return Object.assign({},par[1]||{},{_key:par[0]});
+  }).filter(function(o){
+    var fechaOrden=_fechaLocalISO(o.timestamp||o.actualizado_at||Date.now());
+    var tienePlatillo=(o.items||[]).some(function(it){ return !_esBarCat(it.cat); });
+    return fechaOrden===fecha && tienePlatillo;
+  }).sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+
   db.ref('negocios/'+negocioID+'/historial_kds').orderByChild('fecha_entrega').equalTo(fecha).once('value',function(snap){
-    var items=[];
+    var servidas=[];
     snap.forEach(function(c){
       var v=c.val()||{};
-      // Historial de Cocina: mostrar solo despachos de cocina. Para registros antiguos
-      // sin marcador de área, se conservan si contienen al menos un platillo.
       var esCocina = v.estado_servicio === 'cocina_despachada' || !v.estado_servicio;
       var tienePlatillo = (v.items||[]).some(function(it){ return !_esBarCat(it.cat); });
-      if(esCocina && tienePlatillo) items.push(Object.assign({},v,{_key:c.key}));
+      if(esCocina && tienePlatillo) servidas.push(Object.assign({},v,{_key:c.key}));
     });
-    items.reverse(); // más recientes primero
+    servidas.reverse();
 
-    if(!items.length){
-      body.innerHTML='<div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Sin órdenes entregadas el '+fecha+'</div>';
-      return;
+    var html='';
+
+    html+='<div style="font-size:10px;font-weight:900;letter-spacing:.12em;color:#fbbf24;padding:6px 4px 2px;text-transform:uppercase">'
+      +'⚡ ACTIVAS AHORA · '+activas.length+'</div>';
+
+    if(!activas.length){
+      html+='<div class="hist-empty" style="padding:18px 10px">No hay órdenes activas de Cocina para esta fecha.</div>';
+    } else {
+      html+=activas.map(function(o){
+        var estado=(o.estado_cocina||'pendiente').toUpperCase().replace('_',' ');
+        var itemsList=(o.items||[]).filter(function(it){ return !_esBarCat(it.cat); }).map(function(it){
+          var est=_estadoItemHist(it);
+          var hora=_horaEnvioItem(it);
+          if(est==='anulado'){
+            return '<span style="text-decoration:line-through;color:#9ca3af;opacity:.75">'+it.cant+'× '+it.desc+'</span>'
+              +'<span style="font-size:10px;color:#ef4444;font-weight:900;margin-left:6px">❌ ANULADO'+(it.eliminado_por?' por '+it.eliminado_por:'')+'</span>'
+              +(hora?'<span style="font-size:10px;color:#94a3b8;margin-left:6px">· enviado '+hora+'</span>':'');
+          }
+          var badge=est==='servido'
+            ? '<strong style="color:#4ade80">✓ SERVIDO</strong>'
+            : '<strong style="color:#fbbf24">● PENDIENTE</strong>';
+          return '<span>'+badge+' · '+it.cant+'× '+it.desc
+            +(hora?' <span style="font-size:10px;color:#94a3b8">· enviado '+hora+'</span>':'')+'</span>';
+        }).join('<br>');
+        var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+        return '<div class="hist-card" style="border-color:#f59e0b;background:rgba(245,158,11,.07)">'
+          +'<div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
+          +'<div style="font-size:9px;font-weight:900;color:#fbbf24;border:1px solid rgba(251,191,36,.45);padding:3px 7px;border-radius:12px">ACTIVA · '+estado+'</div></div>'
+          +'<div class="hist-card-info">'+tipoLabel+(o.tomada_por?' · '+o.tomada_por:'')+(o.fire?' 🔥 FIRE':'')+'</div>'
+          +'<div class="hist-card-items" style="line-height:1.9">'+itemsList+'</div>'
+          +(o.nota_cocina?'<div style="font-size:11px;color:#facc15;margin-top:4px">📝 '+o.nota_cocina+'</div>':'')
+          +'</div>';
+      }).join('');
     }
 
-    body.innerHTML=items.map(function(o){
-      var itemsList=(o.items||[]).filter(function(it){
-        return !_esBarCat(it.cat); // Cocina nunca muestra bebidas en historial
-      }).map(function(it){
-        if (it.eliminado) {
-          return '<span style="text-decoration:line-through;color:#9ca3af;opacity:0.7;">' + it.cant + '× ' + it.desc + '</span>'
-            + '<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px;">❌ ANULADO' + (it.eliminado_por ? ' por ' + it.eliminado_por : '') + '</span>';
-        }
-        return '<span><strong style="color:#38bdf8">✓ SERVIDO</strong> · ' + it.cant + '× ' + it.desc + '</span>';
-      }).join('<br>');
-      var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
-      return '<div class="hist-card">'
-        +'<div class="hist-card-head">'
-        +'<div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
-        +'<div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:'')+'</div>'
-        +'</div>'
-        +'<div class="hist-card-info">'+tipoLabel+(o.fire?' 🔥 FIRE':'')+'</div>'
-        +'<div class="hist-card-items" style="line-height:1.8;">'+itemsList+'</div>'
-        +(o.nota_cocina?'<div style="font-size:11px;color:#facc15;margin-top:4px">📝 '+o.nota_cocina+'</div>':'')
-        +'</div>';
-    }).join('');
+    html+='<div style="font-size:10px;font-weight:900;letter-spacing:.12em;color:#4ade80;padding:12px 4px 2px;text-transform:uppercase;border-top:1px solid var(--bd);margin-top:4px">'
+      +'✓ ELEMENTOS SERVIDOS · '+servidas.length+'</div>';
+
+    if(!servidas.length){
+      html+='<div class="hist-empty" style="padding:18px 10px">Sin órdenes de Cocina despachadas el '+fecha+'</div>';
+    } else {
+      html+=servidas.map(function(o){
+        var itemsList=(o.items||[]).filter(function(it){ return !_esBarCat(it.cat); }).map(function(it){
+          var hora=_horaEnvioItem(it);
+          if (it.eliminado) {
+            return '<span style="text-decoration:line-through;color:#9ca3af;opacity:0.7;">' + it.cant + '× ' + it.desc + '</span>'
+              + '<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px;">❌ ANULADO' + (it.eliminado_por ? ' por ' + it.eliminado_por : '') + '</span>'
+              +(hora?'<span style="font-size:10px;color:#94a3b8;margin-left:6px">· enviado '+hora+'</span>':'');
+          }
+          return '<span><strong style="color:#38bdf8">✓ SERVIDO</strong> · ' + it.cant + '× ' + it.desc
+            +(hora?' <span style="font-size:10px;color:#94a3b8">· enviado '+hora+'</span>':'')+'</span>';
+        }).join('<br>');
+        var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+        return '<div class="hist-card">'
+          +'<div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
+          +'<div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:'')+'</div></div>'
+          +'<div class="hist-card-info">'+tipoLabel+(o.fire?' 🔥 FIRE':'')+'</div>'
+          +'<div class="hist-card-items" style="line-height:1.8;">'+itemsList+'</div>'
+          +(o.nota_cocina?'<div style="font-size:11px;color:#facc15;margin-top:4px">📝 '+o.nota_cocina+'</div>':'')
+          +'</div>';
+      }).join('');
+    }
+
+    body.innerHTML=html;
   });
 }
 

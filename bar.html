@@ -542,6 +542,19 @@ function cambiarEstado(id,nestado){
 }
 
 
+
+function _fechaLocalISO(ts){
+  var d = ts ? new Date(Number(ts)) : new Date();
+  if(isNaN(d.getTime())) d = new Date();
+  var local = new Date(d.getTime() - d.getTimezoneOffset()*60000);
+  return local.toISOString().slice(0,10);
+}
+function _estadoItemHist(it){
+  if(it.eliminado) return 'anulado';
+  if(it.listo) return 'servido';
+  return 'pendiente';
+}
+
 /* ─── HISTORIAL KDS BAR ─── */
 function abrirHistorial(){
   document.getElementById('hist-overlay').classList.add('open');
@@ -555,31 +568,82 @@ function cargarHistorialKDS(){
   var body=document.getElementById('hist-body');
   if(!fecha){ body.innerHTML='<div class="hist-empty">Selecciona una fecha</div>'; return; }
   body.innerHTML='<div class="hist-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
+
+  var activas=Object.entries(_orders).map(function(par){
+    return Object.assign({},par[1]||{},{_key:par[0]});
+  }).filter(function(o){
+    var fechaOrden=_fechaLocalISO(o.timestamp||o.actualizado_at||Date.now());
+    var tieneBebida=(o.items||[]).some(function(it){ return _esBarCat(it.cat); });
+    return fechaOrden===fecha && tieneBebida;
+  }).sort(function(a,b){ return (b.timestamp||0)-(a.timestamp||0); });
+
   db.ref('negocios/'+negocioID+'/historial_kds').orderByChild('fecha_entrega').equalTo(fecha).once('value',function(snap){
-    var rows=[];
+    var servidas=[];
     snap.forEach(function(c){
       var v=c.val()||{};
-      // Historial de Bar: aceptar despachos nuevos marcados como bar_despachado
-      // y registros históricos anteriores al marcador de área, siempre que contengan bebidas.
-      var tieneBebida = (v.items||[]).some(function(it){ return _esBarCat(it.cat); });
-      var esBar = v.estado_servicio === 'bar_despachado'
-        || (!v.estado_servicio && tieneBebida)
-        || (v.estado_bar === 'entregado' && tieneBebida && v.estado_servicio !== 'cocina_despachada');
-      if(esBar && tieneBebida) rows.push(Object.assign({},v,{_key:c.key}));
+      var tieneBebida=(v.items||[]).some(function(it){ return _esBarCat(it.cat); });
+      var esBar=v.estado_servicio==='bar_despachado'
+        ||(!v.estado_servicio&&tieneBebida)
+        ||(v.estado_bar==='entregado'&&tieneBebida&&v.estado_servicio!=='cocina_despachada');
+      if(esBar&&tieneBebida) servidas.push(Object.assign({},v,{_key:c.key}));
     });
-    rows.reverse();
-    if(!rows.length){ body.innerHTML='<div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Sin bebidas servidas el '+fecha+'</div>'; return; }
-    body.innerHTML=rows.map(function(o){
-      var itemsList=(o.items||[]).filter(function(it){ return _esBarCat(it.cat); }).map(function(it){
-        if(it.eliminado){
-          return '<span style="text-decoration:line-through;color:#9ca3af;opacity:.7">'+it.cant+'× '+it.desc+'</span>'
-            +'<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px">❌ ANULADO'+(it.eliminado_por?' por '+it.eliminado_por:'')+'</span>';
-        }
-        return '<span><strong style="color:#06b6d4">✓ SERVIDO</strong> · '+it.cant+'× '+it.desc+'</span>';
-      }).join('<br>');
-      var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
-      return '<div class="hist-card"><div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div><div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:(o.mesero?' · '+o.mesero:''))+'</div></div><div class="hist-card-info">'+tipoLabel+'</div><div class="hist-card-items">'+itemsList+'</div></div>';
-    }).join('');
+    servidas.reverse();
+
+    var html='<div style="font-size:10px;font-weight:900;letter-spacing:.12em;color:#fbbf24;padding:6px 4px 2px;text-transform:uppercase">'
+      +'⚡ ACTIVAS AHORA · '+activas.length+'</div>';
+
+    if(!activas.length){
+      html+='<div class="hist-empty" style="padding:18px 10px">No hay órdenes activas de Bar para esta fecha.</div>';
+    } else {
+      html+=activas.map(function(o){
+        var estado=(o.estado_bar||'pendiente').toUpperCase().replace('_',' ');
+        var itemsList=(o.items||[]).filter(function(it){ return _esBarCat(it.cat); }).map(function(it){
+          var est=_estadoItemHist(it), hora=_horaEnvioItem(it);
+          if(est==='anulado'){
+            return '<span style="text-decoration:line-through;color:#9ca3af;opacity:.75">'+it.cant+'× '+it.desc+'</span>'
+              +'<span style="font-size:10px;color:#ef4444;font-weight:900;margin-left:6px">❌ ANULADO'+(it.eliminado_por?' por '+it.eliminado_por:'')+'</span>'
+              +(hora?'<span style="font-size:10px;color:#94a3b8;margin-left:6px">· enviado '+hora+'</span>':'');
+          }
+          var badge=est==='servido'
+            ? '<strong style="color:#60a5fa">✓ SERVIDO</strong>'
+            : '<strong style="color:#fbbf24">● PENDIENTE</strong>';
+          return '<span>'+badge+' · '+it.cant+'× '+it.desc
+            +(hora?' <span style="font-size:10px;color:#94a3b8">· enviado '+hora+'</span>':'')+'</span>';
+        }).join('<br>');
+        var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+        return '<div class="hist-card" style="border-color:#f59e0b;background:rgba(245,158,11,.07)">'
+          +'<div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
+          +'<div style="font-size:9px;font-weight:900;color:#fbbf24;border:1px solid rgba(251,191,36,.45);padding:3px 7px;border-radius:12px">ACTIVA · '+estado+'</div></div>'
+          +'<div class="hist-card-info">'+tipoLabel+(o.tomada_por?' · '+o.tomada_por:(o.mesero?' · '+o.mesero:''))+'</div>'
+          +'<div class="hist-card-items" style="line-height:1.9">'+itemsList+'</div></div>';
+      }).join('');
+    }
+
+    html+='<div style="font-size:10px;font-weight:900;letter-spacing:.12em;color:#60a5fa;padding:12px 4px 2px;text-transform:uppercase;border-top:1px solid var(--bd);margin-top:4px">'
+      +'✓ ELEMENTOS SERVIDOS · '+servidas.length+'</div>';
+
+    if(!servidas.length){
+      html+='<div class="hist-empty" style="padding:18px 10px">Sin bebidas servidas el '+fecha+'</div>';
+    } else {
+      html+=servidas.map(function(o){
+        var itemsList=(o.items||[]).filter(function(it){ return _esBarCat(it.cat); }).map(function(it){
+          var hora=_horaEnvioItem(it);
+          if(it.eliminado){
+            return '<span style="text-decoration:line-through;color:#9ca3af;opacity:.7">'+it.cant+'× '+it.desc+'</span>'
+              +'<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px">❌ ANULADO'+(it.eliminado_por?' por '+it.eliminado_por:'')+'</span>'
+              +(hora?'<span style="font-size:10px;color:#94a3b8;margin-left:6px">· enviado '+hora+'</span>':'');
+          }
+          return '<span><strong style="color:#06b6d4">✓ SERVIDO</strong> · '+it.cant+'× '+it.desc
+            +(hora?' <span style="font-size:10px;color:#94a3b8">· enviado '+hora+'</span>':'')+'</span>';
+        }).join('<br>');
+        var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+        return '<div class="hist-card"><div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div>'
+          +'<div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:(o.mesero?' · '+o.mesero:''))+'</div></div>'
+          +'<div class="hist-card-info">'+tipoLabel+'</div><div class="hist-card-items">'+itemsList+'</div></div>';
+      }).join('');
+    }
+
+    body.innerHTML=html;
   });
 }
 
