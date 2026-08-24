@@ -5351,9 +5351,39 @@ function procesarOrden(tipoAccion){
     }
 
     var pool = (cocinaItems || []).slice();
+    var _envioKdsAhora = Date.now();
+    var _envioKdsUsuario = mesero || localStorage.getItem('meseroId') || 'Desconocido';
+    var _envioKdsUsuarioId = _usuarioActivoId();
+    var _envioKdsOrigen = _isTablet ? 'tablet' : 'caja';
+
+    function _cantidadPreviaMismoItem(itemActual) {
+      var descActual = itemActual.desc || itemActual.nombre || '';
+      var idActual = itemActual.id || '';
+      var totalPrevio = 0;
+      (prevItems || []).forEach(function(pi) {
+        if (!pi || pi.eliminado) return;
+        var descPrev = pi.desc || pi.nombre || '';
+        var mismo = idActual && pi.id ? String(pi.id) === String(idActual) : descPrev === descActual;
+        if (mismo) totalPrevio += Number(pi.cant || 1);
+      });
+      return totalPrevio;
+    }
+
     var cocinaPedido = pedido.map(function(item, idx) {
       var copy = Object.assign({}, item);
       var iDesc = item.desc || item.nombre || '';
+      var _cantPrevia = _cantidadPreviaMismoItem(item);
+      var _esEnvioNuevo = tipoAccion === 'guardar' && (!item.enviado || Number(item.cant || 1) > _cantPrevia);
+
+      // Trazabilidad por línea de producto. Para líneas ya enviadas se conserva la hora anterior.
+      // Si se aumenta la cantidad de una línea existente, ultimo_envio_kds_at identifica la tanda más reciente.
+      if (_esEnvioNuevo) {
+        if (!copy.enviado_kds_at) copy.enviado_kds_at = _envioKdsAhora;
+        copy.ultimo_envio_kds_at = _envioKdsAhora;
+        copy.enviado_kds_por = _envioKdsUsuario;
+        copy.enviado_kds_por_id = _envioKdsUsuarioId;
+        copy.origen_envio_kds = _envioKdsOrigen;
+      }
 
       if (item.eliminado) {
         copy.listo = false;
@@ -5389,6 +5419,11 @@ function procesarOrden(tipoAccion){
       if (foundIdx !== -1) {
         if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
         if (pool[foundIdx].esNuevo !== undefined) copy.esNuevo = pool[foundIdx].esNuevo;
+        if (!copy.enviado_kds_at && pool[foundIdx].enviado_kds_at) copy.enviado_kds_at = pool[foundIdx].enviado_kds_at;
+        if (!copy.ultimo_envio_kds_at && pool[foundIdx].ultimo_envio_kds_at) copy.ultimo_envio_kds_at = pool[foundIdx].ultimo_envio_kds_at;
+        if (!copy.enviado_kds_por && pool[foundIdx].enviado_kds_por) copy.enviado_kds_por = pool[foundIdx].enviado_kds_por;
+        if (!copy.enviado_kds_por_id && pool[foundIdx].enviado_kds_por_id) copy.enviado_kds_por_id = pool[foundIdx].enviado_kds_por_id;
+        if (!copy.origen_envio_kds && pool[foundIdx].origen_envio_kds) copy.origen_envio_kds = pool[foundIdx].origen_envio_kds;
         pool[foundIdx] = null; // consumido
       } else {
         copy.listo = false;

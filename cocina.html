@@ -653,6 +653,22 @@ function _esBarCat(cat){
 }
 
 /* ─── BOARD KDS ─── */
+
+function _horaEnvioItem(it){
+  if(!it) return '';
+  var raw = it.ultimo_envio_kds_at || it.enviado_kds_at;
+  if(!raw) return '';
+  var d = new Date(Number(raw));
+  if(isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+}
+function _metaEnvioItem(it){
+  var h = _horaEnvioItem(it);
+  if(!h) return '';
+  var origen = it.origen_envio_kds === 'tablet' ? 'TABLET' : (it.origen_envio_kds === 'caja' ? 'CAJA' : '');
+  return '<div style="font-size:10px;color:#94a3b8;margin-top:2px;font-weight:700;letter-spacing:.02em"><i class="fa-regular fa-clock"></i> Enviado '+h+(origen?' · '+origen:'')+'</div>';
+}
+
 function renderBoard(){
   var board=document.getElementById('board');
   var entries=Object.entries(_orders).sort((a,b)=>(a[1].timestamp||0)-(b[1].timestamp||0));
@@ -706,6 +722,7 @@ function renderBoard(){
               + '<div class="item-cant" style="color:#ef4444;opacity:0.7;text-decoration:line-through;">' + it.cant + '</div>'
               + '<div class="item-text" style="flex:1;">'
               + '<div class="item-name" style="text-decoration:line-through;color:#9ca3af;opacity:0.85;">' + it.desc + '</div>'
+              + _metaEnvioItem(it)
               + '<div style="font-size:10px;font-weight:900;color:#ef4444;letter-spacing:0.05em;margin-top:2px;display:flex;align-items:center;gap:4px;">'
               + '<i class="fa-solid fa-ban" style="font-size:9px;"></i> ANULADO POR MESERO' + anuladoPor
               + '</div>'
@@ -719,7 +736,7 @@ function renderBoard(){
           var cantStyle = isOk ? 'opacity:0.4;' : 'color:#fff;font-weight:900;';
           var nameStyle = isOk ? 'cursor:pointer;text-decoration:line-through;opacity:0.45;color:#9ca3af;' : 'cursor:pointer;text-decoration:none;opacity:1;color:#fff;font-weight:700;';
           
-          return '<div class="item-line"><div class="item-cant" style="'+cantStyle+'">'+it.cant+'</div><div class="item-text"><div class="item-name" style="'+nameStyle+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+nuevoBadge+'</div></div></div>'
+          return '<div class="item-line"><div class="item-cant" style="'+cantStyle+'">'+it.cant+'</div><div class="item-text"><div class="item-name" style="'+nameStyle+'" onclick="toggleCheck(\''+id+'\','+idx+')">'+it.desc+nuevoBadge+'</div>'+_metaEnvioItem(it)+'</div></div>'
           +(it.nota?'<div class="item-note">-- '+it.nota+'</div>':'');
         }).join('')}
         ${o.nota_cocina?'<div style="background:#444;padding:6px;font-size:12px;color:#fff;margin-top:5px;text-transform:uppercase;">📝 '+o.nota_cocina+'</div>':''}
