@@ -5535,6 +5535,8 @@ function procesarOrden(tipoAccion){
       fecha: new Date().toLocaleDateString('es-SV'),
       fecha_iso: new Date(Date.now() - (new Date()).getTimezoneOffset() * 60000).toISOString().slice(0, -1),
       timestamp: ts,
+      // timestamp = hora original del pedido; cobrado_at = hora real del cobro.
+      cobrado_at: tipoAccion === 'cobrar' ? Date.now() : (orderSnap && orderSnap.exists() ? (orderSnap.val().cobrado_at || null) : null),
       caja_num: _cajaActual
     };
 
@@ -7554,8 +7556,14 @@ function filtrarHistorial(){
       var esAnulada=(est==='ANULADA'||est==='anulada');
       var servicio=v.estado_servicio || (est==='entregado' ? 'entregado' : 'en_proceso');
       var pagada=(est==='pagado');
-      var horaStr=v.hora||'';
-      if(!horaStr&&v.timestamp) horaStr=new Date(v.timestamp).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+      function _fmtHoraHist(valor){
+        if(!valor) return '';
+        var d=new Date(Number(valor));
+        if(isNaN(d.getTime())) return '';
+        return d.toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      }
+      var horaPedido=_fmtHoraHist(v.timestamp) || v.hora || 'Sin registro';
+      var horaCobro=_fmtHoraHist(v.cobrado_at||v.cobro_ts||v.timestamp_cobro||v.fecha_cobro_ts) || 'Sin registro';
       var cIcon=canalIcon[canal]||'\U0001f4cb';
       var canalTxt={mesa:'Mesa '+(v.mesa_num||'?'),llevar:'Para Llevar',domicilio:'Domicilio'}[canal]||(canal||'').toUpperCase();
       var total=parseFloat(v.total||0);
@@ -7600,6 +7608,8 @@ function filtrarHistorial(){
         +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:11px;color:var(--text-muted);">'
         +'<div><span style="opacity:.6">Mesero:</span> '+(v.mesero||v.cajero||v.tomada_por||'\u2014')+'</div>'
         +'<div><span style="opacity:.6">Canal:</span> '+cIcon+' '+canalTxt+'</div>'
+        +'<div><span style="opacity:.6">Hora pedido:</span> '+horaPedido+'</div>'
+        +'<div><span style="opacity:.6">Hora cobro:</span> '+horaCobro+'</div>'
         +(v.cliente?'<div><span style="opacity:.6">Cliente:</span> '+v.cliente+'</div>':'')
         +(v.nota_cocina?'<div style="grid-column:1/-1;color:#facc15"><span style="opacity:.6">\U0001f4dd Nota:</span> '+v.nota_cocina+'</div>':'')
         +'</div></div>';
@@ -7615,16 +7625,20 @@ function filtrarHistorial(){
       html+='<div class="hist-item'+(esAnulada?' anulada':'')+'" id="hitem-'+id+'" style="'+(esAnulada?'opacity:0.65':'')+'">'+
         '<div class="hist-item-head" onclick="toggleHistItem(\''+id+'\')">'
           +'<div style="flex:1;min-width:0">'
-            +'<div class="hist-ord">#'+(v.orden||id)+' '
-              +(esAnulada?'<span class="estado-badge est-anulada" style="vertical-align:middle">Anulada</span>':'')
-              +(!esAnulada && servicio==='entregado'?'<span class="estado-badge est-entregado" style="vertical-align:middle;margin-left:4px">✓ SERVIDO</span>':'')
-              +(!esAnulada && servicio!=='entregado'?'<span class="estado-badge est-cocina" style="vertical-align:middle;margin-left:4px">⏱ EN SERVICIO</span>':'')
-              +(pagada?'<span class="estado-badge est-pagado" style="vertical-align:middle;margin-left:4px">$ PAGADO</span>':'')
+            +(canal==='mesa'?'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px"><span style="font-size:19px;font-weight:950;color:#38bdf8">🍽️ MESA '+(v.mesa_num||'?')+'</span><span style="font-size:11px;font-weight:800;color:var(--text-sub)">#'+(v.orden||id)+'</span></div>'
+              :'<div class="hist-ord">#'+(v.orden||id)+'</div>')
+            +'<div class="hist-ord" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">'
+              +(esAnulada?'<span class="estado-badge est-anulada">Anulada</span>':'')
+              +(!esAnulada && servicio==='entregado'?'<span class="estado-badge est-entregado">✓ SERVIDO</span>':'')
+              +(!esAnulada && servicio!=='entregado'?'<span class="estado-badge est-cocina">⏱ EN SERVICIO</span>':'')
+              +(pagada?'<span class="estado-badge est-pagado">$ PAGADO</span>':'')
             +'</div>'
-            +'<div class="hist-time"><i class="fa-regular fa-clock" style="font-size:9px"></i>'
-              +horaStr
-              +(v.mesero||v.cajero?'<span style="opacity:.5">&middot;</span>'+(v.mesero||v.cajero):'')
-              +'<span style="opacity:.5">&middot;</span>'+cIcon+' '+canalTxt
+            +'<div class="hist-time" style="margin-top:5px;gap:7px;flex-wrap:wrap">'
+              +'<span><i class="fa-regular fa-clock"></i> <b style="color:#cbd5e1">Pedido:</b> '+horaPedido+'</span>'
+              +'<span style="opacity:.45">|</span>'
+              +'<span><i class="fa-solid fa-cash-register"></i> <b style="color:#cbd5e1">Cobro:</b> '+horaCobro+'</span>'
+              +(v.mesero||v.cajero?'<span style="opacity:.45">|</span><span>'+(v.mesero||v.cajero)+'</span>':'')
+              +(canal!=='mesa'?'<span style="opacity:.45">|</span><span>'+cIcon+' '+canalTxt+'</span>':'')
             +'</div>'
           +'</div>'
           +'<div style="text-align:right;flex-shrink:0">'
