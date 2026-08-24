@@ -531,6 +531,10 @@ body {
 .hist-time { font-size: 10px; color: var(--text-sub); margin-top: 2px; display: flex; align-items: center; gap: 5px; }
 .hist-total { font-size: 15px; font-weight: 900; color: var(--accent); white-space: nowrap; }
 .estado-badge { font-size: 9px; font-weight: 800; padding: 3px 8px; border-radius: 20px; white-space: nowrap; }
+.est-pagado { background:#16a34a; color:#fff; border:1px solid #4ade80; box-shadow:0 0 10px rgba(34,197,94,.28); }
+.est-entregado { background:#2563eb; color:#fff; border:1px solid #60a5fa; box-shadow:0 0 10px rgba(59,130,246,.28); }
+.est-cocina { background:#d97706; color:#fff; border:1px solid #fbbf24; box-shadow:0 0 10px rgba(245,158,11,.25); }
+.est-anulada { background:#b91c1c; color:#fff; border:1px solid #f87171; }
 .hist-chevron { font-size: 11px; color: var(--text-sub); transition: transform 0.2s; flex-shrink: 0; }
 .hist-item.expanded .hist-chevron { transform: rotate(180deg); }
 /* Ficha detalle expandida */
@@ -1521,7 +1525,7 @@ body {
         <span class="items-badge" id="items-count">0 items</span>
       </div>
       <div style="display:flex;gap:5px">
-        <button class="tbb" onclick="limpiarOrden()" title="Limpiar"><i class="fa-solid fa-trash"></i></button>
+        <button class="tbb" id="btn-liberar-mesa" onclick="solicitarLiberarMesa()" title="Liberar mesa (requiere autorización)"><i class="fa-solid fa-door-open"></i> <span class="liberar-mesa-label">Liberar mesa</span></button>
         <button class="tbb" onclick="abrirNota()" title="Nota de cocina"><i class="fa-solid fa-note-sticky"></i></button>
       </div>
     </div>
@@ -2489,6 +2493,8 @@ document.addEventListener('DOMContentLoaded', function(){
     document.body.classList.add('tablet-mode-active');
     
     // Ocultar botones superiores de forma permanente en la tablet
+    var btnLiberarMesa = document.getElementById('btn-liberar-mesa');
+    if (btnLiberarMesa) btnLiberarMesa.style.display = 'none';
     ['btn-caja-status', 'btn-mov-caja', 'btn-pax-config', 'link-cocina', 'link-menu', 'link-dte', 'link-portal'].forEach(function(id) {
       var el = document.getElementById(id);
       if (el) {
@@ -5453,6 +5459,7 @@ function procesarOrden(tipoAccion){
       mesa_num: mesa_num,
       cliente: cliente,
       mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
+      mesero_id: _usuarioActivoId(),
       nota_cocina: _notaCocina,
       timestamp: kdsTimestamp
     };
@@ -5461,7 +5468,7 @@ function procesarOrden(tipoAccion){
     var v = {
       orden: ORDEN, canal: CANAL,
       cliente: cliente, telefono: telefono,
-      mesa_num: mesa_num, mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido', personas: personas,
+      mesa_num: mesa_num, mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido', mesero_id: _usuarioActivoId(), personas: personas,
       direccion: direccion, repartidor_id: repartidor||null,
       items: cocinaPedido,
       subtotal: sub.toFixed(2),
@@ -5725,9 +5732,72 @@ function nuevaOrden(){
   renderCanalDetail();
 }
 
-function limpiarOrden(){
-  if(pedido.length && !confirm('¿Limpiar la orden actual?')) return;
-  pedido = []; renderCart();
+function _usuarioActivoId(){
+  try {
+    var ses = JSON.parse(localStorage.getItem('food_session_' + negocioID) || localStorage.getItem('food_session_elparche') || '{}');
+    if (ses.empKey) return String(ses.empKey);
+    var emp = JSON.parse(localStorage.getItem('modus_emp') || '{}');
+    return String(emp.empKey || emp.id || emp.codigo || emp.code || emp.id_empleado || '');
+  } catch(e) { return ''; }
+}
+
+function solicitarLiberarMesa(){
+  checkUserRoles();
+  if (_isTablet) { toast('⛔ Esta función no está disponible en tablet','err'); return; }
+  if (!_esAdmin && !_esCajero) { toast('⛔ Solo caja o administración puede liberar una mesa','err'); return; }
+  if (CANAL !== 'mesa' || !MESA_SEL) { toast('Selecciona una mesa primero','err'); return; }
+  var mesaActual = MESA_SEL, ordenActual = ORDEN;
+  Promise.all([
+    db.ref('negocios/'+negocioID+'/mesas/'+mesaActual).once('value'),
+    db.ref('negocios/'+negocioID+'/pedidos/'+ordenActual).once('value'),
+    db.ref('negocios/'+negocioID+'/cocina_orders/'+ordenActual).once('value')
+  ]).then(function(res){
+    var mesaVal=res[0].val()||{}, ordenMesa=mesaVal.pedido_activo_id||ordenActual;
+    if(String(ordenMesa)!==String(ordenActual)){
+      return Promise.all([
+        db.ref('negocios/'+negocioID+'/pedidos/'+ordenMesa).once('value'),
+        db.ref('negocios/'+negocioID+'/cocina_orders/'+ordenMesa).once('value')
+      ]).then(function(r2){ return {ordenId:ordenMesa,ped:r2[0],kds:r2[1]}; });
+    }
+    return {ordenId:ordenMesa,ped:res[1],kds:res[2]};
+  }).then(function(ctx){
+    if(!ctx) return;
+    if(ctx.ped.exists() || ctx.kds.exists()){
+      toast('⛔ No se puede liberar: la orden ya fue enviada a Cocina/Bar. Debe seguir el flujo normal.','err'); return;
+    }
+    _duiAccion='liberar_mesa'; _duiId=String(MESA_SEL);
+    document.getElementById('dui-tit').textContent='🔓 Autorizar liberación de mesa';
+    document.getElementById('dui-sub').textContent='Mesa '+MESA_SEL+' aún no ha sido enviada a Cocina/Bar. Ingresa el DUI de administrador o supervisor para liberarla.';
+    document.getElementById('dui-inp').value=''; document.getElementById('dui-err').style.display='none';
+    document.getElementById('m-dui').style.display='flex';
+  }).catch(function(err){ console.error('solicitarLiberarMesa:',err); toast('No se pudo verificar el estado de la mesa','err'); });
+}
+
+function ejecutarLiberarMesaAutorizada(mesaId, autorizador){
+  if(_isTablet){ toast('⛔ Acción bloqueada en tablet','err'); return; }
+  var mesaRef=db.ref('negocios/'+negocioID+'/mesas/'+mesaId);
+  mesaRef.once('value').then(function(ms){
+    var mv=ms.val()||{}, ordenId=mv.pedido_activo_id||ORDEN;
+    return Promise.all([
+      db.ref('negocios/'+negocioID+'/pedidos/'+ordenId).once('value'),
+      db.ref('negocios/'+negocioID+'/cocina_orders/'+ordenId).once('value')
+    ]).then(function(chk){
+      if(chk[0].exists()||chk[1].exists()) throw new Error('ORDEN_YA_ENVIADA');
+      var ts=Date.now();
+      var log={mesa_num:String(mesaId),orden:ordenId||'',timestamp:ts,fecha_iso:new Date(ts-(new Date()).getTimezoneOffset()*60000).toISOString().slice(0,-1),autorizado_por:autorizador.nombre||'Supervisor',autorizado_id:autorizador.id||'',ejecutado_por:_loggedMesero||'Caja',motivo:'Liberación antes de envío a KDS'};
+      return Promise.all([
+        mesaRef.update({estado:'libre',pedido_activo_id:null,mesero:'',personas:1,cliente_nombre:'',timestamp:0,ultima_liberacion_ts:ts,ultima_liberacion_por:autorizador.nombre||'Supervisor'}),
+        db.ref('negocios/'+negocioID+'/auditoria/liberaciones_mesa').push(log)
+      ]);
+    });
+  }).then(function(){
+    clearLocalUnsaved(mesaId);
+    if(String(MESA_SEL)===String(mesaId)){ pedido=[]; _notaCocina=''; _descuentoAplicado=0; _descDUI=''; MESA_SEL=null; generarOrden(); renderCart(); renderCanalDetail(); }
+    toast('✅ Mesa '+mesaId+' liberada con autorización','ok');
+  }).catch(function(err){
+    if(err&&err.message==='ORDEN_YA_ENVIADA') toast('⛔ La orden fue enviada mientras se autorizaba. Ya no puede liberarse.','err');
+    else { console.error('ejecutarLiberarMesaAutorizada:',err); toast('No se pudo liberar la mesa','err'); }
+  });
 }
 
 /* ═══════════════════════════════════════
@@ -7321,7 +7391,19 @@ function cargarHistorial(){
   if(body) body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:12px"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
   db.ref('negocios/'+negocioID+'/pedidos').orderByChild('timestamp').limitToLast(200).once('value', function(snap){
     _todasOrdenes = {};
-    snap.forEach(function(c){ _todasOrdenes[c.key] = c.val(); });
+    var usuarioIdActivo=_usuarioActivoId();
+    var usuarioNombreActivo=(_loggedMesero||'').trim().toLowerCase();
+    snap.forEach(function(c){
+      var ov=c.val()||{};
+      if(_isTablet){
+        var oid=String(ov.mesero_id||ov.usuario_id||ov.empleado_id||'');
+        var onombre=String(ov.mesero||ov.cajero||ov.tomada_por||'').trim().toLowerCase();
+        var coincideId=usuarioIdActivo&&oid&&String(usuarioIdActivo)===oid;
+        var coincideNombre=usuarioNombreActivo&&onombre===usuarioNombreActivo;
+        if(!coincideId&&!coincideNombre) return;
+      }
+      _todasOrdenes[c.key]=ov;
+    });
     var hoy = new Date(Date.now() - (new Date()).getTimezoneOffset()*60000).toISOString().slice(0,10);
     var dDesde = document.getElementById('hist-fecha-desde');
     var dHasta = document.getElementById('hist-fecha-hasta');
@@ -7373,7 +7455,7 @@ function filtrarHistorial(){
 
   if(statsEl){
     var tm = filtradas.reduce(function(s,e){ return s+parseFloat(e[1].total||0); },0);
-    statsEl.innerHTML = filtradas.length+' orden'+(filtradas.length!==1?'es':'')+' &nbsp;&middot;&nbsp; <strong style="color:var(--accent)">$'+tm.toFixed(2)+'</strong> en ventas';
+    statsEl.innerHTML = (_isTablet ? '<strong style="color:#60a5fa">MIS ÓRDENES</strong> &nbsp;&middot;&nbsp; ' : '') + filtradas.length+' orden'+(filtradas.length!==1?'es':'')+' &nbsp;&middot;&nbsp; <strong style="color:var(--accent)">$'+tm.toFixed(2)+'</strong> en ventas';
   }
 
   if(!filtradas.length){
@@ -7471,9 +7553,9 @@ function filtrarHistorial(){
       // ── Acciones ──
       var acH='<div class="hist-actions">'
         +'<button class="hist-action-btn reprint" onclick="reimprimirTicketHistorial(\''+id+'\');event.stopPropagation()"><i class="fa-solid fa-print"></i> Reimprimir Ticket</button>'
-        +(!esAnulada?'<button class="hist-action-btn" onclick="pedirDuiHistorial(\'editar\',\''+id+'\');event.stopPropagation()"><i class="fa-solid fa-pen-to-square"></i> Editar</button>':'')
-        +(!esAnulada?'<button class="hist-action-btn danger" onclick="confirmarAnularHistorial(\''+id+'\',\''+(v.orden||id)+'\');event.stopPropagation()"><i class="fa-solid fa-ban"></i> Anular</button>':'')
-        +'<button class="hist-action-btn danger" onclick="pedirDuiHistorial(\'eliminar\',\''+id+'\');event.stopPropagation()"><i class="fa-solid fa-trash-can"></i> Eliminar</button>'
+        +(!_isTablet && !esAnulada?'<button class="hist-action-btn" onclick="pedirDuiHistorial(\'editar\',\''+id+'\');event.stopPropagation()"><i class="fa-solid fa-pen-to-square"></i> Editar</button>':'')
+        +(!_isTablet && !esAnulada?'<button class="hist-action-btn danger" onclick="confirmarAnularHistorial(\''+id+'\',\''+(v.orden||id)+'\');event.stopPropagation()"><i class="fa-solid fa-ban"></i> Anular</button>':'')
+        +(!_isTablet?'<button class="hist-action-btn danger" onclick="pedirDuiHistorial(\'eliminar\',\''+id+'\');event.stopPropagation()"><i class="fa-solid fa-trash-can"></i> Eliminar</button>':'')
         +'</div>';
 
       html+='<div class="hist-item'+(esAnulada?' anulada':'')+'" id="hitem-'+id+'" style="'+(esAnulada?'opacity:0.65':'')+'">'+
@@ -7481,9 +7563,9 @@ function filtrarHistorial(){
           +'<div style="flex:1;min-width:0">'
             +'<div class="hist-ord">#'+(v.orden||id)+' '
               +(esAnulada?'<span class="estado-badge est-anulada" style="vertical-align:middle">Anulada</span>':'')
-              +(!esAnulada && servicio==='entregado'?'<span class="estado-badge est-entregado" style="vertical-align:middle">Entregado</span>':'')
-              +(!esAnulada && servicio!=='entregado'?'<span class="estado-badge est-cocina" style="vertical-align:middle">En servicio</span>':'')
-              +(pagada?'<span class="estado-badge est-pagado" style="vertical-align:middle;margin-left:4px">Pagado</span>':'')
+              +(!esAnulada && servicio==='entregado'?'<span class="estado-badge est-entregado" style="vertical-align:middle;margin-left:4px">✓ SERVIDO</span>':'')
+              +(!esAnulada && servicio!=='entregado'?'<span class="estado-badge est-cocina" style="vertical-align:middle;margin-left:4px">⏱ EN SERVICIO</span>':'')
+              +(pagada?'<span class="estado-badge est-pagado" style="vertical-align:middle;margin-left:4px">$ PAGADO</span>':'')
             +'</div>'
             +'<div class="hist-time"><i class="fa-regular fa-clock" style="font-size:9px"></i>'
               +horaStr
@@ -7658,7 +7740,15 @@ function confirmarDui(){
   var dui = document.getElementById('dui-inp').value.trim();
   if(!dui){ toast('Ingresa el DUI','err'); return; }
   db.ref('negocios/'+negocioID+'/empleados').orderByChild('dui').equalTo(dui).once('value', function(snap){
-    if(!snap.exists()){ document.getElementById('dui-err').style.display='block'; return; }
+    if(!snap.exists()){ document.getElementById('dui-err').textContent='⚠ DUI no encontrado en el sistema'; document.getElementById('dui-err').style.display='block'; return; }
+    var authEmp=null, authKey='';
+    snap.forEach(function(c){ if(!authEmp){ authEmp=c.val()||{}; authKey=c.key; } });
+    if(_duiAccion==='liberar_mesa'){
+      var rol=String(authEmp.puesto||authEmp.rol||'').toLowerCase();
+      var autorizado=rol.includes('admin')||rol.includes('gerente')||rol.includes('supervisor')||authEmp.admin===true;
+      if(!autorizado){ var er=document.getElementById('dui-err'); er.textContent='⛔ Este DUI no tiene autorización administrativa para liberar mesas'; er.style.display='block'; return; }
+      cerrarDui(); ejecutarLiberarMesaAutorizada(_duiId,{id:authKey,nombre:authEmp.nombre||'Supervisor'}); return;
+    }
     cerrarDui();
     if(_duiAccion==='editar') cargarOrdenParaEditar(_duiId);
     else if(_duiAccion==='eliminar') eliminarOrdenDefinitivo(_duiId);
