@@ -24,6 +24,8 @@ var db = firebase.database();
 // Esta instalación es exclusiva para El Parche.
 // El negocioID está fijo; no se necesita multi-tenant.
 var NEGOCIO_ID = "elparche";
+// PARCHE SYS: se ignorará cualquier tenant externo; esta instalación nunca debe escribir fuera de /negocios/elparche.
+try { var _qNeg = new URLSearchParams(window.location.search).get("negocio"); if (_qNeg && _qNeg !== NEGOCIO_ID) console.warn("PARCHE SYS: tenant externo ignorado:", _qNeg); } catch(e) {}
 
 // Compatibilidad con código existente que use la variable negocioID
 var negocioID = localStorage.getItem('food_negocioID') || NEGOCIO_ID;

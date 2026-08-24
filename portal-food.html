@@ -257,7 +257,7 @@
           </h2>
           <p style="color:var(--m-muted)">Pedidos recibidos por menú digital - pendientes de asignar a un mesero</p>
         </div>
-        <a href="cocina.html?negocio=negocio_food_sv_demo" style="padding:10px 18px;border-radius:8px;background:#7c3aed;color:white;font-weight:800;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+        <a href="cocina.html?negocio=elparche" style="padding:10px 18px;border-radius:8px;background:#7c3aed;color:white;font-weight:800;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;gap:6px">
           <i class="fa-solid fa-fire-burner"></i> Ver KDS Cocina
         </a>
       </div>
@@ -1584,7 +1584,7 @@
     }
     // --------------------------------
 // Si no hay negocioID por URL ni localStorage, usar el negocio demo
-    if (!negocioID) negocioID = 'negocio_food_sv_demo';
+    if (!negocioID) negocioID = (typeof NEGOCIO_ID !== 'undefined' ? NEGOCIO_ID : 'elparche');
     if(!negocioID) location.href = '../index.html';
 
     // Update Sidebar & Dashboard Links to maintain session persistence
@@ -2286,6 +2286,8 @@
           variantes: normalizedVars,
           extras: currentPlat.extras
        };
+       // Control interno de inventario: nunca perder marcadores al editar/mover categoría.
+       if (currentPlat._stockAplicado) d._stockAplicado = currentPlat._stockAplicado;
 
        let refId = currentPlat.id;
        if(!refId) {
@@ -2381,13 +2383,22 @@
       const qtyInput = document.getElementById('bdg-qty-' + rowKey);
       const qty = parseFloat(qtyInput.value || 0);
       if (!qty || qty <= 0) { alert('Ingresa una cantidad válida.'); return; }
-
-      const nuevoBodega = (parseFloat(p.stockBodega || 0)) + qty;
-      db.ref(`negocios/${negocioID}/productos/${cat}/${id}/stockBodega`).set(nuevoBodega).then(() => {
-        p.stockBodega = nuevoBodega;
-        qtyInput.value = '';
-        renderBodegaTabla();
-      }).catch(e => { alert('Error al ingresar a bodega: ' + e.message); });
+      const ref = db.ref(`negocios/${negocioID}/productos/${cat}/${id}`);
+      ref.transaction(prod => {
+        if(!prod) return;
+        prod.stockBodega = (parseFloat(prod.stockBodega || 0)) + qty;
+        return prod;
+      }).then(r => {
+        if(!r.committed) throw new Error('No se pudo actualizar el producto');
+        const nuevo = r.snapshot.val() || {};
+        Object.assign(p,nuevo);
+        const mk='mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        return db.ref(`negocios/${negocioID}/stock_movimientos/${mk}`).set({
+          tipo:'entrada_bodega', origen:'PORTAL_FOOD', producto_id:id, producto:p.nombre||id,
+          cantidad:qty, stock_bodega_nuevo:parseFloat(nuevo.stockBodega||0), motivo:'Ingreso manual a bodega', ts:Date.now(), fecha:new Date().toISOString()
+        }).catch(e => console.warn('Bitácora bodega no disponible:',e));
+      }).then(() => { qtyInput.value=''; renderBodegaTabla(); })
+        .catch(e => alert('Error al ingresar a bodega: '+e.message));
     }
 
     function trasladarABodega(rowKey) {
@@ -2395,32 +2406,38 @@
       if (!p) return;
       const qtyInput = document.getElementById('bdg-qty-' + rowKey);
       const qty = parseFloat(qtyInput.value || 0);
-      const stockBod = parseFloat(p.stockBodega || 0);
       if (!qty || qty <= 0) { alert('Ingresa una cantidad válida.'); return; }
-      if (qty > stockBod) { alert('No hay suficiente stock en bodega para trasladar.'); return; }
-
-      const updates = {};
-      const nuevoBodega = stockBod - qty;
-      updates[`negocios/${negocioID}/productos/${cat}/${id}/stockBodega`] = nuevoBodega;
-
-      if (p.variantes && p.variantes.length) {
-        const varSel = document.getElementById('bdg-var-' + rowKey);
-        const vIdx = varSel ? parseInt(varSel.value) : 0;
-        const variantesCopy = JSON.parse(JSON.stringify(p.variantes));
-        variantesCopy[vIdx].stock = (parseFloat(variantesCopy[vIdx].stock) || 0) + qty;
-        updates[`negocios/${negocioID}/productos/${cat}/${id}/variantes`] = variantesCopy;
-        p.variantes = variantesCopy;
-      } else {
-        const nuevoStockFijo = (parseFloat(p.stockFijo || 0)) + qty;
-        updates[`negocios/${negocioID}/productos/${cat}/${id}/stockFijo`] = nuevoStockFijo;
-        p.stockFijo = nuevoStockFijo;
-      }
-
-      db.ref().update(updates).then(() => {
-        p.stockBodega = nuevoBodega;
-        qtyInput.value = '';
-        renderBodegaTabla();
-      }).catch(e => { alert('Error al trasladar a venta: ' + e.message); });
+      const varSel = document.getElementById('bdg-var-' + rowKey);
+      const vIdx = (p.variantes && p.variantes.length) ? (varSel ? parseInt(varSel.value) : 0) : null;
+      let txInfo={};
+      db.ref(`negocios/${negocioID}/productos/${cat}/${id}`).transaction(prod => {
+        if(!prod) return;
+        const bod=parseFloat(prod.stockBodega||0);
+        if(bod < qty) return;
+        prod.stockBodega=bod-qty;
+        if(vIdx!==null){
+          if(!Array.isArray(prod.variantes)||!prod.variantes[vIdx]) return;
+          const before=parseFloat(prod.variantes[vIdx].stock||0);
+          prod.variantes[vIdx].stock=before+qty;
+          txInfo={bodegaAntes:bod,bodegaNuevo:bod-qty,ventaAntes:before,ventaNuevo:before+qty,variante:prod.variantes[vIdx].n||prod.variantes[vIdx].nombre||''};
+        } else {
+          const before=parseFloat(prod.stockFijo||0);
+          prod.stockFijo=before+qty;
+          txInfo={bodegaAntes:bod,bodegaNuevo:bod-qty,ventaAntes:before,ventaNuevo:before+qty,variante:''};
+        }
+        return prod;
+      }).then(r => {
+        if(!r.committed) throw new Error('No hay suficiente stock en bodega o el producto cambió.');
+        Object.assign(p,r.snapshot.val()||{});
+        const mk='mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+        return db.ref(`negocios/${negocioID}/stock_movimientos/${mk}`).set({
+          tipo:'traslado_bodega_venta', origen:'PORTAL_FOOD', producto_id:id, producto:p.nombre||id,
+          variante:txInfo.variante||'', cantidad:qty, stock_bodega_anterior:txInfo.bodegaAntes,
+          stock_bodega_nuevo:txInfo.bodegaNuevo, stock_venta_anterior:txInfo.ventaAntes, stock_venta_nuevo:txInfo.ventaNuevo,
+          motivo:'Traslado Bodega → Venta', ts:Date.now(), fecha:new Date().toISOString()
+        }).catch(e => console.warn('Bitácora traslado no disponible:',e));
+      }).then(() => { qtyInput.value=''; renderBodegaTabla(); })
+        .catch(e => alert('Error al trasladar a venta: '+e.message));
     }
 
     let _allProds = [];
