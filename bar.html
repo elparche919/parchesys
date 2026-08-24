@@ -542,7 +542,13 @@ function cargarHistorialKDS(){
     var rows=[];
     snap.forEach(function(c){
       var v=c.val()||{};
-      if(v.estado_servicio==='bar_despachado' && (v.items||[]).some(function(it){return _esBarCat(it.cat);})) rows.push(Object.assign({},v,{_key:c.key}));
+      // Historial de Bar: aceptar despachos nuevos marcados como bar_despachado
+      // y registros históricos anteriores al marcador de área, siempre que contengan bebidas.
+      var tieneBebida = (v.items||[]).some(function(it){ return _esBarCat(it.cat); });
+      var esBar = v.estado_servicio === 'bar_despachado'
+        || (!v.estado_servicio && tieneBebida)
+        || (v.estado_bar === 'entregado' && tieneBebida && v.estado_servicio !== 'cocina_despachada');
+      if(esBar && tieneBebida) rows.push(Object.assign({},v,{_key:c.key}));
     });
     rows.reverse();
     if(!rows.length){ body.innerHTML='<div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Sin bebidas servidas el '+fecha+'</div>'; return; }
