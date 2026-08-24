@@ -1887,7 +1887,7 @@ body {
           <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-pin-apertura', 'PIN de Apertura')" type="button"><i class="fa-solid fa-calculator"></i></button>
         </div>
       </div>
-      <div id="caja-apertura-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ PIN incorrecto o usuario no autorizado</div>
+      <div id="caja-apertura-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ Código incorrecto o usuario no autorizado</div>
       <button class="checkout-trigger" onclick="abrirCajaSesion()" style="padding:14px;">
         <i class="fa-solid fa-key"></i> INICIAR TURNO Y ABRIR CAJA
       </button>
@@ -1910,7 +1910,7 @@ body {
         <div id="caja-ajuste-inicial-box" style="display:none; flex-direction:column; gap:8px; margin-top:8px; padding-top:10px; border-top:1px dashed var(--border);">
           <input type="number" id="caja-ajuste-monto" class="fi" placeholder="Nuevo fondo inicial $" step="0.01" style="font-size:14px; font-weight:bold; text-align:center;">
           <input type="password" id="caja-ajuste-pin" class="fi" placeholder="PIN de autorización" maxlength="6" inputmode="numeric" style="font-size:14px; text-align:center; letter-spacing:3px;">
-          <div id="caja-ajuste-err" style="display:none; color:var(--danger); font-size:11px; font-weight:bold; text-align:center;">⚠ PIN incorrecto</div>
+          <div id="caja-ajuste-err" style="display:none; color:var(--danger); font-size:11px; font-weight:bold; text-align:center;">⚠ Código incorrecto</div>
           <div style="display:flex; gap:8px;">
             <button class="btn-sec" onclick="cerrarAjusteMontoInicial()" type="button" style="flex:1; padding:8px; font-size:11px;">Cancelar</button>
             <button class="btn-sec" onclick="guardarAjusteMontoInicial()" type="button" style="flex:1; padding:8px; font-size:11px; background:var(--accent); color:#000;">Guardar</button>
@@ -1968,13 +1968,13 @@ body {
           </div>
         </div>
         <div>
-          <label class="fl">PIN de Autorización Cajero</label>
+          <label class="fl">Código de Autorización Cajero</label>
           <div class="input-keypad-container">
             <input type="password" id="caja-pin-cierre" class="fi" placeholder="••••" maxlength="6" inputmode="numeric" style="font-size:16px; font-weight:bold; text-align:center; letter-spacing:4px;">
             <button class="keypad-trigger-btn" onclick="abrirNumKeypad('caja-pin-cierre', 'PIN de Cierre')" type="button"><i class="fa-solid fa-calculator"></i></button>
           </div>
         </div>
-        <div id="caja-cierre-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ PIN incorrecto o usuario no autorizado</div>
+        <div id="caja-cierre-err" style="display:none; color:var(--danger); font-size:12px; font-weight:bold; text-align:center;">⚠ Código incorrecto o usuario no autorizado</div>
         <button class="checkout-trigger" onclick="cerrarCajaSesion()" style="background:var(--danger); box-shadow:0 10px 25px rgba(239,68,68,0.25); padding:14px;">
           <i class="fa-solid fa-circle-xmark"></i> REALIZAR ARQUEO Y CERRAR CAJA
         </button>
@@ -2007,10 +2007,10 @@ body {
     <div class="modal-body" style="text-align:center">
       <div id="dui-sub" style="font-size:12px; color:var(--text-muted); margin-bottom:20px">Ingresa tu DUI para autorizar esta acción</div>
       <div class="input-keypad-container" style="margin-bottom:10px;">
-        <input type="text" class="fi" id="dui-inp" placeholder="00000000-0" style="text-align:center; font-size:20px; letter-spacing:2px">
-        <button class="keypad-trigger-btn" onclick="abrirNumKeypad('dui-inp', 'DUI de Autorización')" type="button"><i class="fa-solid fa-calculator"></i></button>
+        <input type="password" class="fi" id="dui-inp" placeholder="••••••" maxlength="10" inputmode="numeric" autocomplete="off" style="text-align:center; font-size:20px; letter-spacing:5px">
+        <button class="keypad-trigger-btn" onclick="abrirNumKeypad('dui-inp', 'Código de Autorización')" type="button"><i class="fa-solid fa-calculator"></i></button>
       </div>
-      <div id="dui-err" style="display:none; color:var(--danger); font-size:11px; font-weight:700; margin-top:10px">DUI no encontrado</div>
+      <div id="dui-err" style="display:none; color:var(--danger); font-size:11px; font-weight:700; margin-top:10px">Código incorrecto</div>
       <button class="checkout-trigger" id="dui-confirm-btn" onclick="confirmarDui()" style="margin-top:20px; padding:14px; font-size:14px">Validar Identidad</button>
     </div>
   </div>
@@ -2198,6 +2198,35 @@ body {
 </div>
 
 <script src="firebase-config.js"></script>
+<script>
+/* Respaldo de conexión PARCHE SYS: si firebase-config.js no carga, inicializa la BD correcta. */
+(function(){
+  try{
+    if(typeof firebase==='undefined') throw new Error('Firebase SDK no disponible');
+    if(typeof db==='undefined'){
+      var _FB_CFG_FALLBACK={
+        apiKey:"AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+        authDomain:"parche-sys-v2.firebaseapp.com",
+        databaseURL:"https://parche-sys-v2-default-rtdb.firebaseio.com",
+        projectId:"parche-sys-v2",
+        storageBucket:"parche-sys-v2.firebasestorage.app",
+        messagingSenderId:"367489065915",
+        appId:"1:367489065915:web:300a2bca022c6eb6a41a9e"
+      };
+      if(!firebase.apps.length) firebase.initializeApp(_FB_CFG_FALLBACK);
+      window.db=firebase.database();
+    }
+    window.NEGOCIO_ID='elparche';
+    window.negocioID='elparche';
+    localStorage.setItem('food_negocioID','elparche');
+    localStorage.setItem('modus_food_negocio','elparche');
+    localStorage.setItem('negocioID','elparche');
+    console.log('[PARCHE SYS] Firebase conectado:', firebase.app().options.projectId, 'negocio:', window.negocioID);
+  }catch(e){
+    console.error('[PARCHE SYS] Error inicializando Firebase:',e);
+  }
+})();
+</script>
 <script src="modus-return.js"></script>
 <script>
 /* ═══════════════════════════════════════
@@ -2697,7 +2726,7 @@ function guardarAjusteMontoInicial() {
     }
 
     if (!foundEmp) {
-      errDiv.textContent = '⚠ PIN incorrecto';
+      errDiv.textContent = '⚠ Código incorrecto';
       errDiv.style.display = 'block';
       return;
     }
@@ -2771,7 +2800,7 @@ function abrirCajaSesion() {
     }
     
     if (!foundEmp) {
-      errDiv.textContent = '⚠ PIN incorrecto';
+      errDiv.textContent = '⚠ Código incorrecto';
       errDiv.style.display = 'block';
       return;
     }
@@ -2888,7 +2917,7 @@ function cerrarCajaSesion() {
     }
     
     if (!foundEmp) {
-      errDiv.textContent = '⚠ PIN incorrecto';
+      errDiv.textContent = '⚠ Código incorrecto';
       errDiv.style.display = 'block';
       return;
     }
@@ -3940,6 +3969,9 @@ function ejecutarSelMesa(n){
           db.ref('negocios/'+negocioID+'/mesas/'+n).update({
             estado: 'libre',
             pedido_activo_id: null,
+            qr_bloqueada: null,
+            qr_estado: null,
+            qr_solicitud_id: null,
             mesero: '',
             personas: 1,
             cliente_nombre: '',
@@ -4746,7 +4778,7 @@ function abrirCheckout(){
     return;
   }
   if(!pedido.length){ toast('Agrega productos primero','err'); return; }
-  if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
+  if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); if(onError)onError(new Error('Mesa no seleccionada')); return; }
 
   // Verificar que el mesero puede cobrar esta mesa
   if(_isTablet && !_esAdmin && !_esCajero && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
@@ -5234,10 +5266,10 @@ function enviarAlertaStockBajo(productId, productName, currentStock) {
 /* ═══════════════════════════════════════
    PROCESAR ORDEN
 ═══════════════════════════════════════ */
-function procesarOrden(tipoAccion){
-  if(!pedido.length){ toast('Agrega al menos un platillo','err'); return; }
+function procesarOrden(tipoAccion, onComplete, onError){
+  if(!pedido.length){ toast('Agrega al menos un platillo','err'); if(onError)onError(new Error('Orden sin items')); return; }
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); return; }
-  if(!ORDEN || ORDEN.trim() === ''){ toast('Generando ID, por favor espera...','warn'); return; }
+  if(!ORDEN || ORDEN.trim() === ''){ toast('Generando ID, por favor espera...','warn'); if(onError)onError(new Error('Orden sin ID')); return; }
 
   var saveMesa = MESA_SEL;
   var saveCanal = CANAL;
@@ -5300,10 +5332,12 @@ function procesarOrden(tipoAccion){
     }).catch(function(stockErr){
       console.error('Inventario bloqueó la operación:', stockErr);
       toast('❌ '+stockErr.message, 'err');
+      if(onError)onError(stockErr);
     });
   }).catch(function(err){
     console.error('No se pudo leer el estado previo de la orden:', err);
     toast('❌ No se pudo verificar la orden/inventario. Intenta de nuevo.', 'err');
+    if(onError)onError(err);
   });
 
   function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap, prevItems){
@@ -5730,6 +5764,7 @@ function procesarOrden(tipoAccion){
     Promise.all(saves).then(function(){
       return asegurarMesaLiberadaTrasCobro();
     }).then(function(){
+      if(onComplete) onComplete({orden:saveOrden,mesa:saveMesa,items:pedido.slice()});
       if(btnCocina) {
           btnCocina.disabled = false;
           btnCocina.innerHTML = originalHtml;
@@ -5769,6 +5804,7 @@ function procesarOrden(tipoAccion){
       var btn = document.getElementById('btn-cobrar-final');
       if(btn){ btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-check-double"></i> CONFIRMAR Y COBRAR'; }
     }).catch(function(err){
+      if(onError)onError(err);
       console.error("Error al guardar pedido:", err);
       toast('❌ Error al guardar: ' + err.message, 'err');
       if(btnCocina) {
@@ -5848,7 +5884,7 @@ function solicitarLiberarMesa(){
     }
     _duiAccion='liberar_mesa'; _duiId=String(MESA_SEL);
     document.getElementById('dui-tit').textContent='🔓 Autorizar liberación de mesa';
-    document.getElementById('dui-sub').textContent='Mesa '+MESA_SEL+' aún no ha sido enviada a Cocina/Bar. Ingresa el DUI de administrador o supervisor para liberarla.';
+    document.getElementById('dui-sub').textContent='Mesa '+MESA_SEL+' aún no ha sido enviada a Cocina/Bar. Ingresa el código de autorización del propietario para liberarla.';
     document.getElementById('dui-inp').value=''; document.getElementById('dui-err').style.display='none';
     document.getElementById('m-dui').style.display='flex';
   }).catch(function(err){ console.error('solicitarLiberarMesa:',err); toast('No se pudo verificar el estado de la mesa','err'); });
@@ -5867,7 +5903,11 @@ function ejecutarLiberarMesaAutorizada(mesaId, autorizador){
       var ts=Date.now();
       var log={mesa_num:String(mesaId),orden:ordenId||'',timestamp:ts,fecha_iso:new Date(ts-(new Date()).getTimezoneOffset()*60000).toISOString().slice(0,-1),autorizado_por:autorizador.nombre||'Supervisor',autorizado_id:autorizador.id||'',ejecutado_por:_loggedMesero||'Caja',motivo:'Liberación antes de envío a KDS'};
       return Promise.all([
-        mesaRef.update({estado:'libre',pedido_activo_id:null,mesero:'',personas:1,cliente_nombre:'',timestamp:0,ultima_liberacion_ts:ts,ultima_liberacion_por:autorizador.nombre||'Supervisor'}),
+        mesaRef.update({
+          estado:'libre',pedido_activo_id:null,mesero:'',mesero_id:null,personas:1,cliente_nombre:'',timestamp:0,
+          qr_bloqueada:null,qr_estado:null,qr_solicitud_id:null,qr_bloqueada_at:null,
+          ultima_liberacion_ts:ts,ultima_liberacion_por:autorizador.nombre||'Supervisor'
+        }),
         db.ref('negocios/'+negocioID+'/auditoria/liberaciones_mesa').push(log)
       ]);
     });
@@ -7060,6 +7100,9 @@ function cobrarSiguienteTicketSplit(){
         personas:1,
         estado:'libre',
         pedido_activo_id:null,
+        qr_bloqueada:null,
+        qr_estado:null,
+        qr_solicitud_id:null,
         timestamp:Date.now()
       }).then(function(){
         toast('🎉 Todos los tickets cobrados. Mesa liberada.', 'ok');
@@ -7372,15 +7415,21 @@ function abrirNumKeypad(inputId, titleText) {
   if (!targetInput) return;
 
   document.getElementById('numkeypad-title').textContent = titleText || 'Teclado Numérico';
-  
+
   var display = document.getElementById('numkeypad-display');
   display.value = targetInput.value || '';
-  
-  var dashBtn = document.getElementById('btn-keypad-dash');
+
+  // En autorizaciones sensibles ocultar también el contenido del teclado táctil.
   if (inputId === 'dui-inp') {
-    dashBtn.disabled = false;
-    dashBtn.style.opacity = '1';
+    display.type = 'password';
+    display.maxLength = 10;
   } else {
+    display.type = 'text';
+    display.removeAttribute('maxlength');
+  }
+
+  var dashBtn = document.getElementById('btn-keypad-dash');
+  if (dashBtn) {
     dashBtn.disabled = true;
     dashBtn.style.opacity = '0.3';
   }
@@ -7844,21 +7893,61 @@ function pedirDuiHistorial(accion, id){
 }
 function cerrarDui(){ document.getElementById('m-dui').style.display='none'; }
 function confirmarDui(){
-  var dui = document.getElementById('dui-inp').value.trim();
-  if(!dui){ toast('Ingresa el DUI','err'); return; }
-  db.ref('negocios/'+negocioID+'/empleados').orderByChild('dui').equalTo(dui).once('value', function(snap){
-    if(!snap.exists()){ document.getElementById('dui-err').textContent='⚠ DUI no encontrado en el sistema'; document.getElementById('dui-err').style.display='block'; return; }
-    var authEmp=null, authKey='';
-    snap.forEach(function(c){ if(!authEmp){ authEmp=c.val()||{}; authKey=c.key; } });
-    if(_duiAccion==='liberar_mesa'){
-      var rol=String(authEmp.puesto||authEmp.rol||'').toLowerCase();
-      var autorizado=rol.includes('admin')||rol.includes('gerente')||rol.includes('supervisor')||authEmp.admin===true;
-      if(!autorizado){ var er=document.getElementById('dui-err'); er.textContent='⛔ Este DUI no tiene autorización administrativa para liberar mesas'; er.style.display='block'; return; }
-      cerrarDui(); ejecutarLiberarMesaAutorizada(_duiId,{id:authKey,nombre:authEmp.nombre||'Supervisor'}); return;
+  var clave=document.getElementById('dui-inp').value.trim();
+  var err=document.getElementById('dui-err');
+  if(!clave){toast('Ingresa el código de autorización','err');return;}
+
+  // LIBERAR MESA y ANULAR/ELIMINAR:
+  // la autorización se toma dinámicamente del campo `dui` del empleado PROPIETARIO.
+  // En esta instalación ese campo se usa deliberadamente como código privado,
+  // no como DUI legal real. Nunca se hardcodea la clave en el POS.
+  if(_duiAccion==='liberar_mesa' || _duiAccion==='eliminar'){
+    db.ref('negocios/'+negocioID+'/empleados').once('value',function(snap){
+      var autorizado=null;
+      snap.forEach(function(c){
+        var e=c.val()||{};
+        var rol=String(e.rol||'').toLowerCase().trim();
+        var puesto=String(e.puesto||'').toLowerCase().trim();
+        var esPropietario = rol==='propietario'
+          || puesto==='dueño'
+          || puesto==='propietario'
+          || puesto.indexOf('dueño')!==-1
+          || puesto.indexOf('propietario')!==-1;
+        if(esPropietario && String(e.dui||'').trim()===clave){
+          autorizado={id:c.key,nombre:e.nombre||'Propietario',rol:e.rol||'',puesto:e.puesto||''};
+        }
+      });
+
+      if(!autorizado){
+        err.textContent='⚠ Código de autorización incorrecto';
+        err.style.display='block';
+        document.getElementById('dui-inp').value='';
+        return;
+      }
+
+      cerrarDui();
+      if(_duiAccion==='liberar_mesa'){
+        ejecutarLiberarMesaAutorizada(_duiId,autorizado);
+      }else{
+        eliminarOrdenDefinitivo(_duiId,autorizado);
+      }
+    },function(e){
+      console.error('[Autorización propietario]',e);
+      err.textContent='⚠ No se pudo validar la autorización';
+      err.style.display='block';
+    });
+    return;
+  }
+
+  // Compatibilidad para acciones antiguas que aún validen directamente por DUI.
+  db.ref('negocios/'+negocioID+'/empleados').orderByChild('dui').equalTo(clave).once('value',function(snap){
+    if(!snap.exists()){
+      err.textContent='⚠ Autorización no encontrada';
+      err.style.display='block';
+      return;
     }
     cerrarDui();
-    if(_duiAccion==='editar') cargarOrdenParaEditar(_duiId);
-    else if(_duiAccion==='eliminar') eliminarOrdenDefinitivo(_duiId);
+    if(_duiAccion==='editar')cargarOrdenParaEditar(_duiId);
   });
 }
 
@@ -8134,6 +8223,266 @@ function iniciarSyncAsistencia() {
     });
   });
 }
+</script>
+<script>
+/* Aviso en caja de pedidos recibidos desde QR de mesa */
+(function(){
+  var _qrPosStart=Date.now();
+  function activarAvisosQR(){
+    if(typeof db==='undefined' || typeof negocioID==='undefined') return;
+    db.ref('negocios/'+negocioID+'/ordenes_web').orderByChild('timestamp').startAt(_qrPosStart).on('child_added',function(sn){
+      var o=sn.val()||{};
+      if(o.origen==='qr_mesa' && o.auto_asignada){
+        var msg='📱 QR · Mesa '+(o.mesa_num||'?')+' agregó '+((o.items||[]).reduce(function(s,i){return s+(parseInt(i.cant||1));},0))+' ítem(s)';
+        if(typeof toast==='function') toast(msg,'ok');
+      }
+    });
+  }
+  setTimeout(activarAvisosQR,1200);
+})();
+</script>
+
+<!-- ═══ SOLICITUDES QR · INSERTADO FUERA DEL SCRIPT PRINCIPAL ═══ -->
+<div id="qrUrgentBanner" onclick="qrAbrir()" style="position:fixed;left:50%;top:68px;transform:translateX(-50%);z-index:9997;display:none;min-width:360px;max-width:80vw;background:#f59e0b;color:#111827;border:2px solid #fbbf24;border-radius:15px;padding:11px 16px;font-weight:950;box-shadow:0 10px 30px rgba(245,158,11,.38);cursor:pointer;text-align:center">
+📱 NUEVO PEDIDO QR · <span id="qrUrgentText">0 pendientes</span> · TOCAR PARA ABRIR
+</div>
+<button id="qrReqBtn" onclick="qrAbrir()" style="position:fixed;right:18px;bottom:92px;z-index:9997;display:none;background:#f59e0b;color:#111827;border:0;border-radius:16px;padding:12px 15px;font-weight:950;box-shadow:0 10px 28px rgba(0,0,0,.35)">📱 QR <span id="qrReqN" style="background:#111827;color:#fff;padding:2px 7px;border-radius:999px">0</span></button>
+<div id="qrReqModal" style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.76);padding:20px;overflow:auto">
+  <div style="max-width:760px;margin:30px auto;background:#111827;color:white;padding:18px;border:1px solid #334155;border-radius:20px">
+    <button onclick="qrCerrar()" style="float:right;background:#334155;color:#fff;border:0;border-radius:9px;padding:7px 11px">✕</button>
+    <h2 style="margin:0 0 14px">📱 Solicitudes QR</h2>
+    <div id="qrReqList"></div>
+  </div>
+</div>
+<script>
+var _qrReq={};
+var _qrMeserosReales=[];
+function qrCargarMeserosReales(){
+  return db.ref('negocios/'+negocioID+'/empleados').once('value').then(function(s){
+    var arr=[];
+    s.forEach(function(c){
+      var e=c.val()||{},perfil=((e.puesto||'')+' '+(e.rol||'')).toLowerCase();
+      if(e.nombre && e.estado!=='inactivo' && e.activo!==false && perfil.indexOf('meser')!==-1) arr.push({id:c.key,nombre:e.nombre});
+    });
+    _qrMeserosReales=arr.sort(function(a,b){return a.nombre.localeCompare(b.nombre);});
+    return arr;
+  });
+}
+function qrAbrir(){document.getElementById('qrReqModal').style.display='block';qrCargarMeserosReales().then(qrRender).catch(function(e){console.warn('[QR meseros]',e);qrRender();});}
+function qrCerrar(){document.getElementById('qrReqModal').style.display='none';}
+function qrEsc(s){return String(s==null?'':s).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c];});}
+function qrRender(){
+  var el=document.getElementById('qrReqList'); if(!el)return;
+  var a=Object.values(_qrReq).filter(function(x){return x&&x.estado==='pendiente_aprobacion';}).sort(function(a,b){return (a.timestamp||0)-(b.timestamp||0);});
+  if(!a.length){el.innerHTML='<div style="padding:30px;text-align:center;color:#94a3b8">Sin solicitudes pendientes.</div>';return;}
+  el.innerHTML=a.map(function(s){
+    var h=new Date(Number(s.timestamp||Date.now())).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
+    var items=(s.items||[]).map(function(i){return '<div style="padding:3px 0"><b>'+Number(i.cant||1)+'×</b> '+qrEsc(i.desc||i.nombre)+'</div>';}).join('');
+    return '<div style="border:1px solid #475569;border-radius:15px;padding:14px;margin:10px 0;background:#0f172a">'
+      +'<div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:22px;color:#38bdf8">MESA '+Number(s.mesa_num||0)+'</b><span style="color:#94a3b8">'+h+'</span></div>'
+      +'<div style="font-size:12px;color:#cbd5e1;margin:4px 0 8px">'+Number(s.comensales||1)+' comensales'+(s.mesero_sugerido?' · Sugerido: '+qrEsc(s.mesero_sugerido):'')+'</div>'
+      +'<div style="background:#111827;border-radius:10px;padding:8px">'+items+'</div>'
+      +'<div style="margin-top:10px"><label style="font-size:10px;font-weight:900;color:#94a3b8;display:block;margin-bottom:5px">MESERO RESPONSABLE</label>'
+      +'<select id="qr-mesero-'+s.id+'" style="width:100%;padding:10px;border-radius:9px;background:#111827;color:#fff;border:1px solid #475569;font-weight:800"><option value="">Seleccionar mesero real...</option>'
+      +_qrMeserosReales.map(function(m){var sel=(s.mesero_sugerido&&m.nombre.toLowerCase()===String(s.mesero_sugerido).toLowerCase())?' selected':'';return '<option value="'+qrEsc(m.id)+'" data-nombre="'+qrEsc(m.nombre)+'"'+sel+'>'+qrEsc(m.nombre)+'</option>';}).join('')
+      +'</select></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1.7fr;gap:8px;margin-top:10px">'
+      +'<button onclick="qrRechazar(\''+s.id+'\')" style="padding:10px;border:1px solid #ef4444;background:transparent;color:#f87171;border-radius:9px;font-weight:800">Rechazar</button>'
+      +'<button onclick="qrTomar(\''+s.id+'\')" style="padding:10px;background:#22c55e;color:#052e16;border:0;border-radius:9px;font-weight:950">TOMAR ORDEN / ASIGNAR MESERO</button></div></div>';
+  }).join('');
+}
+async function qrRechazar(id){
+  if(!confirm('¿Rechazar esta solicitud QR?'))return;
+  await db.ref('negocios/'+negocioID+'/solicitudes_qr/'+id).update({estado:'rechazada',resuelta_at:Date.now()});
+}
+async function qrTomar(id){
+  var s=_qrReq[id];if(!s)return;
+  var sel=document.getElementById('qr-mesero-'+id);
+  if(!sel||!sel.value){alert('Selecciona un mesero real del sistema.');return;}
+  var opt=sel.options[sel.selectedIndex];
+  var meseroId=sel.value;
+  var mesero=(opt.getAttribute('data-nombre')||opt.textContent||'').trim();
+  var rr=db.ref('negocios/'+negocioID+'/solicitudes_qr/'+id);
+
+  var lk=await rr.transaction(function(v){
+    if(!v||v.estado!=='pendiente_aprobacion')return;
+    v.estado='procesando';v.procesando_at=Date.now();v.mesero_asignado=mesero;v.mesero_id=meseroId;
+    return v;
+  });
+  if(!lk.committed){alert('Esta solicitud ya fue tomada.');return;}
+
+  try{
+    var n=Number(s.mesa_num);
+    var mesaRef=db.ref('negocios/'+negocioID+'/mesas/'+n);
+    var ms=await mesaRef.once('value');
+    var mesa=ms.val()||{};
+    var ordenId=mesa.pedido_activo_id||'';
+
+    if(!ordenId){
+      var ct=await db.ref('negocios/'+negocioID+'/contador_food_orders').transaction(function(v){return(v||0)+1;});
+      if(!ct.committed)throw new Error('No se pudo generar la orden');
+      ordenId='MESA-'+String(ct.snapshot.val()).padStart(4,'0');
+    }
+
+    var rawItems=Array.isArray(s.items) ? s.items : Object.keys(s.items||{}).sort().map(function(k){return s.items[k];});
+    if(!rawItems.length) throw new Error('La solicitud QR llegó sin productos');
+
+    await mesaRef.update({
+      estado:'ocupada',pedido_activo_id:ordenId,mesero:mesero,mesero_id:meseroId,
+      personas:Number(s.comensales||1),cliente_nombre:s.nombre_cliente||'Cliente QR',
+      qr_bloqueada:true,qr_estado:'procesando',qr_solicitud_id:id,timestamp:mesa.timestamp||Date.now()
+    });
+
+    CANAL='mesa';MESA_SEL=n;ORDEN=ordenId;
+    renderCanalDetail();
+
+    var ps=await db.ref('negocios/'+negocioID+'/pedidos/'+ordenId).once('value');
+    var pd=ps.val()||{};
+    var prev=Array.isArray(pd.items)?pd.items:(pd.items?Object.keys(pd.items).sort().map(function(k){return pd.items[k];}):[]);
+
+    var nuevos=rawItems.map(function(i){
+      return {
+        id:i.id||'',
+        desc:i.desc||i.nombre||'Producto',
+        nombre:i.nombre||i.desc||'Producto',
+        cant:Number(i.cant||1),
+        precio:Number(i.precio||0),
+        cat:i.cat||i.categoria||'',
+        nota:i.nota||'',
+        img:i.img||i.imagen||'',
+        variante:i.variante||null,
+        enviado:false,esNuevo:true,listo:false,eliminado:false,
+        origen_envio_kds:'qr_cliente'
+      };
+    });
+    pedido=prev.concat(nuevos);
+
+    var mi=document.getElementById('mesa-mesero');
+    if(mi){
+      var existe=Array.from(mi.options||[]).some(function(o){return o.value===mesero;});
+      if(!existe){var op=document.createElement('option');op.value=mesero;op.textContent=mesero;mi.appendChild(op);}
+      mi.value=mesero;
+    }
+    var pi=document.getElementById('mesa-personas');if(pi)pi.value=Number(s.comensales||1);
+    var ci=document.getElementById('mesa-cliente-nombre');if(ci)ci.value=s.nombre_cliente||'Cliente QR';
+    document.getElementById('tb-ord').textContent=ORDEN;
+    document.getElementById('ord-num').textContent=ORDEN;
+    renderCart();actualizarGuiaMesaBar();
+
+    // CRÍTICO: no aprobar la solicitud QR hasta que pedidos/{orden}
+    // y cocina_orders/{orden} hayan terminado de escribirse realmente.
+    await new Promise(function(resolve,reject){
+      procesarOrden('guardar',resolve,reject);
+    });
+
+    var verify=await db.ref('negocios/'+negocioID+'/pedidos/'+ordenId).once('value');
+    var guardado=verify.val()||{};
+    var guardados=Array.isArray(guardado.items)?guardado.items:(guardado.items?Object.keys(guardado.items).map(function(k){return guardado.items[k];}):[]);
+    if(!guardados.length) throw new Error('Firebase no confirmó los productos de la orden');
+
+    await mesaRef.update({qr_estado:'activa'});
+    await rr.update({
+      estado:'aprobada',aprobada_at:Date.now(),mesero_asignado:mesero,mesero_id:meseroId,
+      orden:ordenId,items_guardados:guardados.length
+    });
+
+    toast('✅ Mesa '+n+' · '+guardados.length+' productos enviados a Cocina/Bar','ok');
+    qrCerrar();
+  }catch(e){
+    console.error('[QR tomar]',e);
+    await rr.update({estado:'error',error:String(e.message||e),error_at:Date.now()});
+    alert('La orden QR NO fue aprobada porque no pudo guardarse: '+(e.message||e));
+  }
+}
+(function(){
+  function iniciarQRPos(){
+    if(typeof db==='undefined'||typeof negocioID==='undefined'){setTimeout(iniciarQRPos,500);return;}
+    var _qrNotificados={};
+    db.ref('negocios/'+negocioID+'/solicitudes_qr').on('value',function(s){
+      _qrReq=s.val()||{};
+      console.log('[QR POS] solicitudes_qr recibidas:',Object.keys(_qrReq).length,_qrReq);
+      var pendientes=Object.values(_qrReq).filter(function(x){return x&&x.estado==='pendiente_aprobacion';});
+      var n=pendientes.length;
+      var b=document.getElementById('qrReqBtn'),c=document.getElementById('qrReqN');
+      if(c)c.textContent=n;if(b)b.style.display=n?'block':'none';
+      var ban=document.getElementById('qrUrgentBanner'),bt=document.getElementById('qrUrgentText');
+      if(bt)bt.textContent=n+(n===1?' pendiente':' pendientes')+(n?(' · Mesa'+(n>1?'s ':' ')+pendientes.map(function(x){return x.mesa_num}).join(', ')):'');
+      if(ban)ban.style.display=n?'block':'none';
+      pendientes.forEach(function(x){
+        if(!_qrNotificados[x.id]){
+          _qrNotificados[x.id]=true;
+          if(typeof toast==='function')toast('📱 NUEVO PEDIDO QR · MESA '+x.mesa_num+' · '+Number(x.comensales||1)+' comensales','ok');
+          if(typeof mostrarAlertaPedidoQR==='function')mostrarAlertaPedidoQR(x);
+        }
+      });
+      qrRender();
+    });
+    db.ref('negocios/'+negocioID+'/solicitudes_servicio').on('child_added',function(s){
+      var v=s.val()||{};if(v.estado!=='pendiente')return;
+      var m=v.tipo==='cuenta'?'🧾 MESA '+v.mesa_num+' SOLICITA LA CUENTA':'🔔 MESA '+v.mesa_num+' SOLICITA ATENCIÓN';
+      if(typeof toast==='function')toast(m,'ok');
+      if(typeof mostrarAlertaServicioQR==='function')mostrarAlertaServicioQR(v);
+    });
+    // Cuando caja deja una mesa realmente libre, quitar el bloqueo QR para el siguiente cliente.
+    db.ref('negocios/'+negocioID+'/mesas').on('child_changed',function(sn){
+      var m=sn.val()||{};
+      if(m.estado==='libre' && m.qr_bloqueada && m.qr_estado!=='pendiente_aprobacion'){
+        sn.ref.update({qr_bloqueada:null,qr_estado:null,qr_solicitud_id:null,qr_bloqueada_at:null});
+      }
+    });
+  }
+  iniciarQRPos();
+})();
+</script>
+
+
+<div id="qrOrderUrgentOverlay" style="display:none;position:fixed;inset:0;z-index:10060;background:rgba(8,47,73,.95);align-items:center;justify-content:center;padding:22px">
+  <div style="max-width:560px;width:100%;background:#0f172a;border:4px solid #38bdf8;border-radius:26px;padding:30px;text-align:center;color:white;box-shadow:0 22px 80px #000">
+    <div style="font-size:64px;margin-bottom:8px">📱</div>
+    <div style="font-size:30px;font-weight:950;color:#7dd3fc">NUEVO PEDIDO QR</div>
+    <div id="qrOrderUrgentText" style="font-size:20px;font-weight:900;margin:14px 0 6px"></div>
+    <div id="qrOrderUrgentSub" style="font-size:14px;color:#cbd5e1;margin-bottom:22px"></div>
+    <button onclick="abrirPedidoQRDesdeAlerta()" style="width:100%;padding:16px;border:0;border-radius:14px;background:#38bdf8;color:#082f49;font-size:17px;font-weight:950">TOMAR / REVISAR PEDIDO</button>
+  </div>
+</div>
+<script>
+var _qrPedidoUrgenteId='';
+function mostrarAlertaPedidoQR(v){
+  if(!v || v.estado!=='pendiente_aprobacion') return;
+  _qrPedidoUrgenteId=v.id||'';
+  var ov=document.getElementById('qrOrderUrgentOverlay');
+  var tx=document.getElementById('qrOrderUrgentText');
+  var sb=document.getElementById('qrOrderUrgentSub');
+  if(tx) tx.textContent='MESA '+Number(v.mesa_num||0)+' · '+Number(v.comensales||1)+' comensales';
+  if(sb) sb.textContent=(v.nombre_cliente?('Cliente: '+v.nombre_cliente+' · '):'')+((v.items||[]).length)+' productos';
+  if(ov) ov.style.display='flex';
+  try{
+    var ac=new (window.AudioContext||window.webkitAudioContext)();
+    [988,784,988,1174].forEach(function(f,i){
+      setTimeout(function(){
+        var o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g);g.connect(ac.destination);o.frequency.value=f;g.gain.value=.09;o.start();
+        setTimeout(function(){try{o.stop()}catch(e){}},210);
+      },i*260);
+    });
+    setTimeout(function(){try{ac.close()}catch(e){}},1500);
+  }catch(e){}
+}
+function abrirPedidoQRDesdeAlerta(){
+  var ov=document.getElementById('qrOrderUrgentOverlay');if(ov)ov.style.display='none';
+  qrAbrir();
+  setTimeout(function(){
+    if(_qrPedidoUrgenteId){
+      var s=document.getElementById('qr-mesero-'+_qrPedidoUrgenteId);
+      if(s) s.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  },350);
+}
+</script>
+<div id="serviceUrgentOverlay" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(127,29,29,.94);align-items:center;justify-content:center;padding:22px"><div style="max-width:520px;width:100%;background:#111827;border:3px solid #fbbf24;border-radius:24px;padding:28px;text-align:center;color:white"><div id="serviceUrgentIcon" style="font-size:58px">🔔</div><div id="serviceUrgentTitle" style="font-size:28px;font-weight:950;color:#fbbf24"></div><div id="serviceUrgentText" style="font-size:18px;margin:14px 0 22px"></div><button onclick="cerrarAlertaServicioQR()" style="width:100%;padding:15px;border:0;border-radius:14px;background:#fbbf24;color:#111827;font-size:16px;font-weight:950">ATENDER / CERRAR AVISO</button></div></div>
+<script>
+function mostrarAlertaServicioQR(v){var isC=v.tipo==='cuenta',ov=document.getElementById('serviceUrgentOverlay');document.getElementById('serviceUrgentIcon').textContent=isC?'🧾':'🔔';document.getElementById('serviceUrgentTitle').textContent=isC?'MESA '+v.mesa_num+' SOLICITA LA CUENTA':'MESA '+v.mesa_num+' NECESITA SERVICIO';document.getElementById('serviceUrgentText').textContent=(v.cliente?('Cliente: '+v.cliente+' · '):'')+(v.mesero?('Mesero: '+v.mesero):'Sin mesero asignado');ov.style.display='flex';}
+function cerrarAlertaServicioQR(){document.getElementById('serviceUrgentOverlay').style.display='none';}
 </script>
 </body>
 </html>

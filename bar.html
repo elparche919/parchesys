@@ -366,7 +366,7 @@ function renderBoard(){
     var diff=Date.now()-(o.timestamp||Date.now());
     var mins=Math.floor(diff/60000);
     var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
-    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
+    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':(o.origen==='qr_mesa'?'<span style="background:#0f766e;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">📱 QR</span>':'');
     var pagadoBadge=o.estado==='pagado'?'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px">PAGADO</span>':'';
     var estBar = o.estado_bar || 'pendiente';
     return `<div class="ord-card state-${estBar}">

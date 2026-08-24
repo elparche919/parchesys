@@ -6,6 +6,7 @@
   <title>PARCHE SYS · Portal Gerencial</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-storage-compat.js"></script>
@@ -1162,6 +1163,7 @@
         <div style="display:flex; gap:10px">
             <button id="btn-del-masivo" class="btn-m-out" style="display:none; color:var(--ff-red); border-color:var(--ff-red)" onclick="eliminarMasivoMenu()"><i class="fa-solid fa-trash-can"></i> Eliminar Selección</button>
             <button class="btn-m" style="background:#0ea5e9; border-color:#0ea5e9" onclick="abrirModalBodega()"><i class="fa-solid fa-warehouse"></i> Bodega</button>
+            <button class="btn-m" style="background:#7c3aed; border-color:#7c3aed" onclick="abrirQRMesas()"><i class="fa-solid fa-qrcode"></i> QR 30 Mesas</button>
             <button class="btn-m-out" onclick="descargarPlantillaMenu()"><i class="fa-solid fa-download"></i> Plantilla</button>
             <button class="btn-m-out" onclick="document.getElementById('xlsx-menu').click()"><i class="fa-solid fa-file-import"></i> Subida Masiva</button>
             <input type="file" id="xlsx-menu" style="display:none" accept=".xlsx, .xls, .csv" onchange="importarMenuExcel(this)">
@@ -4680,7 +4682,9 @@
           ${footer(pageNum++)}</div>`;
       }
 
-      html += `</body></html>`;
+      html += `
+
+</body></html>`;
       const w = window.open('','_blank');
       if (!w) { alert('Activa las ventanas emergentes para generar el PDF'); return; }
       w.document.write(html);
@@ -5260,5 +5264,141 @@
     });
 
   </script>
+<script>
+/* ══════════════════════════════════════════════════════════
+   QR POR MESA · 30 MESAS
+══════════════════════════════════════════════════════════ */
+var _qrAsignaciones={};
+var _qrRenderedUrls={};
+
+function _urlQRBase(){
+  var u=new URL('menu-cliente.html',window.location.href);
+  u.search='';
+  u.hash='';
+  return u;
+}
+
+function abrirQRMesas(){
+  var ov=document.getElementById('mod-qr-mesas');
+  if(ov){ ov.classList.add('active'); ov.style.display='flex'; }
+  Promise.all([
+    db.ref('negocios/'+negocioID+'/qr_mesas/asignaciones').once('value'),
+    db.ref('negocios/'+negocioID+'/qr_mesas/habilitado').once('value')
+  ]).then(function(vals){
+    _qrAsignaciones=vals[0].val()||{};
+    var chk=document.getElementById('qr-global-enabled');
+    if(chk) chk.checked=vals[1].val()!==false;
+    renderQRMesas();
+  });
+}
+
+function cerrarQRMesas(){
+  var ov=document.getElementById('mod-qr-mesas');
+  if(ov){ ov.classList.remove('active'); ov.style.display='none'; }
+}
+
+function guardarQRHabilitado(v){
+  db.ref('negocios/'+negocioID+'/qr_mesas/habilitado').set(!!v)
+    .then(function(){ if(typeof showToast==='function') showToast(v?'✅ Pedidos QR habilitados':'⏸️ Pedidos QR pausados'); });
+}
+
+function _meserosParaQR(){
+  var arr=(window._foodMeseros||[]).slice();
+  return arr.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+}
+
+function renderQRMesas(){
+  var grid=document.getElementById('qr-mesas-grid');
+  if(!grid) return;
+  var meseros=_meserosParaQR();
+  var base=_urlQRBase();
+  _qrRenderedUrls={};
+
+  var html='';
+  for(var n=1;n<=30;n++){
+    var cfg=_qrAsignaciones[n]||{};
+    var u=new URL(base.toString());
+    u.searchParams.set('negocio',negocioID);
+    u.searchParams.set('mesa',String(n));
+    _qrRenderedUrls[n]=u.toString();
+    var opts='<option value="">Sin respaldo</option>'+meseros.map(function(m){
+      return '<option value="'+m.key+'" '+(cfg.mesero_key===m.key?'selected':'')+'>'+m.nombre+'</option>';
+    }).join('');
+    html+='<div style="background:var(--m-surface);border:1px solid var(--m-border);border-radius:12px;padding:12px;text-align:center">'
+      +'<div style="font-size:18px;font-weight:950;color:#38bdf8;margin-bottom:8px">MESA '+n+'</div>'
+      +'<div id="qr-mesa-'+n+'" style="width:132px;height:132px;margin:0 auto 8px;background:white;padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center"></div>'
+      +'<select class="f-inp" style="font-size:11px;padding:7px;margin-top:4px" onchange="guardarAsignacionQRMesa('+n+',this.value)">'+opts+'</select>'
+      +'<div style="font-size:9px;color:var(--m-muted);margin-top:6px;word-break:break-all;line-height:1.25">'+u.pathname.split('/').pop()+'?mesa='+n+'</div>'
+      +'</div>';
+  }
+  grid.innerHTML=html;
+
+  setTimeout(function(){
+    for(var n=1;n<=30;n++){
+      var el=document.getElementById('qr-mesa-'+n);
+      if(el && typeof QRCode!=='undefined'){
+        el.innerHTML='';
+        new QRCode(el,{text:_qrRenderedUrls[n],width:120,height:120,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});
+      }
+    }
+  },50);
+}
+
+function guardarAsignacionQRMesa(mesa,empKey){
+  var meseros=_meserosParaQR();
+  var emp=meseros.find(function(x){return x.key===empKey;});
+  var ref=db.ref('negocios/'+negocioID+'/qr_mesas/asignaciones/'+mesa);
+  if(!empKey){
+    delete _qrAsignaciones[mesa];
+    return ref.remove().then(function(){ if(typeof showToast==='function') showToast('Mesa '+mesa+': respaldo eliminado'); });
+  }
+  var data={mesero_key:empKey,mesero_nombre:emp?emp.nombre:empKey,actualizado_at:Date.now()};
+  _qrAsignaciones[mesa]=data;
+  return ref.set(data).then(function(){ if(typeof showToast==='function') showToast('Mesa '+mesa+' → '+data.mesero_nombre); });
+}
+
+function imprimirTodosQR(){
+  if(!Object.keys(_qrRenderedUrls).length) renderQRMesas();
+  var w=window.open('','_blank','width=1000,height=800');
+  if(!w){ alert('Permite ventanas emergentes para imprimir los QR.'); return; }
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>QR Mesas</title>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"><\/script>'
+    +'<style>@page{size:A4;margin:8mm}body{font-family:Arial,sans-serif;color:#111}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8mm}.card{border:1px solid #bbb;border-radius:10px;padding:8mm;text-align:center;break-inside:avoid}.mesa{font-size:24px;font-weight:900;margin-bottom:6px}.sub{font-size:10px;color:#555;margin-top:6px}.qr{width:150px;height:150px;margin:auto}@media print{button{display:none}}</style></head><body>'
+    +'<div class="grid">';
+  for(var n=1;n<=30;n++){
+    html+='<div class="card"><div class="mesa">MESA '+n+'</div><div class="qr" id="pqr-'+n+'"></div><div class="sub">Escanea para ordenar desde esta mesa</div></div>';
+  }
+  html+='</div><script>window.onload=function(){var urls='+JSON.stringify(_qrRenderedUrls)+';for(var n=1;n<=30;n++){new QRCode(document.getElementById("pqr-"+n),{text:urls[n],width:150,height:150,correctLevel:QRCode.CorrectLevel.M});}setTimeout(function(){window.print();},700);};<\/script></body></html>';
+  w.document.write(html); w.document.close();
+}
+</script>
+
+
+<!-- MODAL QR POR MESA -->
+<div class="modal-overlay" id="mod-qr-mesas" style="z-index:12000">
+  <div class="modal-box" style="max-width:1180px;width:96vw;max-height:94vh">
+    <div class="mb-head">
+      <div>
+        <h2><i class="fa-solid fa-qrcode" style="color:#a78bfa"></i> QR por Mesa · 30 Mesas</h2>
+        <div style="font-size:11px;color:var(--m-muted);margin-top:3px">Cada QR abre el menú vinculado a su mesa. El mesero activo de la mesa tiene prioridad; esta asignación funciona como respaldo.</div>
+      </div>
+      <button class="mb-close" onclick="cerrarQRMesas()">&times;</button>
+    </div>
+    <div style="padding:12px 18px;border-bottom:1px solid var(--m-border);display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#0b1120">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800">
+        <input type="checkbox" id="qr-global-enabled" onchange="guardarQRHabilitado(this.checked)" checked>
+        Pedidos QR habilitados
+      </label>
+      <button class="btn-m" onclick="imprimirTodosQR()" style="margin-left:auto;background:#7c3aed"><i class="fa-solid fa-print"></i> Imprimir 30 QR</button>
+      <button class="btn-m-out" onclick="renderQRMesas()"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+    </div>
+    <div class="mb-body" style="padding:16px">
+      <div id="qr-mesas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:12px">
+        <div style="grid-column:1/-1;text-align:center;padding:30px;color:var(--m-muted)">Cargando QR...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

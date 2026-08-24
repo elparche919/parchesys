@@ -198,6 +198,10 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 </style>
 </head>
 <body>
+<div id="temp-mesa-badge" style="position:fixed;top:8px;right:8px;z-index:9999;background:#111827;color:#38bdf8;border:1px solid #38bdf8;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:900;box-shadow:0 4px 14px rgba(0,0,0,.25)">
+  PRUEBA · MESA 1
+</div>
+
 
 <!-- LOADER -->
 <div class="loader" id="loader">
@@ -209,7 +213,7 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 <div id="screen-onboarding">
   <div class="ob-hero">
     <div class="ob-biz-icon" id="ob-biz-icon">🍽️</div>
-    <div class="ob-biz-name" id="ob-biz-name">Restaurante</div>
+    <div class="ob-biz-name" id="ob-biz-name">Restaurante</div><div style="font-size:10px;font-weight:900;letter-spacing:.16em;color:var(--muted);margin-top:3px">MENÚ DIGITAL · PARCHE SYS</div>
     <div class="ob-biz-tag">¡Haz tu pedido fácil y rápido!</div>
   </div>
   <div class="ob-form">
@@ -219,26 +223,14 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
       <input type="text" class="ob-input" id="ob-nombre" placeholder="Ej. María López" autocomplete="name">
     </div>
     <div class="ob-field">
-      <label class="ob-label">Teléfono *</label>
-      <input type="tel" class="ob-input" id="ob-telefono" placeholder="Ej. 7788-9900" autocomplete="tel">
+      <label class="ob-label">Número de comensales *</label>
+      <input type="number" class="ob-input" id="ob-telefono" min="1" max="30" inputmode="numeric" placeholder="Ej. 4">
     </div>
-    <div class="ob-section-title"><i class="fa-solid fa-motorcycle" style="color:var(--primary)"></i> ¿Cómo recibes tu pedido?</div>
-    <div class="tipo-grid">
-      <div class="tipo-card selected" data-tipo="domicilio" onclick="selTipo('domicilio')">
-        <span class="tc-icon">🛵</span>
-        <div class="tc-label">A domicilio</div>
-        <div class="tc-sub">Te lo llevamos</div>
-      </div>
-      <div class="tipo-card" data-tipo="recoger" onclick="selTipo('recoger')">
-        <span class="tc-icon">🥡</span>
-        <div class="tc-label">Recoger</div>
-        <div class="tc-sub">Paso por él</div>
-      </div>
+    <div class="ob-section-title"><i class="fa-solid fa-chair" style="color:var(--primary)"></i> Pedido en mesa</div>
+    <div style="background:var(--primary-light);border:1px solid rgba(244,63,94,.2);border-radius:16px;padding:14px 16px;margin-bottom:14px;color:var(--text);font-size:13px;line-height:1.5">
+      Este menú es exclusivo para ordenar desde tu mesa. El pedido se agregará a la cuenta de la mesa indicada en el código QR.
     </div>
-    <div class="dir-field open" id="grp-dir">
-      <div class="ob-label">Dirección de entrega *</div>
-      <input type="text" class="ob-input" id="ob-dir" placeholder="Calle, colonia, referencias..." autocomplete="street-address">
-    </div>
+    <input type="hidden" id="ob-dir" value="">
     <div class="ob-err" id="ob-err"></div>
     <button class="ob-cta" onclick="iniciarApp()">
       <i class="fa-solid fa-utensils"></i> Ver el Menú
@@ -316,9 +308,46 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
         <span class="os-total-label">Total a pagar</span>
         <span class="os-total-val" id="os-total">$0.00</span>
       </div>
-      <button class="btn-confirm" id="btn-confirm" onclick="enviarPedido()">
-        <i class="fa-solid fa-paper-plane"></i> Confirmar Pedido
+      <button type="button" class="btn-confirm" id="btn-confirm" onclick="abrirConfirmacionFinal()">
+        <i class="fa-solid fa-clipboard-check"></i> Revisar y Confirmar
       </button>
+    </div>
+  </div>
+</div>
+
+
+<!-- CONFIRMACIÓN FINAL DE PEDIDO -->
+<div class="modal-overlay" id="modal-confirm-final" onclick="if(event.target===this)cerrarConfirmacionFinal()">
+  <div class="modal-sheet" style="max-height:88vh">
+    <div class="ms-handle"></div>
+    <div class="ms-header">
+      <div class="ms-title"><i class="fa-solid fa-circle-check" style="color:var(--primary)"></i> Confirmar pedido</div>
+      <button class="ms-close" onclick="cerrarConfirmacionFinal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ms-body" style="padding-bottom:18px">
+      <div style="background:var(--primary-light);border:1px solid rgba(244,63,94,.18);border-radius:16px;padding:14px 16px;margin-bottom:14px;font-size:13px;line-height:1.55;color:var(--text)">
+        Revisa tu pedido. Al confirmar, los productos se enviarán directamente a <strong>Cocina y/o Bar</strong> y se agregarán a la cuenta de <strong id="cf-mesa">tu mesa</strong>.
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="display:block;font-size:12px;font-weight:900;color:var(--muted);margin-bottom:6px">NÚMERO DE COMENSALES *</label>
+        <input type="number" id="cf-comensales" min="1" max="30" value="1" inputmode="numeric" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:16px;font-weight:900;outline:none">
+      </div>
+      <div id="cf-items" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border);margin-top:14px;padding-top:14px">
+        <span style="font-family:'Sora',sans-serif;font-weight:800;color:var(--muted)">TOTAL</span>
+        <strong id="cf-total" style="font-family:'Sora',sans-serif;font-size:24px;color:var(--primary)">$0.00</strong>
+      </div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.45;margin-top:10px">
+        Al pulsar <strong>Estoy de acuerdo · Enviar pedido</strong> confirmas que revisaste cantidades, productos y notas.
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.45fr;gap:10px;margin-top:16px">
+        <button onclick="cerrarConfirmacionFinal()" style="padding:15px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-weight:800;cursor:pointer">
+          <i class="fa-solid fa-arrow-left"></i> Volver
+        </button>
+        <button type="button" id="btn-confirm-final-send" onclick="confirmarYEnviarPedido()" style="padding:15px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff;font-family:'Sora',sans-serif;font-weight:900;cursor:pointer">
+          <i class="fa-solid fa-paper-plane"></i> Estoy de acuerdo · Enviar pedido
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -327,12 +356,36 @@ body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif
 <div id="screen-success">
   <div class="ss-circle">✓</div>
   <div class="ss-title">¡Pedido enviado!</div>
-  <div class="ss-sub">Tu pedido ha llegado a cocina.<br>Un mesero confirmará tu orden pronto.</div>
+  <div class="ss-sub">Tu pedido fue confirmado y enviado.<br>Cocina y/o Bar ya recibieron los productos correspondientes.</div>
   <div class="ss-order" id="ss-order">#WEB00000</div>
   <div class="ss-detail" id="ss-detail"></div>
-  <button class="ss-new-order" onclick="resetApp()">Hacer otro pedido</button>
+  <div id="qr-locked-actions" style="display:none;width:min(420px,92vw);grid-template-columns:1fr;gap:10px;margin-top:18px">
+  <button type="button" onclick="abrirRevisionPedidoQR()" style="padding:14px;border-radius:14px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-weight:900;cursor:pointer"><i class="fa-solid fa-receipt"></i> Revisar pedido</button>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <button type="button" onclick="solicitarServicioQR('mesero')" style="padding:14px;border-radius:14px;border:0;background:#f59e0b;color:#111827;font-weight:900;cursor:pointer">🔔 Llamar servicio</button>
+    <button type="button" onclick="solicitarServicioQR('cuenta')" style="padding:14px;border-radius:14px;border:0;background:#0ea5e9;color:white;font-weight:900;cursor:pointer">🧾 Pedir cuenta</button>
+  </div>
+</div>
 </div>
 
+
+<div class="modal-overlay" id="modal-review-qr" onclick="if(event.target===this)cerrarRevisionPedidoQR()">
+  <div class="modal-sheet" style="max-height:88vh">
+    <div class="ms-handle"></div>
+    <div class="ms-header">
+      <div class="ms-title"><i class="fa-solid fa-receipt" style="color:var(--primary)"></i> Pedido de tu mesa</div>
+      <button class="ms-close" onclick="cerrarRevisionPedidoQR()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="ms-body">
+      <div id="qr-review-status" style="padding:12px 14px;border-radius:12px;background:var(--primary-light);font-weight:800;margin-bottom:12px"></div>
+      <div id="qr-review-items" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:14px;margin-top:14px">
+        <span style="font-weight:800;color:var(--muted)">TOTAL</span>
+        <strong id="qr-review-total" style="font-size:22px;color:var(--primary)">$0.00</strong>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <!-- Firebase Configuración Compartida -->
@@ -376,9 +429,23 @@ var _categorias   = [];      // [ { key, nombre, emoji, orden, ... } ]
 var _activeCat    = '';
 var _searchQuery  = '';
 var _cart         = [];
-var _cliente      = { nombre:'', telefono:'', tipo:'domicilio', direccion:'' };
-var _tipoSel      = 'domicilio';
+var _cliente      = { nombre:'', telefono:'', comensales:1, tipo:'mesa', direccion:'' };
+var _tipoSel      = 'mesa';
 var _bizInfo      = {};
+
+// ── MODO QR POR MESA ─────────────────────────────────────────
+// ?mesa=1..30 transforma el menú web en autoservicio de salón.
+// La orden se integra a la cuenta activa de la mesa y usa el mesero
+// asignado en tiempo real; como respaldo usa /qr_mesas/asignaciones/{mesa}.
+var _urlParamsQR   = new URLSearchParams(window.location.search);
+var _mesaQR        = parseInt(_urlParamsQR.get('mesa') || '0', 10);
+// TEMPORAL: mientras se generan los QR oficiales, esta página funciona como MESA 1 si no recibe ?mesa=.
+if(!_mesaQR || _mesaQR < 1 || _mesaQR > 30) _mesaQR = 1;
+var _modoMesaQR    = _mesaQR >= 1 && _mesaQR <= 30;
+// TEMPORAL: la página está ligada a una mesa de prueba.
+_modoMesaQR = true;
+var _qrHabilitado  = true;
+var _qrEnviando    = false;
 
 /* ══════════════════════════════════════════════════════════
    FIREBASE — CARGA PÚBLICA (sin login)
@@ -392,12 +459,16 @@ db.ref('negocios/' + negocioID + '/info').once('value', function(sn) {
   document.getElementById('app-biz-name').textContent = name;
   document.title = name + ' · Menú';
 
-  // Logo / ícono del negocio
-  if (info.logo) {
-    document.getElementById('ob-biz-icon').innerHTML = '<img src="' + info.logo + '" alt="' + name + '">';
-    document.getElementById('ah-icon').innerHTML     = '<img src="' + info.logo + '" alt="' + name + '">';
-    document.getElementById('loader').querySelector('.loader-logo').innerHTML = '<img src="' + info.logo + '" style="width:100%;height:100%;object-fit:cover;border-radius:22px">';
-  }
+  var logoMenu = info.logo_menu_cliente || 'https://raw.githubusercontent.com/elparche919/parchesys/main/LOGOPARCHESYS.png';
+  document.getElementById('ob-biz-icon').innerHTML = '<img src="' + logoMenu + '" alt="' + name + '" style="object-fit:contain;background:#fff">';
+  document.getElementById('ah-icon').innerHTML = '<img src="' + logoMenu + '" alt="' + name + '" style="object-fit:contain;background:#fff">';
+  document.getElementById('loader').querySelector('.loader-logo').innerHTML = '<img src="' + logoMenu + '" style="width:100%;height:100%;object-fit:contain;border-radius:22px;background:#fff">';
+});
+
+// Configuración QR: si el administrador deshabilita temporalmente el canal,
+// el menú puede seguir viéndose, pero no permitirá enviar órdenes.
+db.ref('negocios/' + negocioID + '/qr_mesas/habilitado').on('value', function(sn) {
+  _qrHabilitado = sn.val() !== false;
 });
 
 // 2. Categorías del menú (con metadata: emoji, orden)
@@ -405,7 +476,10 @@ db.ref('negocios/' + negocioID + '/menu_categorias').on('value', function(sn) {
   var raw = sn.val() || {};
   _categorias = Object.entries(raw)
     .map(function(e) { return Object.assign({ key: e[0] }, e[1]); })
-    .sort(function(a,b) { return (a.orden||99) - (b.orden||99); });
+    .filter(function(c){ return c.menu_cliente_visible !== false; })
+    .sort(function(a,b) {
+      return Number(a.menu_cliente_orden || a.orden || 99) - Number(b.menu_cliente_orden || b.orden || 99);
+    });
   // Si ya tenemos productos, re-renderizar
   if (Object.keys(_productos).length > 0) {
     _activeCat = _activeCat || (_categorias[0] ? _categorias[0].nombre : '');
@@ -442,6 +516,24 @@ db.ref('negocios/' + negocioID + '/productos').on('value', function(sn) {
 });
 
 /* ══════════════════════════════════════════════════════════
+   MODO QR DE MESA
+══════════════════════════════════════════════════════════ */
+function activarModoMesaQR() {
+  if (!_modoMesaQR) return;
+  _tipoSel = 'mesa';
+  var ob=document.getElementById('screen-onboarding');
+  if(ob){ob.style.display='flex';ob.classList.remove('hidden');}
+  var app=document.getElementById('screen-app');if(app)app.classList.remove('active');
+  var badge=document.getElementById('ws-badge');
+  if(badge){badge.textContent='MESA '+_mesaQR;badge.style.background='#0f766e';badge.style.color='#fff';}
+  var sub=document.querySelector('.app-header .ah-sub');if(sub)sub.textContent='Menú · Mesa '+_mesaQR;
+  document.title=(_bizInfo.nombre||'Restaurante')+' · Mesa '+_mesaQR;
+  setTimeout(verificarBloqueoMesaQR,150);
+}
+
+setTimeout(activarModoMesaQR, 0);
+
+/* ══════════════════════════════════════════════════════════
    ONBOARDING
 ══════════════════════════════════════════════════════════ */
 function selTipo(t) {
@@ -454,16 +546,13 @@ function selTipo(t) {
 
 function iniciarApp() {
   var nombre   = document.getElementById('ob-nombre').value.trim();
-  var telefono = document.getElementById('ob-telefono').value.trim();
+  var telefono = ''; var comensales = parseInt(document.getElementById('ob-telefono').value||'0',10);
   var dir      = document.getElementById('ob-dir').value.trim();
   var errEl    = document.getElementById('ob-err');
   var err      = '';
 
   if (!nombre)   { err='Por favor ingresa tu nombre.';    document.getElementById('ob-nombre').classList.add('error'); }
-  else if (!telefono) { err='Por favor ingresa tu teléfono.'; document.getElementById('ob-telefono').classList.add('error'); }
-  else if (_tipoSel==='domicilio' && !dir) { err='Por favor ingresa tu dirección.'; document.getElementById('ob-dir').classList.add('error'); }
-
-  if (err) {
+if (err) {
     errEl.textContent = err;
     errEl.classList.add('show');
     setTimeout(function(){ errEl.classList.remove('show'); }, 4000);
@@ -472,12 +561,17 @@ function iniciarApp() {
   errEl.classList.remove('show');
   document.querySelectorAll('.ob-input').forEach(function(i){ i.classList.remove('error'); });
 
-  _cliente = { nombre: nombre, telefono: telefono, tipo: _tipoSel, direccion: dir };
-
+  if(!comensales || comensales<1){ errEl.textContent='Indica el número de comensales.'; return; }
+  _cliente = { nombre: nombre, telefono: '', comensales: comensales, tipo: 'mesa', direccion: '' };
+  if (_modoMesaQR && _mesaQR && typeof db !== 'undefined') {
+    db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).update({
+      qr_visitante_nombre:nombre,personas:comensales,cliente_nombre:nombre,qr_ultima_actividad:Date.now()
+    }).catch(function(e){console.warn('[QR datos mesa]',e);});
+  }
   document.getElementById('app-user-name').textContent = nombre.split(' ')[0];
   document.getElementById('ws-hello').textContent  = '¡Hola, ' + nombre.split(' ')[0] + '! 👋';
-  document.getElementById('ws-detail').textContent = telefono + ' · ' + (_tipoSel==='domicilio' ? '🛵 A domicilio' : '🥡 Recoger');
-  document.getElementById('ws-badge').textContent  = _tipoSel==='domicilio' ? '🛵 Domicilio' : '🥡 Recoger';
+  document.getElementById('ws-detail').textContent = '🍽️ Pedido en mesa';
+  document.getElementById('ws-badge').textContent  = _modoMesaQR ? ('MESA '+_mesaQR) : 'PEDIDO EN MESA';
 
   document.getElementById('screen-onboarding').classList.add('hidden');
   setTimeout(function(){
@@ -487,6 +581,11 @@ function iniciarApp() {
 }
 
 function volverOnboarding() {
+  if (_modoMesaQR) {
+    closeCart();
+    showToast('Este menú está vinculado a la Mesa ' + _mesaQR, 'ok');
+    return;
+  }
   closeCart();
   document.getElementById('screen-onboarding').style.display = 'flex';
   setTimeout(function(){ document.getElementById('screen-onboarding').classList.remove('hidden'); }, 10);
@@ -522,7 +621,7 @@ function renderBusqueda() {
       items = Object.entries(rawItems).map(function(e){ return e[1] ? Object.assign({ id: e[0], _cat: cat }, e[1]) : null; }).filter(Boolean);
     }
     items.forEach(function(it) {
-      if (it.oculto) return;
+      if (it.oculto || it.menu_cliente_visible === false) return;
       var nombre = (it.nombre || '').toLowerCase();
       var desc   = (it.descripcion || it.desc || '').toLowerCase();
       if (nombre.includes(_searchQuery) || desc.includes(_searchQuery)) {
@@ -551,7 +650,7 @@ function renderCats() {
     var rawItems = _productos[cat.nombre];
     if (!rawItems) return;
     var items = flattenItems(rawItems, cat.nombre);
-    var visible = items.filter(function(it){ return !it.oculto; });
+    var visible = items.filter(function(it){ return !it.oculto && it.menu_cliente_visible !== false; });
     if (visible.length > 0) catsConProductos.push(cat);
   });
 
@@ -561,7 +660,7 @@ function renderCats() {
     if (!existe) {
       var rawItems = _productos[catNombre];
       var items = flattenItems(rawItems, catNombre);
-      var visible = items.filter(function(it){ return !it.oculto; });
+      var visible = items.filter(function(it){ return !it.oculto && it.menu_cliente_visible !== false; });
       if (visible.length > 0) {
         catsConProductos.push({ key: catNombre, nombre: catNombre, emoji: '🍽️' });
       }
@@ -609,7 +708,12 @@ function renderMenu() {
     return;
   }
 
-  var items = flattenItems(rawItems, _activeCat).filter(function(it){ return !it.oculto; });
+  var items = flattenItems(rawItems, _activeCat)
+    .filter(function(it){ return !it.oculto && it.menu_cliente_visible !== false; })
+    .sort(function(a,b){
+      var d=Number(a.menu_cliente_orden||9999)-Number(b.menu_cliente_orden||9999);
+      return d || String(a.nombre||'').localeCompare(String(b.nombre||''),'es');
+    });
 
   if (!items.length) {
     grid.innerHTML = '<div class="empty-cat"><i class="fa-solid fa-bowl-food"></i><p>Sin productos</p></div>';
@@ -627,14 +731,17 @@ function renderItemHTML(it, cat) {
   var qty      = inCart ? inCart.cant : 0;
   var desc     = it.descripcion || it.desc || '';
   // Soporte para campo "img" (nuevo) e "imagen" (legacy)
-  var imgSrc   = it.img || it.imagen || '';
+  var imgSrc   = it.menu_cliente_img || it.img || it.imagen || '';
+  var controlaStock = it.descuenta === true || it.descuenta === 'true' || it.descuenta === 'si' || it.descuenta == 1;
+  var stockDisp = parseFloat(it.stockFijo || 0);
+  var sinStock = controlaStock && stockDisp <= 0;
   var imgHtml  = imgSrc
     ? '<img src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(it.nombre) + '" style="width:100%;height:100%;object-fit:cover;border-radius:14px" loading="lazy">'
     : '<span style="font-size:32px">🍽️</span>';
   var catSafe  = cat.replace(/'/g, "\\'");
   var idSafe   = String(it.id).replace(/'/g, "\\'");
 
-  return '<div class="menu-item" id="card-' + catSafe + '-' + idSafe + '">'
+  return '<div class="menu-item" id="card-' + catSafe + '-' + idSafe + '" style="' + (sinStock ? 'opacity:.55;filter:grayscale(.4)' : '') + '">'
     + (qty > 0 ? '<div class="mi-in-cart visible">' + qty + ' en orden</div>' : '<div class="mi-in-cart"></div>')
     + '<div class="mi-img">' + imgHtml + '</div>'
     + '<div class="mi-info">'
@@ -643,14 +750,16 @@ function renderItemHTML(it, cat) {
       + '<div class="mi-price">$' + parseFloat(it.precio || 0).toFixed(2) + '</div>'
     + '</div>'
     + '<div class="mi-right">'
-      + (qty === 0
+      + (sinStock
+        ? '<span style="font-size:10px;font-weight:900;color:#ef4444;background:#fee2e2;padding:5px 8px;border-radius:14px">AGOTADO</span>'
+        : (qty === 0
         ? '<button class="mi-add" onclick="addToCart(\'' + catSafe + '\',\'' + idSafe + '\')"><i class="fa-solid fa-plus"></i></button>'
         : '<div class="mi-counter visible">'
             + '<button class="mc-btn" onclick="changeQtyMenu(\'' + catSafe + '\',\'' + idSafe + '\',-1)"><i class="fa-solid fa-minus"></i></button>'
             + '<div class="mc-qty">' + qty + '</div>'
             + '<button class="mc-btn" onclick="changeQtyMenu(\'' + catSafe + '\',\'' + idSafe + '\',1)"><i class="fa-solid fa-plus"></i></button>'
           + '</div>'
-      )
+      ))
     + '</div>'
   + '</div>';
 }
@@ -672,8 +781,14 @@ function addToCart(cat, id) {
   if (!rawItems) return;
   var item = Array.isArray(rawItems) ? rawItems[id] : rawItems[id];
   if (!item) return;
+  var controlaStock = item.descuenta === true || item.descuenta === 'true' || item.descuenta === 'si' || item.descuenta == 1;
+  var stockMax = controlaStock ? parseFloat(item.stockFijo || 0) : Infinity;
+  if (controlaStock && stockMax <= 0) { showToast('Producto agotado', 'err'); return; }
   var exist = _cart.find(function(c){ return c.cat === cat && String(c.id) === String(id); });
-  if (exist) { exist.cant++; }
+  if (exist) {
+    if (controlaStock && exist.cant >= stockMax) { showToast('Solo quedan ' + stockMax + ' unidades', 'err'); return; }
+    exist.cant++;
+  }
   else { _cart.push({ cat: cat, id: id, nombre: item.nombre, precio: parseFloat(item.precio || 0), cant: 1 }); }
   updateCartUI();
   if (_searchQuery) { renderBusqueda(); } else { renderMenu(); }
@@ -735,8 +850,12 @@ function renderCartModal() {
       + '<button class="ci-btn" onclick="updateCartCant(' + i + ',1)"><i class="fa-solid fa-plus"></i></button>'
       + '</div></div>';
   }).join('');
-  document.getElementById('os-name').textContent   = _cliente.nombre || '—';
-  document.getElementById('os-detail').textContent = (_cliente.telefono || '—') + ' · ' + (_cliente.tipo === 'domicilio' ? '🛵 Domicilio — ' + (_cliente.direccion || '') : '🥡 Recoger en restaurante');
+  document.getElementById('os-name').textContent   = _modoMesaQR ? ('🍽️ Mesa ' + _mesaQR) : (_cliente.nombre || '—');
+  document.getElementById('os-detail').textContent = _modoMesaQR
+    ? 'Pedido desde QR de mesa · se agregará a la cuenta activa'
+    : ((_cliente.telefono || '—') + ' · ' + (_cliente.tipo === 'domicilio' ? '🛵 Domicilio — ' + (_cliente.direccion || '') : '🥡 Recoger en restaurante'));
+  var editLink = document.querySelector('#order-summary .os-edit');
+  if (editLink) editLink.style.display = _modoMesaQR ? 'none' : '';
   document.getElementById('os-total').textContent  = '$' + totalMoney.toFixed(2);
   summaryEl.style.display = 'block';
 }
@@ -744,7 +863,7 @@ function renderCartModal() {
 /* ══════════════════════════════════════════════════════════
    ENVIAR PEDIDO
 ══════════════════════════════════════════════════════════ */
-function enviarPedido() {
+function enviarPedidoWebLegacy() {
   if (!_cart.length) return;
   var btn = document.getElementById('btn-confirm');
   btn.disabled = true;
@@ -804,6 +923,345 @@ function enviarPedido() {
   });
 }
 
+
+function _esBarCatQR(cat){
+  var c=(cat||'').trim().toUpperCase();
+  var bars=['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
+  var parent=c.split(/[-/:]/)[0].trim();
+  return bars.indexOf(c)!==-1 || bars.indexOf(parent)!==-1 ||
+    c.indexOf('BEBIDA')!==-1 || c.indexOf('CERVEZA')!==-1 || c.indexOf('COCTEL')!==-1 || c.indexOf('LICOR')!==-1;
+}
+
+function _qrProductoPath(cat,id){
+  return 'negocios/' + negocioID + '/productos/' + cat + '/' + id;
+}
+
+function _qrReservarStock(requestID, items){
+  var reservados=[];
+  var chain=Promise.resolve();
+
+  items.forEach(function(it){
+    chain=chain.then(function(){
+      var raw=_productos[it.cat];
+      var p=raw ? (Array.isArray(raw) ? raw[it.id] : raw[it.id]) : null;
+      if(!p) throw new Error('Producto no disponible: ' + it.desc);
+      var controla=p.descuenta===true || p.descuenta==='true' || p.descuenta==='si' || p.descuenta==1;
+      if(!controla) return true;
+
+      var path=_qrProductoPath(it.cat,it.id);
+      var abort='';
+      var before=0, after=0, delta=0;
+      return db.ref(path).transaction(function(prod){
+        if(!prod || typeof prod!=='object'){ abort='producto_no_existe'; return; }
+        if(!prod._stockAplicadoQR) prod._stockAplicadoQR={};
+        var aplicado=parseFloat(prod._stockAplicadoQR[requestID]||0);
+        var deseado=parseFloat(it.cant||0);
+        delta=deseado-aplicado;
+        var current=parseFloat(prod.stockFijo||0);
+        if(delta>0 && current<delta){ abort='stock_insuficiente'; return; }
+        if(delta<0){ /* no debería ocurrir en una solicitud QR nueva */ }
+        before=current;
+        after=current-delta;
+        if(after<0){ abort='stock_insuficiente'; return; }
+        prod.stockFijo=after;
+        prod._stockAplicadoQR[requestID]=deseado;
+        return prod;
+      }).then(function(r){
+        if(!r.committed){
+          throw new Error(abort==='stock_insuficiente'
+            ? ('Stock insuficiente para "'+it.desc+'". Actualiza el menú e intenta de nuevo.')
+            : ('No se pudo reservar "'+it.desc+'".'));
+        }
+        if(delta>0) reservados.push({path:path,requestID:requestID,cant:delta,cat:it.cat,id:it.id,desc:it.desc,before:before,after:after});
+        return true;
+      });
+    });
+  });
+
+  return chain.then(function(){ return reservados; }).catch(function(err){
+    return _qrRollbackStock(reservados).then(function(){ throw err; });
+  });
+}
+
+function _qrRollbackStock(reservados){
+  var chain=Promise.resolve();
+  (reservados||[]).slice().reverse().forEach(function(r){
+    chain=chain.then(function(){
+      return db.ref(r.path).transaction(function(prod){
+        if(!prod || !prod._stockAplicadoQR) return prod;
+        var aplicado=parseFloat(prod._stockAplicadoQR[r.requestID]||0);
+        if(aplicado<=0) return prod;
+        prod.stockFijo=parseFloat(prod.stockFijo||0)+aplicado;
+        delete prod._stockAplicadoQR[r.requestID];
+        return prod;
+      }).catch(function(e){ console.warn('Rollback QR stock:',e); });
+    });
+  });
+  return chain;
+}
+
+function _qrRegistrarMovimientos(requestID, orderID, mesero, reservados){
+  var updates={};
+  (reservados||[]).forEach(function(r,idx){
+    var mk='qr_'+requestID+'_'+idx;
+    updates['negocios/'+negocioID+'/stock_movimientos/'+mk]={
+      tipo:'salida',origen:'QR_MESA',producto_id:r.id,producto:r.desc,cantidad:r.cant,
+      impacto_stock:-r.cant,stock_anterior:r.before,stock_nuevo:r.after,
+      orden:orderID,mesa:String(_mesaQR),usuario:mesero||'QR Mesa '+_mesaQR,
+      motivo:'Pedido QR Mesa '+_mesaQR,qr_request_id:requestID,ts:Date.now(),fecha:new Date().toISOString()
+    };
+  });
+  return Object.keys(updates).length ? db.ref().update(updates) : Promise.resolve();
+}
+
+async function enviarPedidoMesaQR(){
+  if(!_qrHabilitado){ showToast('Los pedidos QR están pausados temporalmente. Solicita ayuda a tu mesero.','err'); return; }
+  if(!_modoMesaQR || _mesaQR<1 || _mesaQR>30){ showToast('QR de mesa inválido.','err'); return; }
+  if(!_cart.length){ showToast('Tu orden está vacía.','err'); return; }
+
+  var requestRef=db.ref('negocios/'+negocioID+'/solicitudes_qr').push();
+  var requestID=requestRef.key;
+  var mesaRef=db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR);
+  var ahora=Date.now();
+
+  // Bloqueo atómico: una mesa sólo admite UN primer pedido QR hasta que caja cierre/libere la cuenta.
+  var lock=await mesaRef.transaction(function(m){
+    m=m||{};
+    // Autocuración fuerte: si la mesa está REALMENTE libre y no tiene una orden activa,
+    // cualquier bloqueo QR residual pertenece a una prueba/orden anterior y debe limpiarse.
+    // Esto también corrige liberaciones hechas desde el mapa de mesas, que históricamente
+    // podían dejar qr_estado='pendiente_aprobacion' aunque la mesa ya estuviera libre.
+    if(m.estado==='libre' && !m.pedido_activo_id){
+      m.qr_bloqueada=null;
+      m.qr_estado=null;
+      m.qr_solicitud_id=null;
+      m.qr_bloqueada_at=null;
+    }
+    if(m.qr_bloqueada) return; // aborta sólo si la mesa sigue realmente ocupada/bloqueada
+    m.qr_bloqueada=true;
+    m.qr_estado='pendiente_aprobacion';
+    m.qr_solicitud_id=requestID;
+    m.qr_bloqueada_at=ahora;
+    m.estado='ocupada';
+    m.personas=Number(_cliente.comensales||1);
+    m.cliente_nombre='Cliente QR';
+    return m;
+  });
+
+  if(!lock.committed){
+    showToast('Esta mesa ya tiene un pedido QR activo. Puedes revisar el pedido o solicitar servicio.','err');
+    await mostrarPantallaBloqueadaQR();
+    return;
+  }
+
+  try{
+    var mesa=lock.snapshot.val()||{};
+    var ar=await db.ref('negocios/'+negocioID+'/qr_mesas/asignaciones/'+_mesaQR).once('value');
+    var respaldo=ar.val()||{};
+    var items=_cart.map(function(c){return {
+      id:c.id||'',desc:c.nombre,nombre:c.nombre,cant:Number(c.cant||1),precio:Number(c.precio||0),
+      cat:c.cat||c.categoria||'',nota:c.nota||'',img:c.img||c.imagen||'',eliminado:false,listo:false
+    }});
+    var total=Number(items.reduce(function(a,x){return a+x.precio*x.cant},0).toFixed(2));
+    await requestRef.set({
+      id:requestID,mesa_num:Number(_mesaQR),estado:'pendiente_aprobacion',origen:'qr_cliente',
+      nombre_cliente:_cliente.nombre||('Cliente Mesa '+_mesaQR),comensales:Number(_cliente.comensales||1),
+      items:items,total:total,timestamp:ahora,confirmada_cliente:true,
+      mesero_sugerido:mesa.mesero||mesa.mesero_nombre||mesa.mesero_asignado||respaldo.mesero||respaldo.nombre||''
+    });
+    localStorage.setItem('qr_request_'+negocioID+'_'+_mesaQR,requestID);
+    _cart=[]; updateCartUI(); closeCart();
+    await mostrarPantallaBloqueadaQR(requestID);
+  }catch(e){
+    // Si falló la creación real de la solicitud, liberar sólo el bloqueo que acabamos de crear.
+    await mesaRef.transaction(function(m){
+      if(!m || m.qr_solicitud_id!==requestID) return m;
+      m.qr_bloqueada=null; m.qr_estado=null; m.qr_solicitud_id=null;
+      if(!m.pedido_activo_id){m.estado='libre';m.personas=1;m.cliente_nombre='';}
+      return m;
+    });
+    throw e;
+  }
+}
+
+
+function abrirConfirmacionFinal(){
+  if(!_cart || !_cart.length){ showToast('Tu orden está vacía.', 'err'); return; }
+  var modal=document.getElementById('modal-confirm-final');
+  var items=document.getElementById('cf-items');
+  var total=0;
+  items.innerHTML=_cart.map(function(c){
+    var sub=(parseFloat(c.precio||0)*parseFloat(c.cant||0));
+    total+=sub;
+    var img=c.img||c.imagen||'';
+    var foto=img
+      ? '<img src="'+escapeHtml(img)+'" alt="" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0">'
+      : '<div style="width:48px;height:48px;border-radius:10px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🍽️</div>';
+    return '<div style="display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:9px 10px">'
+      +foto
+      +'<div style="flex:1;min-width:0"><div style="font-weight:800;color:var(--text)">'+c.cant+'× '+escapeHtml(c.nombre)+'</div>'
+      +(c.nota?'<div style="font-size:11px;color:var(--muted);margin-top:2px">'+escapeHtml(c.nota)+'</div>':'')
+      +'</div><strong style="color:var(--primary)">$'+sub.toFixed(2)+'</strong></div>';
+  }).join('');
+  var ci=document.getElementById('cf-comensales');
+  if(ci) ci.value=Number(_cliente.comensales||1);
+  document.getElementById('cf-total').textContent='$'+total.toFixed(2);
+  document.getElementById('cf-mesa').textContent=_modoMesaQR ? ('Mesa '+_mesaQR) : 'tu mesa';
+  modal.classList.add('active');
+}
+function cerrarConfirmacionFinal(){
+  var modal=document.getElementById('modal-confirm-final');
+  if(modal) modal.classList.remove('active');
+}
+async function confirmarYEnviarPedido(){
+  var btn=document.getElementById('btn-confirm-final-send');
+  if(btn && btn.disabled) return;
+  if(btn){
+    btn.disabled=true;
+    btn.innerHTML='<i class="fa-solid fa-circle-notch fa-spin"></i> Enviando...';
+  }
+  try{
+    if(typeof db==='undefined' || !db){ throw new Error('Firebase no está conectado'); }
+    var ci=document.getElementById('cf-comensales');
+    var com=parseInt(ci && ci.value || '0',10);
+    if(!com || com<1 || com>30){
+      showToast('Indica el número de comensales (1 a 30).','err');
+      return;
+    }
+    _cliente.comensales=com;
+    cerrarConfirmacionFinal();
+    await enviarPedido();
+  }catch(e){
+    console.error('[QR confirmar]',e);
+    showToast('No se pudo enviar el pedido. Intenta nuevamente.','err');
+  }finally{
+    if(btn){
+      btn.disabled=false;
+      btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Estoy de acuerdo · Enviar pedido';
+    }
+  }
+}
+
+function enviarPedido() {
+  if (_modoMesaQR) return enviarPedidoMesaQR();
+  return enviarPedidoWebLegacy();
+}
+
+
+
+
+async function mostrarPantallaBloqueadaQR(requestID){
+  if(!_modoMesaQR) return;
+  var rid=requestID || localStorage.getItem('qr_request_'+negocioID+'_'+_mesaQR) || '';
+  if(!rid){
+    try{
+      var ms=await db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).once('value');
+      var m=ms.val()||{};
+      rid=m.qr_solicitud_id||'';
+    }catch(e){}
+  }
+  if(rid) localStorage.setItem('qr_request_'+negocioID+'_'+_mesaQR,rid);
+
+  var app=document.getElementById('screen-app');
+  if(app) app.classList.remove('active');
+  var success=document.getElementById('screen-success');
+  if(success) success.classList.add('active');
+  var title=document.querySelector('#screen-success .ss-title');
+  if(title) title.textContent='Mesa '+_mesaQR+' · Pedido registrado';
+  var sub=document.querySelector('#screen-success .ss-sub');
+  if(sub) sub.innerHTML='La mesa quedó bloqueada para evitar pedidos duplicados.<br>Puedes revisar tu pedido, llamar al servicio o pedir la cuenta.';
+  var order=document.getElementById('ss-order');
+  if(order) order.textContent=rid ? ('SOLICITUD '+rid.slice(-6).toUpperCase()) : ('MESA '+_mesaQR);
+  var detail=document.getElementById('ss-detail');
+  if(detail) detail.textContent='Mesa '+_mesaQR;
+  var actions=document.getElementById('qr-locked-actions');
+  if(actions) actions.style.display='grid';
+}
+
+async function abrirRevisionPedidoQR(){
+  var rid=localStorage.getItem('qr_request_'+negocioID+'_'+_mesaQR)||'';
+  if(!rid){
+    var ms=await db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).once('value');
+    rid=(ms.val()||{}).qr_solicitud_id||'';
+  }
+  var st=document.getElementById('qr-review-status');
+  var items=document.getElementById('qr-review-items');
+  var totalEl=document.getElementById('qr-review-total');
+  if(!rid){
+    st.textContent='No se encontró la solicitud asociada a esta mesa.';
+    items.innerHTML=''; totalEl.textContent='$0.00';
+  }else{
+    var sn=await db.ref('negocios/'+negocioID+'/solicitudes_qr/'+rid).once('value');
+    var s=sn.val()||{};
+    var labels={
+      pendiente_aprobacion:'⏳ Esperando confirmación en caja',
+      procesando:'🟠 Caja está tomando tu orden',
+      aprobada:'✅ Orden confirmada y enviada a Cocina/Bar',
+      rechazada:'❌ Solicitud rechazada — solicita ayuda al personal',
+      error:'⚠️ El personal debe revisar esta solicitud'
+    };
+    st.textContent=labels[s.estado]||('Estado: '+(s.estado||'sin información'));
+    items.innerHTML=(s.items||[]).map(function(i){
+      return '<div style="display:flex;justify-content:space-between;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:10px">'
+        +'<span><b>'+Number(i.cant||1)+'×</b> '+escapeHtml(i.desc||i.nombre||'Producto')+'</span>'
+        +'<b>$'+(Number(i.precio||0)*Number(i.cant||1)).toFixed(2)+'</b></div>';
+    }).join('');
+    totalEl.textContent='$'+Number(s.total||0).toFixed(2);
+  }
+  document.getElementById('modal-review-qr').classList.add('active');
+}
+function cerrarRevisionPedidoQR(){
+  var m=document.getElementById('modal-review-qr'); if(m)m.classList.remove('active');
+}
+
+async function verificarBloqueoMesaQR(){
+  if(!_modoMesaQR || typeof db==='undefined') return;
+  try{
+    var ms=await db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).once('value');
+    var m=ms.val()||{};
+    if(m.estado==='libre' && !m.pedido_activo_id){
+      if(m.qr_bloqueada || m.qr_estado || m.qr_solicitud_id){
+        await db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).update({
+          qr_bloqueada:null,qr_estado:null,qr_solicitud_id:null,qr_bloqueada_at:null
+        });
+      }
+      liberarInterfazClienteQR();
+      return;
+    }
+    if(m.qr_bloqueada){
+      if(m.qr_solicitud_id) localStorage.setItem('qr_request_'+negocioID+'_'+_mesaQR,m.qr_solicitud_id);
+      await mostrarPantallaBloqueadaQR(m.qr_solicitud_id||'');
+    }
+  }catch(e){console.error('[QR bloqueo]',e);}
+}
+setTimeout(verificarBloqueoMesaQR,900);
+
+
+function liberarInterfazClienteQR(){
+  if(!_modoMesaQR)return;
+  localStorage.removeItem('qr_request_'+negocioID+'_'+_mesaQR);
+  _cart=[];updateCartUI();
+  var success=document.getElementById('screen-success');if(success)success.classList.remove('active');
+  var app=document.getElementById('screen-app');if(app)app.classList.remove('active');
+  var actions=document.getElementById('qr-locked-actions');if(actions)actions.style.display='none';
+  var ob=document.getElementById('screen-onboarding');
+  if(ob){ob.style.display='flex';ob.classList.remove('hidden');}
+  var nom=document.getElementById('ob-nombre');if(nom)nom.value='';
+  var com=document.getElementById('ob-telefono');if(com)com.value='';
+}
+function escucharLiberacionMesaQR(){
+  if(!_modoMesaQR||typeof db==='undefined')return;
+  db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).on('value',function(sn){
+    var m=sn.val()||{};
+    if(m.estado==='libre' && !m.pedido_activo_id){
+      liberarInterfazClienteQR();
+    }else if(m.qr_bloqueada){
+      if(m.qr_solicitud_id)localStorage.setItem('qr_request_'+negocioID+'_'+_mesaQR,m.qr_solicitud_id);
+    }
+  });
+}
+setTimeout(escucharLiberacionMesaQR,1100);
+
 function resetApp() {
   _cart = [];
   document.getElementById('screen-success').classList.remove('active');
@@ -822,6 +1280,29 @@ function showToast(msg, type) {
   t.className   = 'toast show' + (type ? ' ' + type : '');
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+</script>
+<div id="qr-service-bar" style="display:none;position:fixed;left:12px;right:12px;bottom:82px;z-index:35;grid-template-columns:1fr 1fr;gap:8px"><button id="btn-llamar-mesero" onclick="solicitarServicioQR('mesero')" style="border:0;border-radius:15px;padding:12px;background:#f59e0b;font-weight:900">🔔 Llamar mesero</button><button id="btn-pedir-cuenta" onclick="solicitarServicioQR('cuenta')" style="border:0;border-radius:15px;padding:12px;background:#0ea5e9;color:white;font-weight:900">🧾 Pedir la cuenta</button></div>
+<script>
+setTimeout(function(){var b=document.getElementById('qr-service-bar');if(b&&_modoMesaQR&&!document.getElementById('screen-success').classList.contains('active'))b.style.display='grid'},700);
+async function solicitarServicioQR(tipo){
+  if(!_modoMesaQR||!_mesaQR)return;
+  var btn=document.getElementById(tipo==='cuenta'?'btn-pedir-cuenta':'btn-llamar-mesero');
+  if(btn&&btn.dataset.locked==='1')return;
+  try{
+    var ms=await db.ref('negocios/'+negocioID+'/mesas/'+_mesaQR).once('value');
+    var m=ms.val()||{};
+    var mesero=(m.mesero||m.mesero_nombre||m.mesero_asignado||'').trim();
+    var r=db.ref('negocios/'+negocioID+'/solicitudes_servicio').push(),ahora=Date.now();
+    var mensaje=tipo==='cuenta'?'MESA '+_mesaQR+' SOLICITA LA CUENTA':'MESA '+_mesaQR+' SOLICITA SERVICIO';
+    await r.set({id:r.key,mesa_num:Number(_mesaQR),tipo:tipo,estado:'pendiente',timestamp:ahora,origen:'qr_cliente',mesero:mesero,cliente:_cliente.nombre||m.cliente_nombre||''});
+    if(mesero){
+      var nr=db.ref('negocios/'+negocioID+'/notificaciones/'+mesero.toLowerCase().trim()).push();
+      await nr.set({mensaje:mensaje,tipo:tipo==='cuenta'?'qr_cuenta':'qr_servicio',mesa_num:Number(_mesaQR),timestamp:ahora,solicitud_id:r.key,origen:'qr_cliente'});
+    }
+    if(btn){var original=btn.innerHTML;btn.dataset.locked='1';btn.innerHTML=tipo==='cuenta'?'✓ Cuenta solicitada':'✓ Servicio solicitado';setTimeout(function(){btn.dataset.locked='0';btn.innerHTML=original;},60000);}
+    showToast(tipo==='cuenta'?(mesero?'Cuenta solicitada a '+mesero+'.':'Cuenta solicitada al personal.'):(mesero?'Avisamos a '+mesero+'.':'Avisamos al personal.'),'ok');
+  }catch(e){console.error('[QR servicio]',e);showToast('No se pudo enviar la solicitud.','err');}
 }
 </script>
 </body>

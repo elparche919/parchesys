@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parche Sys · Admin Menú Cliente</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:Arial,sans-serif}header{position:sticky;top:0;background:#0b1726;border-bottom:1px solid #25364b;padding:14px 18px;display:flex;align-items:center;gap:12px;z-index:10}header img{width:54px;height:54px;object-fit:contain;background:white;border-radius:12px;padding:3px}h1{font-size:18px;margin:0}.sub{font-size:11px;color:#91a7bc}main{max-width:1200px;margin:auto;padding:18px}.card{background:#0d1b2a;border:1px solid #24384f;border-radius:16px;padding:15px;margin-bottom:15px}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}input,select{width:100%;background:#071522;color:white;border:1px solid #2b435d;border-radius:9px;padding:10px}button{border:0;border-radius:9px;padding:10px 12px;font-weight:800;cursor:pointer;background:#38bdf8;color:#062033}label{font-size:10px;color:#9eb2c5;font-weight:800}.product{display:grid;grid-template-columns:70px 1fr 90px 95px minmax(260px,1.5fr) 95px;gap:9px;align-items:center;border:1px solid #24384f;background:#081725;border-radius:12px;padding:9px;margin:8px 0}.thumb{width:70px;height:70px;border-radius:10px;background:#13283a;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:28px}.thumb img{width:100%;height:100%;object-fit:cover}.name{font-weight:900}.meta{font-size:10px;color:#8fa6bb;margin-top:4px}.switch{display:flex;gap:7px;align-items:center;font-size:11px;font-weight:800}.switch input{width:18px}.toolbar{display:grid;grid-template-columns:1fr 190px;gap:9px}.toast{position:fixed;right:14px;bottom:14px;background:#123d31;color:#caffec;border:1px solid #2b7a61;border-radius:10px;padding:10px 13px;display:none}@media(max-width:900px){.product{grid-template-columns:60px 1fr 80px 90px}.url,.save{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header><img src="https://raw.githubusercontent.com/elparche919/parchesys/main/LOGOPARCHESYS.png" alt="Parche Sys"><div><h1>Administrador del Menú Cliente</h1><div class="sub">Fotos externas · orden y visibilidad solo para el QR</div></div></header>
+<main>
+<section class="card"><div class="grid"><div><label>NEGOCIO</label><input id="negocio" value="elparche" onchange="cambiarNegocio()"></div><div><label>LOGO OFICIAL</label><input value="https://raw.githubusercontent.com/elparche919/parchesys/main/LOGOPARCHESYS.png" readonly></div></div><p class="sub">El catálogo, precio y stock siguen en Firebase. Las imágenes se cargan desde URL externa y Firebase solo guarda esa URL.</p></section>
+<section class="card"><h3>Categorías</h3><div id="cats"></div></section>
+<section class="card"><div class="toolbar"><input id="q" placeholder="Buscar producto" oninput="renderProductos()"><select id="fc" onchange="renderProductos()"><option value="">Todas las categorías</option></select></div><div id="products"></div></section>
+</main><div id="toast" class="toast"></div>
+<script>
+var FB_CFG={
+  apiKey: "AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+  authDomain: "parche-sys-v2.firebaseapp.com",
+  databaseURL: "https://parche-sys-v2-default-rtdb.firebaseio.com",
+  projectId: "parche-sys-v2",
+  storageBucket: "parche-sys-v2.firebasestorage.app",
+  messagingSenderId: "367489065915",
+  appId: "1:367489065915:web:300a2bca022c6eb6a41a9e"
+};
+if(!firebase.apps.length)firebase.initializeApp(FB_CFG);
+var db=firebase.database();
+var negocioID=new URLSearchParams(location.search).get('negocio')||localStorage.getItem('negocioID')||'elparche';
+document.getElementById('negocio').value=negocioID;
+var P={},C={};
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function say(s){var e=document.getElementById('toast');e.textContent=s;e.style.display='block';clearTimeout(window.tt);window.tt=setTimeout(function(){e.style.display='none'},2500)}
+function cambiarNegocio(){negocioID=document.getElementById('negocio').value.trim()||'elparche';localStorage.setItem('negocioID',negocioID);location.search='?negocio='+encodeURIComponent(negocioID)}
+function flatten(){var a=[];Object.keys(P).forEach(function(cat){var r=P[cat]||{};if(Array.isArray(r))r.forEach(function(x,i){if(x)a.push(Object.assign({_cat:cat,_id:String(i)},x))});else Object.keys(r).forEach(function(id){if(r[id])a.push(Object.assign({_cat:cat,_id:id},r[id]))})});return a}
+function load(){db.ref('negocios/'+negocioID+'/productos').on('value',function(s){P=s.val()||{};fillCats();renderProductos()});db.ref('negocios/'+negocioID+'/menu_categorias').on('value',function(s){C=s.val()||{};renderCategorias()})}
+function fillCats(){var el=document.getElementById('fc'),v=el.value,cats=Object.keys(P).sort();el.innerHTML='<option value="">Todas las categorías</option>'+cats.map(function(c){return '<option>'+esc(c)+'</option>'}).join('');el.value=cats.indexOf(v)>=0?v:''}
+function renderCategorias(){var a=Object.keys(C).map(function(k){return[k,C[k]||{}]}).sort(function(a,b){return Number(a[1].menu_cliente_orden||a[1].orden||99)-Number(b[1].menu_cliente_orden||b[1].orden||99)});document.getElementById('cats').innerHTML=a.map(function(x){var k=x[0],c=x[1],safe=encodeURIComponent(k);return '<div class="product" data-cat="'+safe+'" style="grid-template-columns:70px 1fr 110px 110px 100px"><div class="thumb">'+esc(c.emoji||'🍽️')+'</div><div><div class="name">'+esc(c.nombre||k)+'</div><div class="meta">'+esc(k)+'</div></div><div><label>ORDEN</label><input class="co" type="number" value="'+Number(c.menu_cliente_orden||c.orden||99)+'"></div><label class="switch"><input class="cv" type="checkbox" '+(c.menu_cliente_visible===false?'':'checked')+'> Visible</label><button onclick="saveCat(\''+safe+'\')">Guardar</button></div>'}).join('')}
+async function saveCat(safe){var k=decodeURIComponent(safe),row=document.querySelector('[data-cat="'+safe+'"]');await db.ref('negocios/'+negocioID+'/menu_categorias/'+k).update({menu_cliente_orden:Number(row.querySelector('.co').value||99),menu_cliente_visible:row.querySelector('.cv').checked});say('Categoría guardada')}
+function renderProductos(){var q=document.getElementById('q').value.toLowerCase(),fc=document.getElementById('fc').value,a=flatten().filter(function(x){return(!fc||x._cat===fc)&&(!q||String(x.nombre||x.desc||'').toLowerCase().includes(q))});a.sort(function(x,y){if(x._cat!==y._cat)return x._cat.localeCompare(y._cat,'es');return Number(x.menu_cliente_orden||9999)-Number(y.menu_cliente_orden||9999)});document.getElementById('products').innerHTML=a.map(function(x){var key=encodeURIComponent(x._cat+'|||'+x._id),img=x.menu_cliente_img||x.img||x.imagen||'';return '<div class="product" data-key="'+key+'"><div class="thumb">'+(img?'<img src="'+esc(img)+'">':'🍽️')+'</div><div><div class="name">'+esc(x.nombre||x.desc||'Producto')+'</div><div class="meta">'+esc(x._cat)+' · $'+Number(x.precio||0).toFixed(2)+'</div></div><div><label>ORDEN</label><input class="po" type="number" value="'+Number(x.menu_cliente_orden||9999)+'"></div><label class="switch"><input class="pv" type="checkbox" '+(x.menu_cliente_visible===false?'':'checked')+'> Visible</label><div class="url"><label>URL IMAGEN EXTERNA</label><input class="pi" value="'+esc(img)+'" placeholder="https://...jpg"></div><div class="save"><button onclick="saveProd(\''+key+'\')">Guardar</button></div></div>'}).join('')}
+async function saveProd(key){var z=decodeURIComponent(key).split('|||'),row=document.querySelector('[data-key="'+key+'"]'),base='negocios/'+negocioID+'/productos/'+z[0]+'/'+z[1];await db.ref(base).update({menu_cliente_orden:Number(row.querySelector('.po').value||9999),menu_cliente_visible:row.querySelector('.pv').checked,menu_cliente_img:row.querySelector('.pi').value.trim()||null});say('Producto guardado')}
+load();
+</script>
+</body></html>

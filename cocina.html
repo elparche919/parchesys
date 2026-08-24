@@ -296,7 +296,7 @@ body.tv-mode-active .board {
   <div class="tb-r">
     <button id="btn-sound" onclick="activarSonido()" style="padding:6px 10px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;cursor:pointer"><i class="fa-solid fa-volume-xmark"></i></button>
     <button onclick="abrirHistorial()" style="padding:6px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
-    <a href="portal-food.html?negocio=negocio_food_sv_demo" id="link-portal" style="padding:6px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-grid-2"></i> Portal</a>
+    <a href="portal-food.html?negocio=elparche" id="link-portal" style="padding:6px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;text-decoration:none;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-grid-2"></i> Portal</a>
     <div class="tb-stats">
       <div class="stat-pill s-web">
         <div class="sn" id="cnt-web">0</div><div class="sl">Web</div>
@@ -694,7 +694,7 @@ function renderBoard(){
     var diff=Date.now()-(o.timestamp||Date.now());
     var mins=Math.floor(diff/60000);
     var tc=mins>15?'time-late':mins>10?'time-warn':'time-ok';
-    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':'';
+    var webTag=o.origen==='menu_web'?'<span style="background:#7c3aed;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">WEB</span>':(o.origen==='qr_mesa'?'<span style="background:#0f766e;color:white;border-radius:4px;padding:1px 5px;font-size:9px;margin-left:5px">📱 QR</span>':'');
     var fireTag=o.fire?'<span class="fire-badge"><i class="fa-solid fa-fire"></i> FIRE</span>':'';
     var pagadoBadge=o.estado==='pagado'?'<span style="background:#10b981;color:#fff;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;letter-spacing:0.05em;margin-left:4px">PAGADO</span>':'';
     // Override card border if fire active
