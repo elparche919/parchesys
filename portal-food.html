@@ -2939,11 +2939,30 @@
         `${diasSemana[fechaObj.getDay()]} ${fechaObj.toLocaleDateString('es',{day:'2-digit',month:'long',year:'numeric'})}`;
       document.getElementById('dia-detalle-sub').textContent = 'Detalle completo de operación diaria';
 
-      const vSnap = await db.ref(`negocios/${negocioID}/ventas`).once('value');
+      // Finanzas toma el valor cobrado desde /ventas, pero el estado operativo más reciente
+      // desde /pedidos. Así una orden puede figurar PAGADA y continuar EN SERVICIO hasta
+      // que Cocina/Bar realmente terminen, sin falsear la venta.
+      const snapsDia = await Promise.all([
+        db.ref(`negocios/${negocioID}/ventas`).once('value'),
+        db.ref(`negocios/${negocioID}/pedidos`).once('value')
+      ]);
+      const vSnap = snapsDia[0], pSnap = snapsDia[1];
+      const pedidosActuales = {};
+      pSnap.forEach(pc => { pedidosActuales[pc.key] = pc.val() || {}; });
+
       let totalIng=0, totalDesc=0, tickets=0;
       let prodsMap={}, paymentsMap={}, canalesMap={}, ordenes=[];
       vSnap.forEach(c => {
-        const v = c.val();
+        const venta = c.val() || {};
+        const operativo = pedidosActuales[c.key] || {};
+        const v = Object.assign({}, venta, {
+          _key: c.key,
+          estado: venta.estado || 'pagado',
+          estado_servicio: operativo.estado_servicio || venta.estado_servicio || 'en_proceso',
+          estado_cocina: operativo.estado_cocina || venta.estado_cocina,
+          estado_bar: operativo.estado_bar || venta.estado_bar,
+          items: operativo.items || venta.items || []
+        });
         const fechaV = _getLocalDia(v);
         if (fechaV !== fecha) return;
         const monto = parseFloat(v.total||0);
@@ -2989,7 +3008,11 @@
           list.forEach(it => {
             const isElim = !!it.eliminado;
             const rowStyle = isElim ? 'text-decoration:line-through; opacity:0.6;' : '';
-            const estadoBadge = isElim ? '<span style="color:#ef4444;font-size:10px;font-weight:900;">ANULADO</span>' : '<span style="color:#16a34a;font-size:10px;font-weight:900;">SERVIDO</span>';
+            const estadoBadge = isElim
+              ? '<span style="color:#ef4444;font-size:10px;font-weight:900;">ANULADO</span>'
+              : (it.listo
+                  ? '<span style="color:#16a34a;font-size:10px;font-weight:900;">SERVIDO</span>'
+                  : '<span style="color:#f59e0b;font-size:10px;font-weight:900;">PENDIENTE</span>');
             const itemTotal = (it.cant || 1) * (it.precio || it.price || 0);
             
             itemsHtml += `<tr style="${rowStyle}">
@@ -3001,9 +3024,14 @@
             </tr>`;
           });
           itemsHtml += '</tbody></table></div>';
-          const rowId = v.orden || v.id || Math.random().toString(36).substr(2, 9);
+          const rowId = v.orden || v.id || v._key || Math.random().toString(36).substr(2, 9);
+          const servicioEntregado = v.estado_servicio === 'entregado' || (v.estado_cocina === 'entregado' && v.estado_bar === 'entregado');
+          const estadoServicioBadge = servicioEntregado
+            ? '<span style="background:#0ea5e9;color:#fff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:900;margin-left:5px">ENTREGADO</span>'
+            : '<span style="background:#f59e0b;color:#111827;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:900;margin-left:5px">EN SERVICIO</span>';
+          const pagadoBadge = '<span style="background:#10b981;color:#fff;padding:2px 6px;border-radius:4px;font-size:9px;font-weight:900;margin-left:5px">PAGADO</span>';
           return `<tr style="cursor:pointer;" onclick="var d=document.getElementById('dd-det-${rowId}'); if(d) d.style.display = d.style.display==='none'?'table-row':'none';">
-            <td style="font-weight:800;font-family:monospace">${v.orden||'—'}${alertIcon}</td>
+            <td style="font-weight:800;font-family:monospace">${v.orden||'—'}${alertIcon}<div style="margin-top:4px;white-space:nowrap">${estadoServicioBadge}${pagadoBadge}</div></td>
             <td style="color:var(--m-muted)">${hora}</td>
             <td><span style="background:rgba(56,189,248,.15);color:#38bdf8;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:800">${(v.canal||'mesa').toUpperCase()}</span></td>
             <td>${v.mesero||v.cajero||'—'}</td>

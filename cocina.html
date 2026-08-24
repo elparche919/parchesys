@@ -351,7 +351,7 @@ body.tv-mode-active .board {
 <div class="hist-overlay" id="hist-overlay">
   <div class="hist-panel">
     <div class="hist-head">
-      <div class="hist-head-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue)"></i> Historial de Órdenes Entregadas</div>
+      <div class="hist-head-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue)"></i> ELEMENTOS SERVIDOS · COCINA</div>
       <button class="hist-close" onclick="cerrarHistorial()"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="hist-filters">
@@ -944,7 +944,14 @@ function cargarHistorialKDS(){
 
   db.ref('negocios/'+negocioID+'/historial_kds').orderByChild('fecha_entrega').equalTo(fecha).once('value',function(snap){
     var items=[];
-    snap.forEach(function(c){ items.push(Object.assign({},c.val(),{_key:c.key})); });
+    snap.forEach(function(c){
+      var v=c.val()||{};
+      // Historial de Cocina: mostrar solo despachos de cocina. Para registros antiguos
+      // sin marcador de área, se conservan si contienen al menos un platillo.
+      var esCocina = v.estado_servicio === 'cocina_despachada' || !v.estado_servicio;
+      var tienePlatillo = (v.items||[]).some(function(it){ return !_esBarCat(it.cat); });
+      if(esCocina && tienePlatillo) items.push(Object.assign({},v,{_key:c.key}));
+    });
     items.reverse(); // más recientes primero
 
     if(!items.length){
@@ -953,12 +960,14 @@ function cargarHistorialKDS(){
     }
 
     body.innerHTML=items.map(function(o){
-      var itemsList=(o.items||[]).map(function(it){
+      var itemsList=(o.items||[]).filter(function(it){
+        return !_esBarCat(it.cat); // Cocina nunca muestra bebidas en historial
+      }).map(function(it){
         if (it.eliminado) {
           return '<span style="text-decoration:line-through;color:#9ca3af;opacity:0.7;">' + it.cant + '× ' + it.desc + '</span>'
             + '<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px;">❌ ANULADO' + (it.eliminado_por ? ' por ' + it.eliminado_por : '') + '</span>';
         }
-        return '<span>' + it.cant + '× ' + it.desc + '</span>';
+        return '<span><strong style="color:#38bdf8">✓ SERVIDO</strong> · ' + it.cant + '× ' + it.desc + '</span>';
       }).join('<br>');
       var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
       return '<div class="hist-card">'

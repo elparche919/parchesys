@@ -7415,7 +7415,9 @@ function filtrarHistorial(){
     lg.forEach(function(e){
       var id=e[0], v=e[1];
       var canal=v.canal||v.tipo||'mesa', est=v.estado||'pendiente';
-      var esAnulada=est==='ANULADA';
+      var esAnulada=(est==='ANULADA'||est==='anulada');
+      var servicio=v.estado_servicio || (est==='entregado' ? 'entregado' : 'en_proceso');
+      var pagada=(est==='pagado');
       var horaStr=v.hora||'';
       if(!horaStr&&v.timestamp) horaStr=new Date(v.timestamp).toLocaleTimeString('es-SV',{hour:'2-digit',minute:'2-digit'});
       var cIcon=canalIcon[canal]||'\U0001f4cb';
@@ -7478,7 +7480,10 @@ function filtrarHistorial(){
         '<div class="hist-item-head" onclick="toggleHistItem(\''+id+'\')">'
           +'<div style="flex:1;min-width:0">'
             +'<div class="hist-ord">#'+(v.orden||id)+' '
-              +'<span class="estado-badge '+(estMap[est]||'est-pendiente')+'" style="vertical-align:middle">'+estLabel[est]+'</span>'
+              +(esAnulada?'<span class="estado-badge est-anulada" style="vertical-align:middle">Anulada</span>':'')
+              +(!esAnulada && servicio==='entregado'?'<span class="estado-badge est-entregado" style="vertical-align:middle">Entregado</span>':'')
+              +(!esAnulada && servicio!=='entregado'?'<span class="estado-badge est-cocina" style="vertical-align:middle">En servicio</span>':'')
+              +(pagada?'<span class="estado-badge est-pagado" style="vertical-align:middle;margin-left:4px">Pagado</span>':'')
             +'</div>'
             +'<div class="hist-time"><i class="fa-regular fa-clock" style="font-size:9px"></i>'
               +horaStr

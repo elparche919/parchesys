@@ -96,6 +96,20 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
 .btn-listo{background:#3b82f6;color:#fff;box-shadow:0 0 10px rgba(59,130,246,0.3)}
 .btn-entregado{background:var(--bl);color:var(--blue)}
 
+
+/* HISTORIAL MODAL */
+.hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9000;display:none;align-items:flex-start;justify-content:flex-end;padding:8px}
+.hist-overlay.open{display:flex}
+.hist-panel{background:var(--sur);border:1px solid var(--bd);border-radius:16px;width:480px;max-width:100%;height:calc(100vh - 16px);display:flex;flex-direction:column;overflow:hidden}
+.hist-head{padding:16px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.hist-head-title{font-size:15px;font-weight:900;display:flex;align-items:center;gap:8px}
+.hist-close{width:32px;height:32px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--muted);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hist-filters{padding:10px 14px;border-bottom:1px solid var(--bd);display:flex;gap:8px;flex-shrink:0}
+.hist-date{flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--bd);background:var(--sur2);color:var(--ink);font-size:12px;font-family:var(--font)}
+.hist-body{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.hist-card{background:var(--sur2);border:1px solid var(--bd);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.hist-card-head{display:flex;align-items:center;justify-content:space-between}.hist-card-id{font-size:14px;font-weight:900;color:var(--ink)}.hist-card-time{font-size:10px;color:var(--muted);font-weight:700}.hist-card-info{font-size:11px;font-weight:700;color:var(--blue);text-transform:uppercase}.hist-card-items{font-size:12px;color:var(--mid);line-height:1.6}.hist-empty{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}.hist-loading{text-align:center;padding:30px;color:var(--muted);font-size:12px}
+
 /* TOAST */
 #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--sur);border:1px solid var(--bd);padding:12px 24px;border-radius:12px;font-size:13px;font-weight:700;z-index:10000;transition:.4s cubic-bezier(.17,1.3,.3,1);opacity:0;box-shadow:0 12px 32px rgba(0,0,0,.3);display:flex;align-items:center;gap:10px}
 </style>
@@ -117,6 +131,7 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
   </div>
   <div class="tb-r">
     <button id="btn-sound" onclick="activarSonido()" style="padding:8px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:12px;cursor:pointer"><i class="fa-solid fa-volume-xmark"></i></button>
+    <button onclick="abrirHistorial()" style="padding:8px 12px;border-radius:9px;border:1px solid var(--bd);background:var(--sur2);color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <div class="tb-stats">
       <div class="stat-pill s-pending">
         <div class="sn" id="cnt-pendiente">0</div><div class="sl">Pendientes</div>
@@ -145,6 +160,22 @@ body{font-family:var(--font);color:var(--ink);display:flex;flex-direction:column
   <div class="empty-board">
     <div class="empty-icon">🍹</div>
     <div class="empty-txt">Conectando con Bar KDS...</div>
+  </div>
+</div>
+
+
+<!-- HISTORIAL MODAL -->
+<div class="hist-overlay" id="hist-overlay">
+  <div class="hist-panel">
+    <div class="hist-head">
+      <div class="hist-head-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue)"></i> ELEMENTOS SERVIDOS · BAR</div>
+      <button class="hist-close" onclick="cerrarHistorial()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="hist-filters">
+      <input type="date" id="hist-fecha" class="hist-date" onchange="cargarHistorialKDS()">
+      <button onclick="cargarHistorialKDS()" style="padding:7px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--sur2);color:var(--mid);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap"><i class="fa-solid fa-rotate"></i> Actualizar</button>
+    </div>
+    <div class="hist-body" id="hist-body"><div class="hist-empty">Selecciona una fecha para ver el historial</div></div>
   </div>
 </div>
 
@@ -491,6 +522,42 @@ function cambiarEstado(id,nestado){
       db.ref('negocios/'+negocioID+'/pedidos/'+id).update({estado_bar:nestado});
     }
   }
+}
+
+
+/* ─── HISTORIAL KDS BAR ─── */
+function abrirHistorial(){
+  document.getElementById('hist-overlay').classList.add('open');
+  var today=new Date(Date.now()-(new Date()).getTimezoneOffset()*60000).toISOString().slice(0,-1).split('T')[0];
+  document.getElementById('hist-fecha').value=today;
+  cargarHistorialKDS();
+}
+function cerrarHistorial(){ document.getElementById('hist-overlay').classList.remove('open'); }
+function cargarHistorialKDS(){
+  var fecha=document.getElementById('hist-fecha').value;
+  var body=document.getElementById('hist-body');
+  if(!fecha){ body.innerHTML='<div class="hist-empty">Selecciona una fecha</div>'; return; }
+  body.innerHTML='<div class="hist-loading"><i class="fa-solid fa-spinner fa-spin"></i> Cargando...</div>';
+  db.ref('negocios/'+negocioID+'/historial_kds').orderByChild('fecha_entrega').equalTo(fecha).once('value',function(snap){
+    var rows=[];
+    snap.forEach(function(c){
+      var v=c.val()||{};
+      if(v.estado_servicio==='bar_despachado' && (v.items||[]).some(function(it){return _esBarCat(it.cat);})) rows.push(Object.assign({},v,{_key:c.key}));
+    });
+    rows.reverse();
+    if(!rows.length){ body.innerHTML='<div class="hist-empty"><i class="fa-solid fa-box-open" style="font-size:32px;opacity:.3;display:block;margin-bottom:10px"></i>Sin bebidas servidas el '+fecha+'</div>'; return; }
+    body.innerHTML=rows.map(function(o){
+      var itemsList=(o.items||[]).filter(function(it){ return _esBarCat(it.cat); }).map(function(it){
+        if(it.eliminado){
+          return '<span style="text-decoration:line-through;color:#9ca3af;opacity:.7">'+it.cant+'× '+it.desc+'</span>'
+            +'<span style="font-size:10px;color:#ef4444;font-weight:800;margin-left:6px">❌ ANULADO'+(it.eliminado_por?' por '+it.eliminado_por:'')+'</span>';
+        }
+        return '<span><strong style="color:#06b6d4">✓ SERVIDO</strong> · '+it.cant+'× '+it.desc+'</span>';
+      }).join('<br>');
+      var tipoLabel=o.tipo==='mesa'?'🍽️ Mesa '+(o.mesa_num||'?'):(o.tipo?'🥡 '+o.tipo.toUpperCase():'ORDEN');
+      return '<div class="hist-card"><div class="hist-card-head"><div class="hist-card-id">#'+(o.orden||o._key.substring(0,8))+'</div><div class="hist-card-time">⏰ '+(o.hora_entrega||'--:--')+(o.tomada_por?' · '+o.tomada_por:(o.mesero?' · '+o.mesero:''))+'</div></div><div class="hist-card-info">'+tipoLabel+'</div><div class="hist-card-items">'+itemsList+'</div></div>';
+    }).join('');
+  });
 }
 
 /* ─── STATS ─── */

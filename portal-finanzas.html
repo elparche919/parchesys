@@ -683,9 +683,15 @@
             if (itemsText.length > 55) itemsText = itemsText.substring(0, 52) + '...';
           }
 
+          const servicioEntregado = o.estado_servicio === 'entregado' || (o.estado_cocina === 'entregado' && o.estado_bar === 'entregado');
+          const estadoServicioHtml = servicioEntregado
+            ? '<span class="badge" style="background:#0ea5e9;color:#fff;margin-left:5px;">ENTREGADO</span>'
+            : '<span class="badge" style="background:#f59e0b;color:#111827;margin-left:5px;">EN SERVICIO</span>';
+          const pagadoHtml = '<span class="badge" style="background:#10b981;color:#fff;margin-left:5px;">PAGADO</span>';
+
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${o.id || o.orden || '--'}</strong></td>
+            <td><strong>${o.id || o.orden || '--'}</strong><div style="margin-top:5px;white-space:nowrap;">${estadoServicioHtml}${pagadoHtml}</div></td>
             <td>${o.cliente || 'Consumidor Final'}</td>
             <td title="${itemsText}">${itemsText || 'Sin detalle'}</td>
             <td><span class="badge badge-open" style="background:#334155;color:white;">${(o.forma_pago || 'efectivo').toUpperCase()}</span></td>
