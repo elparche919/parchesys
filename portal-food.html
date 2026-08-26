@@ -2799,6 +2799,87 @@
     }
 
     /* â”€â”€ Cálculo principal (Resumen) â”€â”€ */
+
+    /* ─────────────────────────────────────────────────────────────
+       INTEGRIDAD NUMÉRICA DE REPORTES
+       Una sola venta con total="NaN", undefined o texto no debe
+       contaminar todo el día/mes. Recuperar total desde:
+       total -> subtotal -> suma de items activos.
+    ───────────────────────────────────────────────────────────── */
+    function _numFinito(v, fallback) {
+      const n = typeof v === 'number' ? v : parseFloat(v);
+      return Number.isFinite(n) ? n : (fallback === undefined ? 0 : fallback);
+    }
+
+    function _totalVentaSeguro(v) {
+      v = v || {};
+
+      let n = typeof v.total === 'number' ? v.total : parseFloat(v.total);
+      if (Number.isFinite(n)) return n;
+
+      n = typeof v.subtotal === 'number' ? v.subtotal : parseFloat(v.subtotal);
+      if (Number.isFinite(n)) {
+        // subtotal puede ser antes del descuento en registros antiguos.
+        const d = _numFinito(v.descuento_monto, 0);
+        const p = _numFinito(v.propina, 0);
+        const candidato = n - d + p;
+        return Number.isFinite(candidato) ? Math.max(0, candidato) : n;
+      }
+
+      const items = Array.isArray(v.items) ? v.items : [];
+      let suma = 0;
+      let validos = 0;
+      items.forEach(it => {
+        if (!it || it.eliminado) return;
+        const cant = _numFinito(it.cant, 1);
+        const precio = _numFinito(
+          it.precio !== undefined ? it.precio :
+          (it.price !== undefined ? it.price : it.precio_venta),
+          NaN
+        );
+        if (!Number.isFinite(precio)) return;
+        suma += cant * precio;
+        validos++;
+      });
+
+      if (validos) {
+        const d = _numFinito(v.descuento_monto, 0);
+        const p = _numFinito(v.propina, 0);
+        return Math.max(0, suma - d + p);
+      }
+
+      return 0;
+    }
+
+    function _registrarVentaNumericaInvalida(key, v, recuperado, contexto) {
+      if (!v) return;
+      const raw = v.total;
+      const rawNum = typeof raw === 'number' ? raw : parseFloat(raw);
+      if (Number.isFinite(rawNum)) return;
+
+      console.warn('[AUDITORÍA] Venta con total inválido recuperada', {
+        key: key || v.orden || '',
+        orden: v.orden || '',
+        total_original: raw,
+        subtotal: v.subtotal,
+        total_recuperado: recuperado,
+        contexto: contexto || ''
+      });
+    }
+
+    function _importeItemSeguro(it) {
+      if (!it || it.eliminado) return 0;
+      const sub = typeof it.sub === 'number' ? it.sub : parseFloat(it.sub);
+      if (Number.isFinite(sub)) return sub;
+      const cant = _numFinito(it.cant, 1);
+      const precio = _numFinito(
+        it.precio !== undefined ? it.precio :
+        (it.price !== undefined ? it.price : it.precio_venta),
+        0
+      );
+      return cant * precio;
+    }
+
     async function calcularReportes() {
       const mes = document.getElementById('rep-mes').value;
       if (!mes) return;
@@ -2817,16 +2898,17 @@
         const v = c.val();
         const fechaV = _getLocalMes(v);
         if (fechaV !== mes) return;
-        const monto = parseFloat(v.total || 0);
+        const monto = _totalVentaSeguro(v);
+        _registrarVentaNumericaInvalida(c.key, v, monto, 'resumen_mes');
         totalIngresos += monto;
         tickets++;
-        const desc = parseFloat(v.descuento_monto || 0);
+        const desc = _numFinito(v.descuento_monto, 0);
         if (desc > 0) { totalDescuentos += desc; descRows.push(v); }
         (v.items || []).forEach(it => {
           const n = it.desc || it.nombre || '?';
           if (!prodsMap[n]) prodsMap[n] = { n, q: 0, v: 0 };
           prodsMap[n].q += (it.cant || 1);
-          prodsMap[n].v += parseFloat(it.sub || (it.cant * it.precio) || 0);
+          prodsMap[n].v += _importeItemSeguro(it);
         });
         const chan = v.canal || 'mesa';
         channelsMap[chan] = (channelsMap[chan] || 0) + 1;
@@ -2942,15 +3024,16 @@
         const v = c.val();
         const fechaV = _getLocalDia(v);
         if (fechaV < desde || fechaV > hasta) return;
-        const monto = parseFloat(v.total||0);
+        const monto = _totalVentaSeguro(v);
+        _registrarVentaNumericaInvalida(c.key, v, monto, 'resumen_granular');
         totalIngresos += monto; tickets++;
-        const desc = parseFloat(v.descuento_monto||0);
+        const desc = _numFinito(v.descuento_monto, 0);
         if (desc > 0) totalDescuentos += desc;
         (v.items||[]).forEach(it => {
           const n = it.desc||it.nombre||'?';
           if (!prodsMap[n]) prodsMap[n]={n,q:0,v:0};
           prodsMap[n].q += (it.cant||1);
-          prodsMap[n].v += parseFloat(it.sub||(it.cant*it.precio)||0);
+          prodsMap[n].v += _importeItemSeguro(it);
         });
         const chan = v.canal||'mesa';
         channelsMap[chan] = (channelsMap[chan]||0)+1;
@@ -2970,7 +3053,9 @@
         const fechaV = _getLocalDia(v);
         if (!fechaV.startsWith(mes)) return;
         if (!diasMap[fechaV]) diasMap[fechaV] = { ingresos:0, tickets:0 };
-        diasMap[fechaV].ingresos += parseFloat(v.total||0);
+        const montoDia = _totalVentaSeguro(v);
+        _registrarVentaNumericaInvalida(c.key, v, montoDia, 'calendario_dias');
+        diasMap[fechaV].ingresos += montoDia;
         diasMap[fechaV].tickets++;
       });
       _diasConDatos = Object.keys(diasMap);
@@ -3047,6 +3132,7 @@
       pSnap.forEach(pc => { pedidosActuales[pc.key] = pc.val() || {}; });
 
       let totalIng=0, totalDesc=0, tickets=0;
+      let ventasRecuperadas=0;
       let prodsMap={}, paymentsMap={}, canalesMap={}, ordenes=[];
       vSnap.forEach(c => {
         const venta = c.val() || {};
@@ -3061,15 +3147,18 @@
         });
         const fechaV = _getLocalDia(v);
         if (fechaV !== fecha) return;
-        const monto = parseFloat(v.total||0);
+        const monto = _totalVentaSeguro(venta);
+        const totalRawNum = typeof venta.total==='number' ? venta.total : parseFloat(venta.total);
+        if (!Number.isFinite(totalRawNum)) ventasRecuperadas++;
+        _registrarVentaNumericaInvalida(c.key, venta, monto, 'detalle_dia');
         totalIng += monto; tickets++;
-        const desc = parseFloat(v.descuento_monto||0);
+        const desc = _numFinito(venta.descuento_monto, 0);
         if (desc>0) totalDesc += desc;
         (v.items||[]).forEach(it => {
           const n=it.desc||it.nombre||'?';
           if(!prodsMap[n]) prodsMap[n]={n,q:0,v:0};
           prodsMap[n].q += (it.cant||1);
-          prodsMap[n].v += parseFloat(it.sub||(it.cant*it.precio)||0);
+          prodsMap[n].v += _importeItemSeguro(it);
         });
         const pay=v.forma_pago||'efectivo';
         paymentsMap[pay]=(paymentsMap[pay]||0)+monto;
@@ -3086,13 +3175,17 @@
       document.getElementById('dd-balance').textContent  = '$'+totalIng.toFixed(2);
       document.getElementById('dd-tickets').textContent  = tickets;
       document.getElementById('dd-avg').textContent      = '$'+avgTkt.toFixed(2);
-      document.getElementById('dd-ordenes-count').textContent = `${ordenes.length} órdenes`;
+      document.getElementById('dd-ordenes-count').textContent =
+        `${ordenes.length} órdenes` + (ventasRecuperadas ? ` · ${ventasRecuperadas} recuperada(s)` : '');
+      document.getElementById('dia-detalle-sub').textContent = ventasRecuperadas
+        ? `Detalle diario · ${ventasRecuperadas} venta(s) tenían total inválido y fueron reconstruidas`
+        : 'Detalle completo de operación diaria';
 
       // Tabla de órdenes
       document.getElementById('dd-tbl-ordenes').querySelector('tbody').innerHTML =
         ordenes.map(v => {
           const hora = _getLocalISO(v) ? _getLocalISO(v).substring(11,16) : (v.hora||'—');
-          const desc = parseFloat(v.descuento_monto||0);
+          const desc = _numFinito(v.descuento_monto, 0);
           const list = v.items || [];
           let hasDeleted = list.some(it => it.eliminado);
           let alertIcon = hasDeleted ? '<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; margin-left:8px;" title="Contiene ítems anulados"></i>' : '';
@@ -3134,7 +3227,7 @@
             <td style="font-size:11px">${v.forma_pago||'efectivo'}</td>
             <td align="center" style="color:var(--m-muted)">${list.length}</td>
             <td align="right" style="color:${desc>0?'#f59e0b':'var(--m-muted)'}">${desc>0?'-$'+desc.toFixed(2):'—'}</td>
-            <td align="right" style="font-weight:900;color:#16a34a">$${parseFloat(v.total||0).toFixed(2)}</td>
+            <td align="right" style="font-weight:900;color:#16a34a">$${_totalVentaSeguro(v).toFixed(2)}</td>
           </tr>
           <tr id="dd-det-${rowId}" style="display:none; background:#1e2430;"><td colspan="8" style="padding:0;">${itemsHtml}</td></tr>`;
         }).join('') || '<tr><td colspan="8" align="center" style="color:var(--m-muted);padding:20px">Sin ventas en este día</td></tr>';
@@ -3242,6 +3335,10 @@
 
     /* â”€â”€â”€ Helper: actualizar KPIs del Resumen â”€â”€â”€ */
     function _actualizarKPIsResumen(totalIngresos, totalEgresos, totalDescuentos, tickets, channelsMap, prodsMap, paymentsMap, descRows) {
+      totalIngresos = _numFinito(totalIngresos, 0);
+      totalEgresos = _numFinito(totalEgresos, 0);
+      totalDescuentos = _numFinito(totalDescuentos, 0);
+      tickets = _numFinito(tickets, 0);
       const balance = totalIngresos - totalEgresos;
       document.getElementById('rep-ingresos').textContent   = '$'+totalIngresos.toFixed(2);
       document.getElementById('rep-egresos').textContent    = '$'+totalEgresos.toFixed(2);
