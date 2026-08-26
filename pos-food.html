@@ -8382,10 +8382,50 @@ async function qrTomar(id){
     alert('La orden QR NO fue aprobada porque no pudo guardarse: '+(e.message||e));
   }
 }
+
+function limpiarSolicitudesServicioAntiguas(){
+  if(typeof db==='undefined'||typeof negocioID==='undefined')return Promise.resolve();
+  var base=db.ref('negocios/'+negocioID+'/solicitudes_servicio');
+  return base.once('value').then(function(sn){
+    var jobs=[];
+    sn.forEach(function(ch){
+      var v=ch.val()||{};
+      if(v.estado!=='pendiente')return;
+
+      var mesaNum=Number(v.mesa_num||0);
+      var reqTs=Number(v.timestamp||v.ts||0);
+
+      jobs.push(
+        db.ref('negocios/'+negocioID+'/mesas/'+mesaNum).once('value').then(function(ms){
+          var mesa=ms.val()||{};
+          var mesaTs=Number(mesa.timestamp||0);
+          var mesaLibre=mesa.estado==='libre'&&!mesa.pedido_activo_id;
+          var sesionAnterior=!!(reqTs&&mesaTs&&reqTs<(mesaTs-30000));
+          var demasiadoVieja=!!(reqTs&&(Date.now()-reqTs)>6*60*60*1000);
+
+          if(mesaLibre||sesionAnterior||demasiadoVieja){
+            return ch.ref.update({
+              estado:'expirada',
+              expirada_at:Date.now(),
+              expirada_motivo:mesaLibre?'mesa_libre':(sesionAnterior?'sesion_anterior':'antiguedad')
+            });
+          }
+        })
+      );
+    });
+    return Promise.all(jobs);
+  }).catch(function(e){
+    console.warn('[Servicio QR] Limpieza inicial:',e);
+  });
+}
+
 (function(){
   function iniciarQRPos(){
     if(typeof db==='undefined'||typeof negocioID==='undefined'){setTimeout(iniciarQRPos,500);return;}
     var _qrNotificados={};
+
+    // Autocuración de residuos de la prueba piloto / sesiones anteriores.
+    limpiarSolicitudesServicioAntiguas();
     db.ref('negocios/'+negocioID+'/solicitudes_qr').on('value',function(s){
       _qrReq=s.val()||{};
       console.log('[QR POS] solicitudes_qr recibidas:',Object.keys(_qrReq).length,_qrReq);
@@ -8406,10 +8446,42 @@ async function qrTomar(id){
       qrRender();
     });
     db.ref('negocios/'+negocioID+'/solicitudes_servicio').on('child_added',function(s){
-      var v=s.val()||{};if(v.estado!=='pendiente')return;
-      var m=v.tipo==='cuenta'?'🧾 MESA '+v.mesa_num+' SOLICITA LA CUENTA':'🔔 MESA '+v.mesa_num+' SOLICITA ATENCIÓN';
-      if(typeof toast==='function')toast(m,'ok');
-      if(typeof mostrarAlertaServicioQR==='function')mostrarAlertaServicioQR(v);
+      var v=s.val()||{};
+      if(v.estado!=='pendiente')return;
+
+      var reqId=s.key;
+      var mesaNum=Number(v.mesa_num||0);
+      var reqTs=Number(v.timestamp||v.ts||0);
+      var ahora=Date.now();
+
+      // Validar que el aviso todavía pertenezca a la sesión ACTUAL de esa mesa.
+      db.ref('negocios/'+negocioID+'/mesas/'+mesaNum).once('value').then(function(ms){
+        var mesa=ms.val()||{};
+        var mesaTs=Number(mesa.timestamp||0);
+
+        var mesaLibre = mesa.estado==='libre' && !mesa.pedido_activo_id;
+        var sesionAnterior = !!(reqTs && mesaTs && reqTs < (mesaTs-30000));
+        var demasiadoVieja = !!(reqTs && (ahora-reqTs) > 6*60*60*1000);
+
+        if(mesaLibre || sesionAnterior || demasiadoVieja){
+          return s.ref.update({
+            estado:'expirada',
+            expirada_at:Date.now(),
+            expirada_motivo: mesaLibre ? 'mesa_libre' : (sesionAnterior ? 'sesion_anterior' : 'antiguedad')
+          });
+        }
+
+        var m=v.tipo==='cuenta'
+          ? '🧾 MESA '+v.mesa_num+' SOLICITA LA CUENTA'
+          : '🔔 MESA '+v.mesa_num+' SOLICITA ATENCIÓN';
+
+        if(typeof toast==='function')toast(m,'ok');
+        if(typeof mostrarAlertaServicioQR==='function'){
+          mostrarAlertaServicioQR(Object.assign({},v,{_firebase_id:reqId}));
+        }
+      }).catch(function(e){
+        console.warn('[Servicio QR] No se pudo validar solicitud '+reqId,e);
+      });
     });
     // Cuando caja deja una mesa realmente libre, quitar el bloqueo QR para el siguiente cliente.
     db.ref('negocios/'+negocioID+'/mesas').on('child_changed',function(sn){
@@ -8469,8 +8541,35 @@ function abrirPedidoQRDesdeAlerta(){
 </script>
 <div id="serviceUrgentOverlay" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(127,29,29,.94);align-items:center;justify-content:center;padding:22px"><div style="max-width:520px;width:100%;background:#111827;border:3px solid #fbbf24;border-radius:24px;padding:28px;text-align:center;color:white"><div id="serviceUrgentIcon" style="font-size:58px">🔔</div><div id="serviceUrgentTitle" style="font-size:28px;font-weight:950;color:#fbbf24"></div><div id="serviceUrgentText" style="font-size:18px;margin:14px 0 22px"></div><button onclick="cerrarAlertaServicioQR()" style="width:100%;padding:15px;border:0;border-radius:14px;background:#fbbf24;color:#111827;font-size:16px;font-weight:950">ATENDER / CERRAR AVISO</button></div></div>
 <script>
-function mostrarAlertaServicioQR(v){var isC=v.tipo==='cuenta',ov=document.getElementById('serviceUrgentOverlay');document.getElementById('serviceUrgentIcon').textContent=isC?'🧾':'🔔';document.getElementById('serviceUrgentTitle').textContent=isC?'MESA '+v.mesa_num+' SOLICITA LA CUENTA':'MESA '+v.mesa_num+' NECESITA SERVICIO';document.getElementById('serviceUrgentText').textContent=(v.cliente?('Cliente: '+v.cliente+' · '):'')+(v.mesero?('Mesero: '+v.mesero):'Sin mesero asignado');ov.style.display='flex';}
-function cerrarAlertaServicioQR(){document.getElementById('serviceUrgentOverlay').style.display='none';}
+var _serviceUrgentRequestId='';
+function mostrarAlertaServicioQR(v){
+  var isC=v.tipo==='cuenta',ov=document.getElementById('serviceUrgentOverlay');
+  _serviceUrgentRequestId=v._firebase_id||v.id||'';
+  document.getElementById('serviceUrgentIcon').textContent=isC?'🧾':'🔔';
+  document.getElementById('serviceUrgentTitle').textContent=isC
+    ?'MESA '+v.mesa_num+' SOLICITA LA CUENTA'
+    :'MESA '+v.mesa_num+' NECESITA SERVICIO';
+  document.getElementById('serviceUrgentText').textContent=
+    (v.cliente?('Cliente: '+v.cliente+' · '):'')+
+    (v.mesero?('Mesero: '+v.mesero):'Sin mesero asignado');
+  ov.style.display='flex';
+}
+function cerrarAlertaServicioQR(){
+  document.getElementById('serviceUrgentOverlay').style.display='none';
+
+  var id=_serviceUrgentRequestId;
+  _serviceUrgentRequestId='';
+
+  if(id && typeof db!=='undefined' && typeof negocioID!=='undefined'){
+    db.ref('negocios/'+negocioID+'/solicitudes_servicio/'+id).update({
+      estado:'atendida',
+      atendida_at:Date.now(),
+      atendida_por:(typeof _usuarioActivoId==='function' ? _usuarioActivoId() : 'POS')
+    }).catch(function(e){
+      console.warn('[Servicio QR] No se pudo cerrar la solicitud '+id,e);
+    });
+  }
+}
 </script>
 </body>
 </html>
