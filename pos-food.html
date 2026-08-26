@@ -4528,7 +4528,19 @@ function updateCant(idx, val){
   renderCart();
 }
 
+
+function itemPedidoValido(it){
+  return !!(it && typeof it==='object' && (it.id || it.desc || it.nombre) &&
+            isFinite(parseFloat(it.cant)) && isFinite(parseFloat(it.precio)));
+}
+function pedidoTieneItemsCorruptos(items){
+  return Array.isArray(items) && items.some(function(it){ return !itemPedidoValido(it); });
+}
+
 function renderCart(){
+  if(pedidoTieneItemsCorruptos(pedido)){
+    console.error('[INTEGRIDAD] La orden contiene ítems incompletos. Se bloquea guardado/cobro hasta revisar.',ORDEN,pedido);
+  }
   var c = document.getElementById('cart-items');
   document.getElementById('items-count').textContent = pedido.length + ' item' + (pedido.length!==1?'s':'');
   if(!pedido.length){

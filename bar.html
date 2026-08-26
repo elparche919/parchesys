@@ -415,32 +415,73 @@ function renderBoard(){
   }).join('');
 }
 
+
+function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items/'+itemIdx);
+  return ref.transaction(function(cur){
+    // CRÍTICO: update() sobre una ruta inexistente crea {listo:true}.
+    // Si el ítem maestro no existe o ya está corrupto, NO escribir nada.
+    if(!cur || typeof cur!=='object') return;
+    var tieneIdentidad = !!(cur.id || cur.desc || cur.nombre);
+    if(!tieneIdentidad) return;
+
+    // Evitar que un índice desfasado marque otro producto.
+    var kId=kdsItem&&(kdsItem.id||'');
+    var cId=cur.id||'';
+    var kNom=String((kdsItem&&(kdsItem.desc||kdsItem.nombre))||'').trim().toLowerCase();
+    var cNom=String(cur.desc||cur.nombre||'').trim().toLowerCase();
+    if(kId && cId && String(kId)!==String(cId)) return;
+    if(!kId && kNom && cNom && kNom!==cNom) return;
+
+    cur.listo=!!newVal;
+    return cur;
+  },function(err,committed){
+    if(err){
+      console.error('['+origen+'] Error sincronizando listo con pedido maestro:',err);
+      return;
+    }
+    if(!committed){
+      console.warn('['+origen+'] Se evitó crear/corromper item maestro',orderId,itemIdx);
+      // Auditoría: deja evidencia sin alterar la orden.
+      db.ref('negocios/'+negocioID+'/auditoria/kds_integridad').push({
+        orden:orderId,item_index:itemIdx,origen:origen,
+        motivo:'item_maestro_inexistente_o_desfasado',
+        kds_id:(kdsItem&&kdsItem.id)||null,
+        kds_desc:(kdsItem&&(kdsItem.desc||kdsItem.nombre))||null,
+        intento_listo:!!newVal,ts:Date.now()
+      }).catch(function(){});
+    }
+  },false);
+}
+
 function toggleCheck(orderId,itemIdx){
   var o = _orders[orderId];
   if(!o || !o.items || !o.items[itemIdx]) return;
-  if(o.items[itemIdx].eliminado) return; // ítem anulado: no se puede marcar
-  var currentVal = !!o.items[itemIdx].listo;
+  if(o.items[itemIdx].eliminado) return;
+  var itemKds=o.items[itemIdx];
+  var currentVal = !!itemKds.listo;
   var newVal = !currentVal;
-  
+
   var k = orderId+'_'+itemIdx;
   _itemChecks[k] = newVal;
-  
+
+  // La copia KDS sí puede actualizarse directamente porque sabemos que existe.
   db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
-    listo: newVal
+    listo:newVal
   });
-  db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items/'+itemIdx).update({
-    listo: newVal
-  });
-  
-  if (newVal) {
+
+  // El pedido maestro se modifica SOLO si el ítem ya existe y corresponde al mismo producto.
+  actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'BAR');
+
+  if(newVal){
     var mesero = o.tomada_por || o.mesero;
-    if (mesero) {
+    if(mesero){
       var channel = o.tipo || o.canal || 'mesa';
       var mesaText = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
-      var itemName = o.items[itemIdx].desc;
+      var itemName = itemKds.desc || itemKds.nombre || 'Ítem';
       db.ref('negocios/'+negocioID+'/notificaciones/' + mesero.toLowerCase().trim()).push({
         tipo: 'bar_item_listo',
-        mensaje: '🍹 Bar ya preparó ' + o.items[itemIdx].cant + 'x ' + itemName + ' de ' + mesaText,
+        mensaje: '🍹 Bar ya preparó ' + (itemKds.cant||1) + 'x ' + itemName + ' de ' + mesaText,
         timestamp: Date.now()
       });
     }
