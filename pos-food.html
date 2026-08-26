@@ -5117,125 +5117,113 @@ function imprimirSolicitudCuenta(){
 /* ═══════════════════════════════════════
    AJUSTE DE STOCK POR DIFERENCIA
 ═══════════════════════════════════════ */
-function ajustarStockPorDiferencia(prevItems, newItems) {
-  // Inventario robusto/idempotente por ORDEN + PRODUCTO.
-  // Cada producto conserva cuánto de esta orden ya fue aplicado en _stockAplicado.
-  // Así, reintentos, tablets desactualizadas o escrituras repetidas NO descuentan dos veces.
-  if (_procesandoSplit) return Promise.resolve(true);
-  if (!ORDEN) return Promise.resolve(true);
+function ajustarStockPorDiferencia(prevItems,newItems){
+  if(_procesandoSplit)return Promise.resolve(true);
+  if(!ORDEN)return Promise.resolve(true);
 
-  function cantidadesEfectivas(items) {
-    var out = {};
-    (Array.isArray(items) ? items : []).forEach(function(i) {
-      if (!i || !i.id || i.eliminado) return; // ANULADO = cantidad efectiva 0
-      var key = (i.variante && i.variante.index !== undefined)
-        ? (i.id + '::' + i.variante.index)
-        : i.id;
-      out[key] = (out[key] || 0) + (parseFloat(i.cant) || 0);
+  function prodInfo(id){return _prods&&_prods[id]?_prods[id]:null;}
+
+  function calc(items){
+    var qty={},force={};
+    function add(k,n,f){n=parseFloat(n)||0;if(!k||!n)return;qty[k]=(qty[k]||0)+n;if(f)force[k]=true;}
+    (Array.isArray(items)?items:[]).forEach(function(i){
+      if(!i||!i.id||i.eliminado)return;
+      var cant=parseFloat(i.cant)||0;if(!cant)return;
+      var p=prodInfo(i.id);
+
+      if(p&&p.descuenta){
+        var dk=(i.variante&&i.variante.index!==undefined)?(i.id+'::'+i.variante.index):i.id;
+        add(dk,cant,false);
+      }
+
+      var ings=p&&Array.isArray(p.ingredientes)?p.ingredientes:[];
+      ings.forEach(function(ig){
+        if(!ig||!(ig.tipo==='producto_menu'||ig.producto_id))return;
+        var cid=ig.producto_id||'', por=parseFloat(ig.c||0);
+        if(!cid||!por||cid===i.id)return;
+        add(cid,cant*por,true);
+      });
     });
-    return out;
+    return {qty:qty,force:force};
   }
 
-  var prevQty = cantidadesEfectivas(prevItems);
-  var desiredQty = cantidadesEfectivas(newItems);
-  var keys = {};
-  Object.keys(prevQty).forEach(function(k){ keys[k]=true; });
-  Object.keys(desiredQty).forEach(function(k){ keys[k]=true; });
-  var orderSafe = String(ORDEN).replace(/[.#$\[\]\/]/g, '_');
+  var a=calc(prevItems),b=calc(newItems),prevQty=a.qty,desiredQty=b.qty;
+  var forced=Object.assign({},a.force,b.force),keys={};
+  Object.keys(prevQty).forEach(k=>keys[k]=true);
+  Object.keys(desiredQty).forEach(k=>keys[k]=true);
+  var orderSafe=String(ORDEN).replace(/[.#$\[\]\/]/g,'_');
 
-  function registrarMovimiento(info) {
-    if (!info || !info.delta) return Promise.resolve();
-    var mk = 'mov_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
-    var data = {
-      tipo: info.delta > 0 ? 'salida' : 'devolucion',
-      origen: 'POS_FOOD',
-      producto_id: info.productId,
-      producto: info.productName || info.productId,
-      variante: info.variantName || '',
-      cantidad: Math.abs(info.delta),
-      impacto_stock: -info.delta,
-      stock_anterior: info.before,
-      stock_nuevo: info.after,
-      orden: ORDEN,
-      mesa: MESA_SEL || '',
-      usuario: (document.getElementById('mesa-mesero')||{value:''}).value || _loggedMesero || 'POS',
-      motivo: info.delta > 0 ? 'Consumo orden '+ORDEN : 'Devolución/anulación orden '+ORDEN,
-      ts: Date.now(),
-      fecha: new Date().toISOString()
-    };
-    return db.ref('negocios/'+negocioID+'/stock_movimientos/'+mk).set(data).catch(function(e){
-      console.warn('No se pudo registrar bitácora de stock:', e);
-    });
+  function log(info){
+    if(!info||!info.delta)return Promise.resolve();
+    var mk='mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+    return db.ref('negocios/'+negocioID+'/stock_movimientos/'+mk).set({
+      tipo:info.delta>0?'salida':'devolucion',
+      origen:info.esComponente?'POS_FOOD_COMBO':'POS_FOOD',
+      producto_id:info.productId,producto:info.productName||info.productId,variante:info.variantName||'',
+      cantidad:Math.abs(info.delta),impacto_stock:-info.delta,stock_anterior:info.before,stock_nuevo:info.after,
+      orden:ORDEN,mesa:MESA_SEL||'',usuario:(document.getElementById('mesa-mesero')||{value:''}).value||_loggedMesero||'POS',
+      motivo:info.delta>0?(info.esComponente?'Componente combo/receta · orden '+ORDEN:'Consumo orden '+ORDEN)
+        :(info.esComponente?'Devolución componente combo/receta · orden '+ORDEN:'Devolución/anulación orden '+ORDEN),
+      ts:Date.now(),fecha:new Date().toISOString()
+    }).catch(e=>console.warn('Bitácora stock:',e));
   }
 
-  var chain = Promise.resolve();
-  Object.keys(keys).forEach(function(key) {
-    chain = chain.then(function(){
-      var parts = key.split('::');
-      var productId = parts[0];
-      var variantIndex = parts[1] !== undefined ? parseInt(parts[1]) : null;
-      var p = _prods[productId];
-      if (!p || !p.descuenta) return true;
+  var chain=Promise.resolve();
+  Object.keys(keys).forEach(function(key){
+    chain=chain.then(function(){
+      var parts=key.split('::'),id=parts[0],vi=parts[1]!==undefined?parseInt(parts[1]):null;
+      var p=prodInfo(id),esComp=!!forced[key];
+      if(!p){
+        if(esComp)throw new Error('El componente de combo "'+id+'" ya no existe en el menú.');
+        return true;
+      }
+      if(!esComp&&!p.descuenta)return true;
 
-      var category = p._cat || '';
-      var basePath = 'negocios/' + negocioID + '/productos/' +
-        ((category && category !== 'General' && category !== 'Todos') ? category + '/' + productId : productId);
-      var markerKey = variantIndex !== null ? ('v'+variantIndex) : 'base';
-      var desired = desiredQty[key] || 0;
-      var previousObserved = prevQty[key] || 0;
-      var txInfo = {delta:0};
-      var abortReason = '';
+      var cat=p._cat||'';
+      var path='negocios/'+negocioID+'/productos/'+((cat&&cat!=='General'&&cat!=='Todos')?cat+'/'+id:id);
+      var markerKey=vi!==null?'v'+vi:'base',desired=desiredQty[key]||0,observed=prevQty[key]||0;
+      var tx={delta:0},reason='';
 
-      return db.ref(basePath).transaction(function(prod) {
-        if (!prod || typeof prod !== 'object') { abortReason='producto_no_existe'; return; }
-        if (!prod._stockAplicado) prod._stockAplicado = {};
-        if (!prod._stockAplicado[orderSafe]) prod._stockAplicado[orderSafe] = {};
+      return db.ref(path).transaction(function(prod){
+        if(!prod||typeof prod!=='object'){reason='producto_no_existe';return;}
+        prod._stockAplicado=prod._stockAplicado||{};
+        prod._stockAplicado[orderSafe]=prod._stockAplicado[orderSafe]||{};
+        var marker=prod._stockAplicado[orderSafe][markerKey];
+        var applied=(marker===undefined||marker===null)?observed:parseFloat(marker||0);
+        var delta=desired-applied,current;
 
-        var marker = prod._stockAplicado[orderSafe][markerKey];
-        // Migración segura: si esta orden existía antes del parche, asumimos que el estado
-        // previo observado YA estaba reflejado en stock y lo usamos como semilla.
-        var applied = (marker === undefined || marker === null) ? previousObserved : parseFloat(marker || 0);
-        var delta = desired - applied;
-        var current;
-        if (variantIndex !== null) {
-          if (!Array.isArray(prod.variantes) || !prod.variantes[variantIndex]) { abortReason='variante_no_existe'; return; }
-          current = parseFloat(prod.variantes[variantIndex].stock || 0);
-        } else {
-          current = parseFloat(prod.stockFijo || 0);
-        }
+        if(vi!==null){
+          if(!Array.isArray(prod.variantes)||!prod.variantes[vi]){reason='variante_no_existe';return;}
+          current=parseFloat(prod.variantes[vi].stock||0);
+        }else current=parseFloat(prod.stockFijo||0);
 
-        if (delta > 0 && current < delta) { abortReason='stock_insuficiente'; return; }
-        var next = current - delta;
-        if (next < 0) { abortReason='stock_insuficiente'; return; }
+        if(delta>0&&current<delta){reason='stock_insuficiente';return;}
+        var next=current-delta;if(next<0){reason='stock_insuficiente';return;}
 
-        if (variantIndex !== null) prod.variantes[variantIndex].stock = next;
-        else prod.stockFijo = next;
-        prod._stockAplicado[orderSafe][markerKey] = desired;
-        txInfo = {delta:delta,before:current,after:next,productId:productId,
-          productName:p.nombre||p.desc||productId,
-          variantName:(variantIndex!==null&&p.variantes&&p.variantes[variantIndex])?(p.variantes[variantIndex].n||p.variantes[variantIndex].nombre||''):''};
+        if(vi!==null)prod.variantes[vi].stock=next;else prod.stockFijo=next;
+        prod._stockAplicado[orderSafe][markerKey]=desired;
+        tx={delta:delta,before:current,after:next,productId:id,productName:p.nombre||p.desc||id,
+          variantName:(vi!==null&&p.variantes&&p.variantes[vi])?(p.variantes[vi].n||p.variantes[vi].nombre||''):'',
+          esComponente:esComp};
         return prod;
-      }).then(function(result){
-        if (!result.committed) {
-          if (abortReason === 'stock_insuficiente') {
-            throw new Error('Stock insuficiente para "'+(p.nombre||p.desc||productId)+'". La orden no fue guardada.');
-          }
-          throw new Error('No se pudo actualizar inventario de '+(p.nombre||p.desc||productId)+' ('+abortReason+').');
+      }).then(function(res){
+        if(!res.committed){
+          if(reason==='stock_insuficiente')throw new Error('Stock insuficiente para "'+(p.nombre||p.desc||id)+'". '+(esComp?'Es componente de un combo. ':'')+'La orden no fue guardada.');
+          throw new Error('No se pudo actualizar inventario de '+(p.nombre||p.desc||id)+' ('+reason+').');
         }
-        if (txInfo.delta) {
-          if (variantIndex !== null && p.variantes && p.variantes[variantIndex]) p.variantes[variantIndex].stock = txInfo.after;
-          else p.stockFijo = txInfo.after;
-          var minStock = 5;
-          if (variantIndex !== null && p.variantes && p.variantes[variantIndex] && p.variantes[variantIndex].stockMinimo !== undefined) minStock=parseFloat(p.variantes[variantIndex].stockMinimo)||5;
-          else if (p.stockMinimo !== undefined && p.stockMinimo !== '') minStock=parseFloat(p.stockMinimo)||5;
-          if (txInfo.after <= minStock) enviarAlertaStockBajo(productId, txInfo.productName+(txInfo.variantName?' ('+txInfo.variantName+')':''), txInfo.after);
-          return registrarMovimiento(txInfo);
+        if(tx.delta){
+          if(vi!==null&&p.variantes&&p.variantes[vi])p.variantes[vi].stock=tx.after;else p.stockFijo=tx.after;
+          var min=5;
+          if(vi!==null&&p.variantes&&p.variantes[vi]&&p.variantes[vi].stockMinimo!==undefined)min=parseFloat(p.variantes[vi].stockMinimo)||5;
+          else if(p.stockMinimo!==undefined&&p.stockMinimo!=='')min=parseFloat(p.stockMinimo)||5;
+          if(tx.after<=min)enviarAlertaStockBajo(id,tx.productName+(tx.variantName?' ('+tx.variantName+')':''),tx.after);
+          return log(tx);
         }
         return true;
       });
     });
   });
-  return chain.then(function(){ return true; });
+  return chain.then(()=>true);
 }
 
 function enviarAlertaStockBajo(productId, productName, currentStock) {
