@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Parche Sys · Reparar MESA-16231</title>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:Arial,sans-serif}
+main{max-width:760px;margin:30px auto;padding:18px}.card{background:#0d1b2a;border:1px solid #29415b;border-radius:18px;padding:20px;margin-bottom:14px}
+h1{font-size:22px;margin:0 0 8px}.muted{color:#91a7bc;font-size:12px;line-height:1.55}
+input{width:100%;background:#071522;color:#fff;border:1px solid #36526e;border-radius:10px;padding:12px;font-size:16px}
+button{border:0;border-radius:11px;padding:13px 16px;font-weight:900;cursor:pointer;background:#38bdf8;color:#05263b;margin-top:10px}
+button.danger{background:#22c55e;color:#052e16}button:disabled{opacity:.4;cursor:not-allowed}
+.row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #1e3449}
+.ok{color:#34d399}.err{color:#fb7185}.warn{color:#fbbf24}
+pre{white-space:pre-wrap;word-break:break-word;background:#071522;border:1px solid #243a50;border-radius:10px;padding:12px;font-size:11px;max-height:300px;overflow:auto}
+</style>
+</head>
+<body>
+<main>
+<div class="card">
+  <h1>🛠 Reparar orden dañada</h1>
+  <div class="muted">Esta herramienta NO cobra, NO toca inventario y NO reenvía la comanda. Solo reconstruye los productos de la orden usando el historial KDS.</div>
+  <label style="display:block;margin-top:14px;font-size:11px;font-weight:900">ORDEN</label>
+  <input id="orden" value="MESA-16231">
+  <button onclick="analizar()">Analizar orden</button>
+</div>
+
+<div class="card" id="resultado" style="display:none">
+  <h3 style="margin-top:0">Resultado</h3>
+  <div id="estado"></div>
+  <div id="items"></div>
+  <div id="totales" style="margin-top:12px"></div>
+  <button class="danger" id="btn-reparar" onclick="reparar()" disabled>✅ RECONSTRUIR ITEMS</button>
+</div>
+
+<div class="card" id="logcard" style="display:none">
+  <h3 style="margin-top:0">Detalle técnico</h3>
+  <pre id="log"></pre>
+</div>
+</main>
+<script>
+var negocioID=new URLSearchParams(location.search).get('negocio')||localStorage.getItem('food_negocioID')||'elparche';
+if(!negocioID)negocioID='elparche';
+var _ctx=null;
+
+function money(n){return '$'+Number(n||0).toFixed(2)}
+function norm(s){return String(s||'').trim().toLowerCase()}
+function showLog(x){document.getElementById('logcard').style.display='block';document.getElementById('log').textContent=typeof x==='string'?x:JSON.stringify(x,null,2)}
+
+async function cargarMenuPlano(){
+  var sn=await db.ref('negocios/'+negocioID+'/productos').once('value');
+  var raw=sn.val()||{}, out=[];
+  Object.keys(raw).forEach(function(cat){
+    var group=raw[cat]||{};
+    if(Array.isArray(group)){
+      group.forEach(function(p,id){if(p)out.push(Object.assign({_id:String(id),_cat:cat},p));});
+    }else{
+      Object.keys(group).forEach(function(id){if(group[id])out.push(Object.assign({_id:id,_cat:cat},group[id]));});
+    }
+  });
+  return out;
+}
+
+async function buscarHistorial(orderId){
+  var sn=await db.ref('negocios/'+negocioID+'/historial_kds').once('value');
+  var candidatos=[];
+  sn.forEach(function(ch){
+    var v=ch.val()||{};
+    var oid=String(v.orden||v.id||ch.key||'');
+    if(oid===orderId && Array.isArray(v.items) && v.items.some(function(i){return i&&(i.desc||i.nombre)})){
+      candidatos.push(Object.assign({_histKey:ch.key},v));
+    }
+  });
+  candidatos.sort(function(a,b){return Number(b.ts_entrega||b.timestamp||0)-Number(a.ts_entrega||a.timestamp||0)});
+  return candidatos[0]||null;
+}
+
+function resolverProducto(histItem, menu){
+  if(histItem.id){
+    var byId=menu.find(function(p){return String(p._id)===String(histItem.id)});
+    if(byId)return byId;
+  }
+  var n=norm(histItem.desc||histItem.nombre);
+  return menu.find(function(p){return norm(p.nombre||p.desc)===n})||null;
+}
+
+async function analizar(){
+  var orderId=document.getElementById('orden').value.trim();
+  var box=document.getElementById('resultado'), estado=document.getElementById('estado'), itemsEl=document.getElementById('items'), tot=document.getElementById('totales'), btn=document.getElementById('btn-reparar');
+  box.style.display='block';btn.disabled=true;estado.innerHTML='⏳ Analizando...';itemsEl.innerHTML='';tot.innerHTML='';
+  try{
+    var [ordSnap,hist,menu]=await Promise.all([
+      db.ref('negocios/'+negocioID+'/pedidos/'+orderId).once('value'),
+      buscarHistorial(orderId),
+      cargarMenuPlano()
+    ]);
+    var orden=ordSnap.val();
+    if(!orden)throw new Error('La orden '+orderId+' no existe en pedidos.');
+    if(orden.estado==='pagado')throw new Error('La orden ya aparece pagada. No se reparará.');
+    if(!hist)throw new Error('No encontré un historial KDS completo para '+orderId+'.');
+
+    var reconstruidos=[];
+    (hist.items||[]).forEach(function(h,i){
+      if(!h || h.eliminado)return;
+      var p=resolverProducto(h,menu);
+      var cant=Number(h.cant||1);
+      var precio=Number(h.precio!=null?h.precio:(h.price!=null?h.price:(p?(p.precio||p.precio_venta||0):0)));
+      var nombre=h.desc||h.nombre||(p&&(p.nombre||p.desc))||'Producto';
+      reconstruidos.push({
+        id:h.id||(p?p._id:''),
+        desc:nombre,
+        nombre:nombre,
+        cant:cant,
+        precio:precio,
+        precio_base:Number(h.precio_base!=null?h.precio_base:precio),
+        total:Number((cant*precio).toFixed(2)),
+        cat:h.cat||h.categoria||(p?p._cat:''),
+        nota:h.nota||'',
+        variante:h.variante||null,
+        modificadores:h.modificadores||null,
+        enviado:true,
+        esNuevo:false,
+        listo:true,
+        eliminado:false,
+        enviado_kds_at:h.enviado_kds_at||h.ultimo_envio_kds_at||hist.timestamp||orden.timestamp||Date.now(),
+        ultimo_envio_kds_at:h.ultimo_envio_kds_at||h.enviado_kds_at||hist.timestamp||orden.timestamp||Date.now(),
+        origen_envio_kds:h.origen_envio_kds||'reconstruido_historial_kds'
+      });
+    });
+
+    if(!reconstruidos.length)throw new Error('El historial encontrado no contiene productos utilizables.');
+    var suma=Number(reconstruidos.reduce(function(a,i){return a+i.cant*i.precio},0).toFixed(2));
+    var esperado=Number(orden.subtotal||orden.total||0);
+    var diferencia=Math.abs(suma-esperado);
+
+    estado.innerHTML='<div class="ok">✅ Historial KDS encontrado: '+hist._histKey+'</div>';
+    itemsEl.innerHTML=reconstruidos.map(function(i){
+      return '<div class="row"><span><b>'+i.cant+'×</b> '+i.desc+'<br><small style="color:#91a7bc">'+(i.cat||'Sin categoría')+'</small></span><b>'+money(i.cant*i.precio)+'</b></div>';
+    }).join('');
+    tot.innerHTML='<div class="row"><span>Total reconstruido</span><b>'+money(suma)+'</b></div>'+
+      '<div class="row"><span>Total original de la orden</span><b>'+money(esperado)+'</b></div>';
+
+    if(diferencia>0.01){
+      tot.innerHTML+='<div class="err" style="margin-top:10px">⛔ Los totales no coinciden. No se habilita reparación automática.</div>';
+      _ctx=null;
+      showLog({orden:orden,historial:hist,reconstruidos:reconstruidos,diferencia:diferencia});
+      return;
+    }
+
+    tot.innerHTML+='<div class="ok" style="margin-top:10px">✅ Totales coinciden. Reparación segura habilitada.</div>';
+    _ctx={orderId:orderId,orden:orden,hist:hist,items:reconstruidos,suma:suma};
+    btn.disabled=false;
+    showLog({orden_corrupta:orden,fuente_historial:hist._histKey,items_reconstruidos:reconstruidos});
+  }catch(e){
+    estado.innerHTML='<div class="err">⛔ '+e.message+'</div>';
+    showLog(String(e.stack||e));
+  }
+}
+
+async function reparar(){
+  if(!_ctx)return;
+  var btn=document.getElementById('btn-reparar');btn.disabled=true;btn.textContent='⏳ REPARANDO...';
+  try{
+    var ts=Date.now();
+    var backupRef=db.ref('negocios/'+negocioID+'/auditoria/reparaciones_orden/'+_ctx.orderId+'/'+ts);
+    await backupRef.set({
+      motivo:'Reconstrucción de items corruptos desde historial_kds',
+      orden_antes:_ctx.orden,
+      historial_fuente:_ctx.hist._histKey,
+      items_reconstruidos:_ctx.items,
+      ts:ts
+    });
+
+    // Solo reparar el pedido maestro. NO tocar cocina_orders, stock ni ventas.
+    await db.ref('negocios/'+negocioID+'/pedidos/'+_ctx.orderId).update({
+      items:_ctx.items,
+      subtotal:_ctx.suma.toFixed(2),
+      total:_ctx.suma.toFixed(2),
+      reparada_integridad:true,
+      reparada_integridad_at:ts,
+      reparada_integridad_fuente:_ctx.hist._histKey
+    });
+
+    document.getElementById('estado').innerHTML='<div class="ok" style="font-size:18px;font-weight:900">✅ ORDEN RECONSTRUIDA</div><div class="muted" style="margin-top:6px">Cierra y vuelve a abrir Mesa 8 en POS. Los productos y el total deben aparecer normalmente y ya podrás cobrar.</div>';
+    btn.textContent='✅ REPARADA';
+    showLog('Reparación completada. Backup: auditoria/reparaciones_orden/'+_ctx.orderId+'/'+ts);
+  }catch(e){
+    btn.disabled=false;btn.textContent='✅ RECONSTRUIR ITEMS';
+    document.getElementById('estado').innerHTML='<div class="err">⛔ Error reparando: '+e.message+'</div>';
+    showLog(String(e.stack||e));
+  }
+}
+</script>
+</body>
+</html>
