@@ -1467,8 +1467,9 @@
         <!-- INVENTARIO & IVA -->
         <div class="ptab" id="pt-inv" style="display:none;">
           <div class="m-grid">
-             <div class="f-grp"><label>¿Descontar del Stock General Físico (Plato Listo)?</label>
-               <select id="p-inv-desc" class="f-inp"><option value="no">NO (Es preparado)</option><option value="si">SÍ (Es un empaque fijo)</option></select>
+             <div class="f-grp"><label>¿Descontar stock propio del producto?</label>
+               <select id="p-inv-desc" class="f-inp"><option value="no">NO (Preparado / Combo)</option><option value="si">SÍ (Producto físico individual)</option></select>
+               <div id="p-combo-stock-help" class="st-warn" style="margin-top:6px;display:none">Producto compuesto: su stock propio no se descuenta; se descuentan sus componentes.</div>
              </div>
              <div class="f-grp"><label>Stock Fijo Actual</label><input type="number" id="p-inv-stk" class="f-inp" placeholder="0"></div>
              <div class="f-grp"><label>Stock en Bodega</label><input type="number" id="p-inv-bod" class="f-inp" placeholder="0"></div>
@@ -2262,6 +2263,20 @@
       renderArrLists();
     }
 
+
+    function actualizarModoInventarioCompuesto(){
+      const tiene=(currentPlat.ingredientes||[]).some(ig=>
+        ig && (ig.tipo==='producto_menu'||ig.producto_id) && ig.producto_id && parseFloat(ig.c||0)>0
+      );
+      const sel=document.getElementById('p-inv-desc');
+      const stk=document.getElementById('p-inv-stk');
+      const help=document.getElementById('p-combo-stock-help');
+      if(sel){if(tiene)sel.value='no';sel.disabled=tiene;}
+      if(stk){stk.disabled=tiene;stk.title=tiene?'Stock virtual: el combo consume sus componentes':'';}
+      if(help)help.style.display=tiene?'block':'none';
+      return tiene;
+    }
+
     function renderArrLists() {
        const iList=document.getElementById('p-ing-lst');
        iList.innerHTML=(currentPlat.ingredientes||[]).map((ig,i)=>{
@@ -2294,6 +2309,8 @@
            <button class="btn-del" onclick="rmArrItem('ingredientes',${i})"><i class="fa-solid fa-trash"></i></button>
          </div>`;
        }).join('');
+
+       actualizarModoInventarioCompuesto();
 
        const vList=document.getElementById('p-var-lst');
        vList.innerHTML=currentPlat.variantes.map((v,i)=>`
@@ -2350,13 +2367,16 @@
           return {tipo:ig.tipo||'manual',n:ig.n||'',c:parseFloat(ig.c||0),u:ig.u||''};
        }).filter(ig=>ig.tipo!=='producto_menu'||(ig.producto_id&&ig.c>0));
 
+       const tieneComponentesMenu=ingredientesNormalizados.some(ig=>ig.tipo==='producto_menu'&&ig.producto_id&&parseFloat(ig.c||0)>0);
+
        const d = {
           nombre: document.getElementById('p-nom').value.trim(),
           precio: parseFloat(document.getElementById('p-pre').value||0),
           img: imgUrl,
           descripcion: document.getElementById('p-dsc').value,
           oculto: document.getElementById('p-est').value === 'oculto',
-          descuenta: document.getElementById('p-inv-desc').value === 'si',
+          descuenta: tieneComponentesMenu ? false : (document.getElementById('p-inv-desc').value === 'si'),
+          tipo_inventario: tieneComponentesMenu ? 'compuesto' : 'simple',
           stockFijo: parseFloat(document.getElementById('p-inv-stk').value||0),
           stockBodega: parseFloat(document.getElementById('p-inv-bod').value||0),
           stockMinimo: parseFloat(document.getElementById('p-inv-min').value||5),

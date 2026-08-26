@@ -1484,7 +1484,7 @@ body {
     </button>
     <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
-    <a class="tbb" id="link-menu" href="menu.html" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
+    <a class="tbb" id="link-menu" href="portal-food.html?panel=menu" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
     <a class="tbb" id="link-dte" href="dte.html" target="_blank" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
     <a class="tbb" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
@@ -5133,109 +5133,118 @@ function ajustarStockPorDiferencia(prevItems,newItems){
   if(_procesandoSplit)return Promise.resolve(true);
   if(!ORDEN)return Promise.resolve(true);
 
-  function prodInfo(id){return _prods&&_prods[id]?_prods[id]:null;}
-
-  function calc(items){
-    var qty={},force={};
-    function add(k,n,f){n=parseFloat(n)||0;if(!k||!n)return;qty[k]=(qty[k]||0)+n;if(f)force[k]=true;}
-    (Array.isArray(items)?items:[]).forEach(function(i){
-      if(!i||!i.id||i.eliminado)return;
-      var cant=parseFloat(i.cant)||0;if(!cant)return;
-      var p=prodInfo(i.id);
-
-      if(p&&p.descuenta){
-        var dk=(i.variante&&i.variante.index!==undefined)?(i.id+'::'+i.variante.index):i.id;
-        add(dk,cant,false);
+  return db.ref('negocios/'+negocioID+'/productos').once('value').then(function(catSnap){
+    var fresh={};
+    catSnap.forEach(function(catNode){
+      var cat=catNode.key, group=catNode.val();
+      if(!group||typeof group!=='object')return;
+      if(!group.nombre){
+        Object.keys(group).forEach(function(id){
+          var p=group[id];
+          if(p&&typeof p==='object'&&p.nombre){
+            fresh[id]=Object.assign({},p,{_id:id,_cat:cat});
+          }
+        });
       }
+    });
+    if(Object.keys(fresh).length){
+      Object.keys(fresh).forEach(function(id){_prods[id]=fresh[id];});
+    }
 
-      var ings=p&&Array.isArray(p.ingredientes)?p.ingredientes:[];
-      ings.forEach(function(ig){
-        if(!ig||!(ig.tipo==='producto_menu'||ig.producto_id))return;
-        var cid=ig.producto_id||'', por=parseFloat(ig.c||0);
-        if(!cid||!por||cid===i.id)return;
-        add(cid,cant*por,true);
+    function prodInfo(id){return fresh[id]||(_prods&&_prods[id])||null;}
+    function calc(items){
+      var qty={},force={};
+      function add(k,n,f){n=parseFloat(n)||0;if(!k||!n)return;qty[k]=(qty[k]||0)+n;if(f)force[k]=true;}
+      (Array.isArray(items)?items:[]).forEach(function(i){
+        if(!i||!i.id||i.eliminado)return;
+        var cant=parseFloat(i.cant)||0;if(!cant)return;
+        var p=prodInfo(i.id);if(!p)return;
+        var comps=(Array.isArray(p.ingredientes)?p.ingredientes:[]).filter(function(ig){
+          return ig&&(ig.tipo==='producto_menu'||ig.producto_id)&&ig.producto_id&&parseFloat(ig.c||0)>0;
+        });
+        var compuesto=comps.length>0||p.tipo_inventario==='compuesto';
+        if(p.descuenta&&!compuesto){
+          var dk=(i.variante&&i.variante.index!==undefined)?(i.id+'::'+i.variante.index):i.id;
+          add(dk,cant,false);
+        }
+        comps.forEach(function(ig){
+          var cid=ig.producto_id||'',por=parseFloat(ig.c||0);
+          if(!cid||!por||cid===i.id)return;
+          add(cid,cant*por,true);
+        });
+      });
+      return {qty:qty,force:force};
+    }
+
+    var a=calc(prevItems),b=calc(newItems),prevQty=a.qty,desiredQty=b.qty;
+    var forced=Object.assign({},a.force,b.force),keys={};
+    Object.keys(prevQty).forEach(function(k){keys[k]=true;});
+    Object.keys(desiredQty).forEach(function(k){keys[k]=true;});
+    var orderSafe=String(ORDEN).replace(/[.#$\[\]\/]/g,'_');
+
+    function log(info){
+      if(!info||!info.delta)return Promise.resolve();
+      var mk='mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
+      return db.ref('negocios/'+negocioID+'/stock_movimientos/'+mk).set({
+        tipo:info.delta>0?'salida':'devolucion',
+        origen:info.esComponente?'POS_FOOD_COMBO':'POS_FOOD',
+        producto_id:info.productId,producto:info.productName||info.productId,variante:info.variantName||'',
+        cantidad:Math.abs(info.delta),impacto_stock:-info.delta,stock_anterior:info.before,stock_nuevo:info.after,
+        orden:ORDEN,mesa:MESA_SEL||'',usuario:(document.getElementById('mesa-mesero')||{value:''}).value||_loggedMesero||'POS',
+        motivo:info.delta>0?(info.esComponente?'Componente combo/receta · orden '+ORDEN:'Consumo orden '+ORDEN)
+          :(info.esComponente?'Devolución componente combo/receta · orden '+ORDEN:'Devolución/anulación orden '+ORDEN),
+        ts:Date.now(),fecha:new Date().toISOString()
+      }).catch(function(e){console.warn('Bitácora stock:',e);});
+    }
+
+    var chain=Promise.resolve();
+    Object.keys(keys).forEach(function(key){
+      chain=chain.then(function(){
+        var parts=key.split('::'),id=parts[0],vi=parts[1]!==undefined?parseInt(parts[1]):null;
+        var p=prodInfo(id),esComp=!!forced[key];
+        if(!p){if(esComp)throw new Error('Componente de combo no existe: '+id);return true;}
+        if(!esComp&&!p.descuenta)return true;
+        var cat=p._cat||'';
+        if(!cat)throw new Error('Producto sin categoría: '+(p.nombre||id));
+        var path='negocios/'+negocioID+'/productos/'+cat+'/'+id;
+        var markerKey=vi!==null?'v'+vi:'base',desired=desiredQty[key]||0,observed=prevQty[key]||0;
+        var tx={delta:0},reason='';
+        return db.ref(path).transaction(function(prod){
+          if(!prod||typeof prod!=='object'){reason='producto_no_existe';return;}
+          prod._stockAplicado=prod._stockAplicado||{};
+          prod._stockAplicado[orderSafe]=prod._stockAplicado[orderSafe]||{};
+          var marker=prod._stockAplicado[orderSafe][markerKey];
+          var applied=(marker===undefined||marker===null)?observed:parseFloat(marker||0);
+          var delta=desired-applied,current;
+          if(vi!==null){
+            if(!Array.isArray(prod.variantes)||!prod.variantes[vi]){reason='variante_no_existe';return;}
+            current=parseFloat(prod.variantes[vi].stock||0);
+          }else current=parseFloat(prod.stockFijo||0);
+          if(delta>0&&current<delta){reason='stock_insuficiente';return;}
+          var next=current-delta;if(next<0){reason='stock_insuficiente';return;}
+          if(vi!==null)prod.variantes[vi].stock=next;else prod.stockFijo=next;
+          prod._stockAplicado[orderSafe][markerKey]=desired;
+          tx={delta:delta,before:current,after:next,productId:id,productName:p.nombre||p.desc||id,
+            variantName:(vi!==null&&p.variantes&&p.variantes[vi])?(p.variantes[vi].n||p.variantes[vi].nombre||''):'',
+            esComponente:esComp};
+          return prod;
+        }).then(function(res){
+          if(!res.committed){
+            if(reason==='stock_insuficiente')throw new Error('Stock insuficiente para "'+(p.nombre||p.desc||id)+'". '+(esComp?'Es componente de un combo. ':'')+'La orden no fue guardada.');
+            throw new Error('No se pudo actualizar inventario de '+(p.nombre||p.desc||id)+' ('+reason+').');
+          }
+          if(tx.delta){
+            if(vi!==null&&p.variantes&&p.variantes[vi])p.variantes[vi].stock=tx.after;else p.stockFijo=tx.after;
+            var min=(p.stockMinimo!==undefined&&p.stockMinimo!=='')?(parseFloat(p.stockMinimo)||5):5;
+            if(tx.after<=min)enviarAlertaStockBajo(id,tx.productName,tx.after);
+            return log(tx);
+          }
+          return true;
+        });
       });
     });
-    return {qty:qty,force:force};
-  }
-
-  var a=calc(prevItems),b=calc(newItems),prevQty=a.qty,desiredQty=b.qty;
-  var forced=Object.assign({},a.force,b.force),keys={};
-  Object.keys(prevQty).forEach(k=>keys[k]=true);
-  Object.keys(desiredQty).forEach(k=>keys[k]=true);
-  var orderSafe=String(ORDEN).replace(/[.#$\[\]\/]/g,'_');
-
-  function log(info){
-    if(!info||!info.delta)return Promise.resolve();
-    var mk='mov_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);
-    return db.ref('negocios/'+negocioID+'/stock_movimientos/'+mk).set({
-      tipo:info.delta>0?'salida':'devolucion',
-      origen:info.esComponente?'POS_FOOD_COMBO':'POS_FOOD',
-      producto_id:info.productId,producto:info.productName||info.productId,variante:info.variantName||'',
-      cantidad:Math.abs(info.delta),impacto_stock:-info.delta,stock_anterior:info.before,stock_nuevo:info.after,
-      orden:ORDEN,mesa:MESA_SEL||'',usuario:(document.getElementById('mesa-mesero')||{value:''}).value||_loggedMesero||'POS',
-      motivo:info.delta>0?(info.esComponente?'Componente combo/receta · orden '+ORDEN:'Consumo orden '+ORDEN)
-        :(info.esComponente?'Devolución componente combo/receta · orden '+ORDEN:'Devolución/anulación orden '+ORDEN),
-      ts:Date.now(),fecha:new Date().toISOString()
-    }).catch(e=>console.warn('Bitácora stock:',e));
-  }
-
-  var chain=Promise.resolve();
-  Object.keys(keys).forEach(function(key){
-    chain=chain.then(function(){
-      var parts=key.split('::'),id=parts[0],vi=parts[1]!==undefined?parseInt(parts[1]):null;
-      var p=prodInfo(id),esComp=!!forced[key];
-      if(!p){
-        if(esComp)throw new Error('El componente de combo "'+id+'" ya no existe en el menú.');
-        return true;
-      }
-      if(!esComp&&!p.descuenta)return true;
-
-      var cat=p._cat||'';
-      var path='negocios/'+negocioID+'/productos/'+((cat&&cat!=='General'&&cat!=='Todos')?cat+'/'+id:id);
-      var markerKey=vi!==null?'v'+vi:'base',desired=desiredQty[key]||0,observed=prevQty[key]||0;
-      var tx={delta:0},reason='';
-
-      return db.ref(path).transaction(function(prod){
-        if(!prod||typeof prod!=='object'){reason='producto_no_existe';return;}
-        prod._stockAplicado=prod._stockAplicado||{};
-        prod._stockAplicado[orderSafe]=prod._stockAplicado[orderSafe]||{};
-        var marker=prod._stockAplicado[orderSafe][markerKey];
-        var applied=(marker===undefined||marker===null)?observed:parseFloat(marker||0);
-        var delta=desired-applied,current;
-
-        if(vi!==null){
-          if(!Array.isArray(prod.variantes)||!prod.variantes[vi]){reason='variante_no_existe';return;}
-          current=parseFloat(prod.variantes[vi].stock||0);
-        }else current=parseFloat(prod.stockFijo||0);
-
-        if(delta>0&&current<delta){reason='stock_insuficiente';return;}
-        var next=current-delta;if(next<0){reason='stock_insuficiente';return;}
-
-        if(vi!==null)prod.variantes[vi].stock=next;else prod.stockFijo=next;
-        prod._stockAplicado[orderSafe][markerKey]=desired;
-        tx={delta:delta,before:current,after:next,productId:id,productName:p.nombre||p.desc||id,
-          variantName:(vi!==null&&p.variantes&&p.variantes[vi])?(p.variantes[vi].n||p.variantes[vi].nombre||''):'',
-          esComponente:esComp};
-        return prod;
-      }).then(function(res){
-        if(!res.committed){
-          if(reason==='stock_insuficiente')throw new Error('Stock insuficiente para "'+(p.nombre||p.desc||id)+'". '+(esComp?'Es componente de un combo. ':'')+'La orden no fue guardada.');
-          throw new Error('No se pudo actualizar inventario de '+(p.nombre||p.desc||id)+' ('+reason+').');
-        }
-        if(tx.delta){
-          if(vi!==null&&p.variantes&&p.variantes[vi])p.variantes[vi].stock=tx.after;else p.stockFijo=tx.after;
-          var min=5;
-          if(vi!==null&&p.variantes&&p.variantes[vi]&&p.variantes[vi].stockMinimo!==undefined)min=parseFloat(p.variantes[vi].stockMinimo)||5;
-          else if(p.stockMinimo!==undefined&&p.stockMinimo!=='')min=parseFloat(p.stockMinimo)||5;
-          if(tx.after<=min)enviarAlertaStockBajo(id,tx.productName+(tx.variantName?' ('+tx.variantName+')':''),tx.after);
-          return log(tx);
-        }
-        return true;
-      });
-    });
+    return chain.then(function(){return true;});
   });
-  return chain.then(()=>true);
 }
 
 function enviarAlertaStockBajo(productId, productName, currentStock) {
