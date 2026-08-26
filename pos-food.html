@@ -1484,7 +1484,7 @@ body {
     </button>
     <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
-    <a class="tbb" id="link-menu" href="portal-food.html?panel=menu" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
+    <a class="tbb" id="link-menu" href="portal-food.html?panel=menu&modo=menu" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
     <a class="tbb" id="link-dte" href="dte.html" target="_blank" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
     <a class="tbb" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
@@ -2434,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', function(){
         // Redireccionar menú al editor de menú del portal y remover target
         if (lm) {
           lm.removeAttribute('target');
-          lm.href = 'portal-food.html?panel=menu&negocio=' + negocioID;
+          lm.href = 'portal-food.html?panel=menu&modo=menu&negocio=' + negocioID;
         }
         // Remover target de mesas y dte
         if (lmesas) {
