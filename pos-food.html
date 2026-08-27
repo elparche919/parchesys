@@ -3942,7 +3942,8 @@ function ejecutarSelMesa(n){
               document.getElementById('tb-ord').textContent=ORDEN;
               document.getElementById('ord-num').textContent=ORDEN;
               renderCart();
-              toast('⛔ ORDEN INCONSISTENTE: la mesa sigue abierta, pero no hay una copia sana de sus productos. Revisa auditoría.','err');
+              toast('⛔ ORDEN INCONSISTENTE: pulsa RECUPERAR ORDEN.','err');
+              mostrarBotonRecuperacionOrden(ORDEN,n);
               _auditarIntegridadOrden(ORDEN,'orden_sin_fuente_recuperable',pd.items,null,'abrir_mesa');
               return;
             }
@@ -3964,6 +3965,7 @@ function ejecutarSelMesa(n){
           renderCart();
           toast('📋 Orden abierta — Mesa '+n,'ok');
           iniciarVigilanciaIntegridadOrdenActiva();
+          ocultarBotonRecuperacionOrden();
           if(pd.timestamp){
             _timerInterval = setInterval(function(){
               if (MESA_SEL !== n || CANAL !== 'mesa' || ORDEN !== m.pedido_activo_id) {
@@ -4569,7 +4571,43 @@ function recuperarItemsOrden(orderId,pedidoActual){
             });
           });
       }
-      return null;
+      return db.ref('negocios/'+negocioID+'/historial_kds').once('value').then(function(hs){
+        var candidatos=[];
+        hs.forEach(function(ch){
+          var hv=ch.val()||{};
+          var oid=String(hv.orden||hv.id||ch.key||'');
+          if(oid===String(orderId) && _itemsOrdenSanos(hv.items)){
+            candidatos.push(Object.assign({_histKey:ch.key},hv));
+          }
+        });
+        candidatos.sort(function(a,b){
+          return Number(b.ts_entrega||b.timestamp||0)-Number(a.ts_entrega||a.timestamp||0);
+        });
+        var h=candidatos[0]||null;
+        if(!h)return null;
+
+        return _auditarIntegridadOrden(orderId,'recuperacion_desde_historial_kds',actuales,h.items,'abrir_mesa')
+          .then(function(){
+            var suma=h.items.filter(function(i){return i&&!i.eliminado;}).reduce(function(s,i){
+              return s+(parseFloat(i.cant)||1)*(parseFloat(i.precio)||0);
+            },0);
+            var upd={
+              items:h.items,
+              recuperada_integridad:true,
+              recuperada_integridad_at:Date.now(),
+              recuperada_integridad_fuente:'historial_kds'
+            };
+            if(suma>0){
+              upd.subtotal=suma.toFixed(2);
+              upd.total=suma.toFixed(2);
+            }
+            return db.ref('negocios/'+negocioID+'/pedidos/'+orderId).update(upd).then(function(){
+              return _guardarUltimaCopiaSana(orderId,h.items,{
+                total:upd.total||null,subtotal:upd.subtotal||null,contexto:'recuperacion_historial_kds'
+              }).then(function(){return h.items;});
+            });
+          });
+      });
     });
   });
 }
@@ -6033,6 +6071,121 @@ function finalizarYLimpiarVenta() {
 /* ═══════════════════════════════════════
    NUEVA ORDEN
 ═══════════════════════════════════════ */
+
+
+var _guardianMesasRef=null;
+var _guardianOrdenRefs={};
+
+function _detenerGuardianOrden(orderId){
+  var r=_guardianOrdenRefs[orderId];
+  if(r){try{r.off();}catch(e){} delete _guardianOrdenRefs[orderId];}
+}
+
+function _vigilarOrdenGlobal(orderId,mesaNum){
+  if(!orderId || _guardianOrdenRefs[orderId])return;
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId);
+  _guardianOrdenRefs[orderId]=ref;
+
+  ref.on('value',function(sn){
+    var p=sn.val();
+    if(!p || p.estado==='pagado')return;
+
+    if(_itemsOrdenSanos(p.items)){
+      _guardarUltimaCopiaSana(orderId,p.items,{
+        total:p.total,subtotal:p.subtotal,mesa_num:mesaNum||p.mesa_num,mesero:p.mesero,
+        contexto:'guardian_global'
+      });
+      return;
+    }
+
+    console.error('[GUARDIAN GLOBAL] Orden activa inconsistente',orderId,mesaNum,p&&p.items);
+    _auditarIntegridadOrden(orderId,'guardian_detecta_items_invalidos',p&&p.items,null,'guardian_global');
+
+    recuperarItemsOrden(orderId,p||{}).then(function(rec){
+      if(rec&&_itemsOrdenSanos(rec)){
+        if(String(ORDEN)===String(orderId)){
+          pedido=rec.map(function(i){var x=Object.assign({},i);x.enviado=true;return x;});
+          renderCart();
+          toast('🛡 Mesa '+(mesaNum||'')+': orden recuperada automáticamente.','ok');
+          ocultarBotonRecuperacionOrden();
+        }
+      }else if(String(ORDEN)===String(orderId)){
+        toast('⛔ Mesa '+(mesaNum||'')+': orden inconsistente. Usa RECUPERAR ORDEN.','err');
+        mostrarBotonRecuperacionOrden(orderId,mesaNum);
+      }
+    }).catch(function(e){
+      console.error('[GUARDIAN GLOBAL] No recuperó '+orderId,e);
+      if(String(ORDEN)===String(orderId)){
+        mostrarBotonRecuperacionOrden(orderId,mesaNum);
+      }
+    });
+  });
+}
+
+function iniciarGuardianGlobalMesas(){
+  if(_guardianMesasRef){try{_guardianMesasRef.off();}catch(e){}}
+  _guardianMesasRef=db.ref('negocios/'+negocioID+'/mesas');
+  _guardianMesasRef.on('value',function(sn){
+    var activos={};
+    sn.forEach(function(ch){
+      var m=ch.val()||{};
+      var oid=m.pedido_activo_id;
+      if(oid && m.estado!=='libre'){
+        activos[oid]=true;
+        _vigilarOrdenGlobal(oid,Number(ch.key)||m.mesa_num||null);
+      }
+    });
+    Object.keys(_guardianOrdenRefs).forEach(function(oid){
+      if(!activos[oid])_detenerGuardianOrden(oid);
+    });
+  });
+}
+
+function asegurarUIRecuperacion(){
+  if(document.getElementById('btn-recuperar-integridad'))return;
+  var b=document.createElement('button');
+  b.id='btn-recuperar-integridad';
+  b.type='button';
+  b.style.cssText='display:none;position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:99999;background:#f59e0b;color:#111827;border:0;border-radius:14px;padding:13px 18px;font-weight:950;box-shadow:0 10px 30px rgba(0,0,0,.4)';
+  b.innerHTML='🛠 RECUPERAR ORDEN';
+  b.onclick=function(){
+    var oid=b.getAttribute('data-orden')||ORDEN;
+    var mesa=b.getAttribute('data-mesa')||MESA_SEL||'';
+    b.disabled=true;b.textContent='⏳ RECUPERANDO...';
+    db.ref('negocios/'+negocioID+'/pedidos/'+oid).once('value').then(function(ps){
+      return recuperarItemsOrden(oid,ps.val()||{});
+    }).then(function(rec){
+      if(rec&&_itemsOrdenSanos(rec)){
+        if(String(ORDEN)===String(oid)){
+          pedido=rec.map(function(i){var x=Object.assign({},i);x.enviado=true;return x;});
+          renderCart();
+        }
+        b.style.display='none';
+        toast('✅ Mesa '+mesa+': productos recuperados.','ok');
+      }else{
+        toast('⛔ No existe una copia sana automática. Debe reconstruirse manualmente.','err');
+      }
+    }).catch(function(e){
+      toast('⛔ No se pudo recuperar: '+e.message,'err');
+    }).finally(function(){
+      b.disabled=false;b.innerHTML='🛠 RECUPERAR ORDEN';
+    });
+  };
+  document.body.appendChild(b);
+}
+
+function mostrarBotonRecuperacionOrden(orderId,mesaNum){
+  asegurarUIRecuperacion();
+  var b=document.getElementById('btn-recuperar-integridad');
+  b.setAttribute('data-orden',orderId||ORDEN||'');
+  b.setAttribute('data-mesa',mesaNum||MESA_SEL||'');
+  b.style.display='block';
+}
+
+function ocultarBotonRecuperacionOrden(){
+  var b=document.getElementById('btn-recuperar-integridad');
+  if(b)b.style.display='none';
+}
 
 function iniciarVigilanciaIntegridadOrdenActiva(){
   if(window._integridadWatchRef){
@@ -8822,6 +8975,16 @@ function cerrarAlertaServicioQR(){
     });
   }
 }
+
+(function iniciarEscudoGlobal(){
+  if(typeof db==='undefined'||typeof negocioID==='undefined'){
+    setTimeout(iniciarEscudoGlobal,700);return;
+  }
+  asegurarUIRecuperacion();
+  iniciarGuardianGlobalMesas();
+  console.log('[INTEGRIDAD] Guardián global de mesas activo');
+})();
+
 </script>
 </body>
 </html>
