@@ -1164,6 +1164,7 @@
             <button id="btn-del-masivo" class="btn-m-out" style="display:none; color:var(--ff-red); border-color:var(--ff-red)" onclick="eliminarMasivoMenu()"><i class="fa-solid fa-trash-can"></i> Eliminar Selección</button>
             <button class="btn-m" style="background:#0ea5e9; border-color:#0ea5e9" onclick="abrirModalBodega()"><i class="fa-solid fa-warehouse"></i> Bodega</button>
             <button class="btn-m" style="background:#7c3aed; border-color:#7c3aed" onclick="abrirQRMesas()"><i class="fa-solid fa-qrcode"></i> QR 30 Mesas</button>
+            <button class="btn-m-out" onclick="exportarMenuParaDTE()"><i class="fa-solid fa-file-export"></i> Exportar para DTE</button>
             <button class="btn-m-out" onclick="descargarPlantillaMenu()"><i class="fa-solid fa-download"></i> Plantilla</button>
             <button class="btn-m-out" onclick="document.getElementById('xlsx-menu').click()"><i class="fa-solid fa-file-import"></i> Subida Masiva</button>
             <input type="file" id="xlsx-menu" style="display:none" accept=".xlsx, .xls, .csv" onchange="importarMenuExcel(this)">
@@ -2624,6 +2625,59 @@
         db.ref(`negocios/${negocioID}/productos/${currentPlat._cat}/${currentPlat.id}`).remove().then(() => {
             closeModal('mod-plat');
         });
+    }
+
+
+    /* --- EXPORTACIÓN DEL MENÚ PARA CATÁLOGO DTE --- */
+    function exportarMenuParaDTE() {
+      if(!_allProds || !_allProds.length) {
+        alert('No hay productos del menú para exportar.');
+        return;
+      }
+
+      const filas = _allProds
+        .filter(p => p && p.nombre)
+        .map((p, idx) => ({
+          codigo: p.codigo || p.sku || p.id || ('MENU-' + String(idx + 1).padStart(4, '0')),
+          nombre: p.nombre || '',
+          tipo: 'producto',
+          precio: parseFloat(p.precio || 0) || 0,
+          tipoIva: p.gravado === false ? 'exento' : 'gravado',
+          uniMedida: '59',
+          categoria: p._cat || p.categoria || 'General',
+          descripcion: p.descripcion || '',
+          activo: p.oculto ? 'NO' : 'SI'
+        }));
+
+      if(!filas.length) {
+        alert('No hay productos válidos para exportar.');
+        return;
+      }
+
+      const headers = ['Codigo','Nombre','Tipo','Precio','TipoIVA','UnidadMH','Categoria','Descripcion','Activo'];
+      const csvEscape = v => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+      const csv = [
+        headers.join(','),
+        ...filas.map(f => [
+          f.codigo, f.nombre, f.tipo, f.precio.toFixed(2), f.tipoIva,
+          f.uniMedida, f.categoria, f.descripcion, f.activo
+        ].map(csvEscape).join(','))
+      ].join('\r\n');
+
+      const blob = new Blob(['\ufeff' + csv], { type:'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const fecha = new Date().toISOString().slice(0,10);
+      a.href = url;
+      a.download = `menu_para_dte_${negocioID}_${fecha}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+      if(typeof showToast === 'function') {
+        showToast(`✅ ${filas.length} productos del menú exportados para DTE`);
+      }
     }
 
     /* --- 3. INVENTARIO & SERVICIOS --- */
