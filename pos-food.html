@@ -1484,7 +1484,7 @@ body {
     </button>
     <button class="tbb" onclick="abrirHistorial()"><i class="fa-solid fa-clock-rotate-left"></i> Historial</button>
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
-    <a class="tbb" id="link-menu" href="portal-food.html?panel=menu&modo=menu" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
+    <a class="tbb" id="link-menu" href="portal-food.html?panel=menu" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
     <a class="tbb" id="link-dte" href="dte.html" target="_blank" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
     <a class="tbb" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
@@ -2434,7 +2434,7 @@ document.addEventListener('DOMContentLoaded', function(){
         // Redireccionar menú al editor de menú del portal y remover target
         if (lm) {
           lm.removeAttribute('target');
-          lm.href = 'portal-food.html?panel=menu&modo=menu&negocio=' + negocioID;
+          lm.href = 'portal-food.html?panel=menu&negocio=' + negocioID;
         }
         // Remover target de mesas y dte
         if (lmesas) {
@@ -3934,11 +3934,23 @@ function ejecutarSelMesa(n){
         // Guard against fast switching (solo verifica mesa y canal, no el caché _mesas que puede estar desactualizado)
         if (MESA_SEL !== n || CANAL !== 'mesa') return;
         
-        if(pd && pd.items && pd.estado !== 'pagado'){
-          var loadedItems = (pd.items || []).map(function(item) {
-            item.enviado = true;
-            return item;
-          });
+        if(pd && pd.estado !== 'pagado'){
+          var abrirConItems = function(itemsRecuperados){
+            if(!_itemsOrdenSanos(itemsRecuperados)){
+              pedido=[];
+              ORDEN=m.pedido_activo_id;
+              document.getElementById('tb-ord').textContent=ORDEN;
+              document.getElementById('ord-num').textContent=ORDEN;
+              renderCart();
+              toast('⛔ ORDEN INCONSISTENTE: la mesa sigue abierta, pero no hay una copia sana de sus productos. Revisa auditoría.','err');
+              _auditarIntegridadOrden(ORDEN,'orden_sin_fuente_recuperable',pd.items,null,'abrir_mesa');
+              return;
+            }
+
+            var loadedItems = (itemsRecuperados || []).map(function(item) {
+              item.enviado = true;
+              return item;
+            });
           var localUnsaved = [];
           try {
             var rawLocal = localStorage.getItem('unsaved_items_' + negocioID + '_' + n);
@@ -3951,6 +3963,7 @@ function ejecutarSelMesa(n){
           document.getElementById('ord-num').textContent = ORDEN;
           renderCart();
           toast('📋 Orden abierta — Mesa '+n,'ok');
+          iniciarVigilanciaIntegridadOrdenActiva();
           if(pd.timestamp){
             _timerInterval = setInterval(function(){
               if (MESA_SEL !== n || CANAL !== 'mesa' || ORDEN !== m.pedido_activo_id) {
@@ -3961,6 +3974,23 @@ function ejecutarSelMesa(n){
               var m2=Math.floor(diff/60), s=diff%60;
               document.getElementById('tb-clock').textContent = String(m2).padStart(2,'0')+':'+String(s).padStart(2,'0');
             },1000);
+          }
+          };
+
+          if(_itemsOrdenSanos(pd.items)){
+            _guardarUltimaCopiaSana(m.pedido_activo_id,pd.items,{
+              total:pd.total,subtotal:pd.subtotal,mesa_num:pd.mesa_num,mesero:pd.mesero,contexto:'abrir_mesa_sana'
+            });
+            abrirConItems(pd.items);
+          }else{
+            toast('⚠ Detectada orden inconsistente. Intentando recuperar productos...','warn');
+            recuperarItemsOrden(m.pedido_activo_id,pd).then(function(rec){
+              if(MESA_SEL!==n||CANAL!=='mesa')return;
+              abrirConItems(rec);
+            }).catch(function(e){
+              console.error('[INTEGRIDAD] Recuperación:',e);
+              abrirConItems(null);
+            });
           }
         } else if (pd && pd.estado === 'pagado') {
           // AUTOCURACIÓN: una mesa nunca debe seguir enlazada a una venta ya pagada.
@@ -4402,6 +4432,148 @@ function addItem(id, selectedVariant){
   toast('✓ '+descCompleto,'ok');
 }
 
+
+/* ═══════════════════════════════════════════════════════════════
+   INTEGRIDAD DE ORDEN MAESTRA
+   - Impide reemplazar items válidos por arreglos vacíos/corruptos.
+   - Conserva última copia sana independiente del KDS.
+   - Registra cualquier intento destructivo.
+═══════════════════════════════════════════════════════════════ */
+function _itemOrdenSano(it){
+  if(!it || typeof it!=='object') return false;
+  var nombre=String(it.desc||it.nombre||'').trim();
+  var cant=parseFloat(it.cant);
+  var precio=parseFloat(it.precio!==undefined?it.precio:it.price);
+  return !!(it.id || nombre) && !!nombre && Number.isFinite(cant) && cant>0 && Number.isFinite(precio) && precio>=0;
+}
+function _itemsOrdenSanos(arr){
+  return Array.isArray(arr) && arr.length>0 && arr.every(function(it){ return _itemOrdenSano(it); });
+}
+function _clonarSeguro(v){
+  try{return JSON.parse(JSON.stringify(v));}catch(e){return v;}
+}
+function _guardarUltimaCopiaSana(orderId,items,meta){
+  if(!orderId || !_itemsOrdenSanos(items)) return Promise.resolve(false);
+  var payload={
+    orden:orderId,
+    items:_clonarSeguro(items),
+    total:meta&&meta.total!==undefined?meta.total:null,
+    subtotal:meta&&meta.subtotal!==undefined?meta.subtotal:null,
+    mesa_num:meta&&meta.mesa_num!==undefined?meta.mesa_num:(MESA_SEL||null),
+    mesero:meta&&meta.mesero?meta.mesero:((document.getElementById('mesa-mesero')||{value:''}).value||_loggedMesero||'POS'),
+    contexto:meta&&meta.contexto?meta.contexto:'guardado_pos',
+    ts:Date.now()
+  };
+  return db.ref('negocios/'+negocioID+'/orden_snapshots/'+orderId+'/latest').set(payload);
+}
+function _auditarIntegridadOrden(orderId,motivo,antes,despues,contexto){
+  if(!orderId)return Promise.resolve();
+  return db.ref('negocios/'+negocioID+'/auditoria/integridad_ordenes/'+orderId).push({
+    motivo:motivo||'integridad',
+    contexto:contexto||'POS',
+    antes:_clonarSeguro(antes||null),
+    despues:_clonarSeguro(despues||null),
+    mesa:MESA_SEL||null,
+    usuario:(typeof _usuarioActivoId==='function'?_usuarioActivoId():'')||_loggedMesero||'POS',
+    ts:Date.now()
+  }).catch(function(e){console.warn('[INTEGRIDAD] No pudo auditar:',e);});
+}
+function escribirItemsMaestrosSeguro(orderId,nuevosItems,contexto,opts){
+  opts=opts||{};
+  if(!orderId)return Promise.reject(new Error('Orden inválida'));
+  if(!_itemsOrdenSanos(nuevosItems)){
+    _auditarIntegridadOrden(orderId,'escritura_bloqueada_items_invalidos',null,nuevosItems,contexto);
+    return Promise.reject(new Error('Protección de integridad: se bloqueó una escritura con items vacíos o incompletos.'));
+  }
+
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId);
+  var antes=null;
+  return ref.once('value').then(function(sn){
+    antes=sn.val()||{};
+    var actuales=Array.isArray(antes.items)?antes.items:[];
+    if(_itemsOrdenSanos(actuales)){
+      return Promise.all([
+        _guardarUltimaCopiaSana(orderId,actuales,{
+          total:antes.total,subtotal:antes.subtotal,mesa_num:antes.mesa_num,mesero:antes.mesero,
+          contexto:'antes_'+contexto
+        }),
+        _auditarIntegridadOrden(orderId,'snapshot_previo',actuales,nuevosItems,contexto)
+      ]);
+    }
+  }).then(function(){
+    return ref.transaction(function(cur){
+      if(!cur || typeof cur!=='object') return;
+      var actuales=Array.isArray(cur.items)?cur.items:[];
+      // Si el maestro era sano, el nuevo también debe ser sano. Ya fue validado arriba.
+      // La reducción de cantidad de items solo se acepta cuando la llamada lo declara expresamente.
+      if(_itemsOrdenSanos(actuales) && nuevosItems.length < actuales.length && !opts.permitirReducir){
+        return;
+      }
+      cur.items=_clonarSeguro(nuevosItems);
+      if(opts.subtotal!==undefined)cur.subtotal=opts.subtotal;
+      if(opts.total!==undefined)cur.total=opts.total;
+      cur.integridad_actualizada_at=Date.now();
+      cur.integridad_contexto=contexto||'POS';
+      return cur;
+    },undefined,false);
+  }).then(function(res){
+    if(!res || !res.committed){
+      return _auditarIntegridadOrden(orderId,'transaccion_bloqueada',antes&&antes.items,nuevosItems,contexto)
+        .then(function(){throw new Error('Protección de integridad impidió reemplazar la orden maestra.');});
+    }
+    return _guardarUltimaCopiaSana(orderId,nuevosItems,{
+      total:opts.total!==undefined?opts.total:(antes&&antes.total),
+      subtotal:opts.subtotal!==undefined?opts.subtotal:(antes&&antes.subtotal),
+      mesa_num:antes&&antes.mesa_num,mesero:antes&&antes.mesero,
+      contexto:'despues_'+contexto
+    }).then(function(){return true;});
+  });
+}
+function recuperarItemsOrden(orderId,pedidoActual){
+  var actuales=pedidoActual&&Array.isArray(pedidoActual.items)?pedidoActual.items:[];
+  if(_itemsOrdenSanos(actuales))return Promise.resolve(actuales);
+
+  var snapRef=db.ref('negocios/'+negocioID+'/orden_snapshots/'+orderId+'/latest');
+  return snapRef.once('value').then(function(ss){
+    var sv=ss.val()||{};
+    if(_itemsOrdenSanos(sv.items)){
+      return _auditarIntegridadOrden(orderId,'recuperacion_desde_snapshot',actuales,sv.items,'abrir_mesa')
+        .then(function(){
+          return db.ref('negocios/'+negocioID+'/pedidos/'+orderId).update({
+            items:sv.items,
+            subtotal:sv.subtotal!==null&&sv.subtotal!==undefined?sv.subtotal:(pedidoActual&&pedidoActual.subtotal),
+            total:sv.total!==null&&sv.total!==undefined?sv.total:(pedidoActual&&pedidoActual.total),
+            recuperada_integridad:true,
+            recuperada_integridad_at:Date.now(),
+            recuperada_integridad_fuente:'orden_snapshots'
+          }).then(function(){return sv.items;});
+        });
+    }
+
+    // Segundo respaldo: comanda KDS todavía activa.
+    return db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId).once('value').then(function(ks){
+      var kv=ks.val()||{};
+      if(_itemsOrdenSanos(kv.items)){
+        return _auditarIntegridadOrden(orderId,'recuperacion_desde_kds',actuales,kv.items,'abrir_mesa')
+          .then(function(){
+            return db.ref('negocios/'+negocioID+'/pedidos/'+orderId).update({
+              items:kv.items,
+              recuperada_integridad:true,
+              recuperada_integridad_at:Date.now(),
+              recuperada_integridad_fuente:'cocina_orders'
+            }).then(function(){
+              return _guardarUltimaCopiaSana(orderId,kv.items,{
+                total:pedidoActual&&pedidoActual.total,subtotal:pedidoActual&&pedidoActual.subtotal,
+                contexto:'recuperacion_kds'
+              }).then(function(){return kv.items;});
+            });
+          });
+      }
+      return null;
+    });
+  });
+}
+
 function removeItem(idx){
   var _prevPedidoStock = JSON.parse(JSON.stringify(pedido || []));
   var item = pedido[idx];
@@ -4443,9 +4615,12 @@ function removeItem(idx){
     });
   }
   
-  // Sincronizar inmediatamente el pedido a Firebase
+  // Sincronizar sin permitir que una copia local vacía/corrupta destruya la orden maestra.
   if (ORDEN) {
-    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/items').set(pedido);
+    escribirItemsMaestrosSeguro(ORDEN,pedido,'anulacion_item',{permitirReducir:false}).catch(function(e){
+      console.error('[INTEGRIDAD] Anulación no pudo sincronizar items:',e);
+      toast('⚠ Ítem marcado localmente, pero la orden maestra fue protegida: '+e.message,'err');
+    });
   }
   if (MESA_SEL) {
     db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL+'/pedido').set(pedido);
@@ -5631,6 +5806,22 @@ function procesarOrden(tipoAccion, onComplete, onError){
 
     var saves = [];
     try {
+      if(!_itemsOrdenSanos(v.items)){
+        _auditarIntegridadOrden(ORDEN,'procesar_orden_bloqueado',orderSnap&&orderSnap.exists()?orderSnap.val().items:null,v.items,'procesar_'+tipoAccion);
+        throw new Error('Protección de integridad: la orden contiene items incompletos y no será sobrescrita.');
+      }
+
+      // Conservar una copia sana antes y después de cada guardado/cobro.
+      if(orderSnap && orderSnap.exists() && _itemsOrdenSanos(orderSnap.val().items)){
+        saves.push(_guardarUltimaCopiaSana(ORDEN,orderSnap.val().items,{
+          total:orderSnap.val().total,subtotal:orderSnap.val().subtotal,mesa_num:orderSnap.val().mesa_num,
+          mesero:orderSnap.val().mesero,contexto:'antes_procesar_'+tipoAccion
+        }));
+      }
+      saves.push(_guardarUltimaCopiaSana(ORDEN,v.items,{
+        total:v.total,subtotal:v.subtotal,mesa_num:v.mesa_num,mesero:v.mesero,
+        contexto:'procesar_'+tipoAccion
+      }));
       saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
 
       if (tipoAccion === 'cobrar') {
@@ -5842,7 +6033,42 @@ function finalizarYLimpiarVenta() {
 /* ═══════════════════════════════════════
    NUEVA ORDEN
 ═══════════════════════════════════════ */
+
+function iniciarVigilanciaIntegridadOrdenActiva(){
+  if(window._integridadWatchRef){
+    try{window._integridadWatchRef.off();}catch(e){}
+    window._integridadWatchRef=null;
+  }
+  if(!ORDEN)return;
+  var orderId=ORDEN;
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items');
+  window._integridadWatchRef=ref;
+  ref.on('value',function(sn){
+    if(ORDEN!==orderId)return;
+    var val=sn.val();
+    if(_itemsOrdenSanos(val)){
+      _guardarUltimaCopiaSana(orderId,val,{contexto:'watchdog_items_sanos'});
+      return;
+    }
+    // No actuar cuando la orden ya fue cobrada; verificar estado primero.
+    db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/estado').once('value').then(function(es){
+      if(es.val()==='pagado')return;
+      console.error('[INTEGRIDAD] Items desaparecieron durante orden activa',orderId,val);
+      return recuperarItemsOrden(orderId,{items:val}).then(function(rec){
+        if(rec&&_itemsOrdenSanos(rec)){
+          toast('🛡 Orden protegida: productos recuperados automáticamente.','ok');
+          if(ORDEN===orderId){
+            pedido=rec.map(function(i){i.enviado=true;return i;});
+            renderCart();
+          }
+        }
+      });
+    }).catch(function(e){console.error('[INTEGRIDAD watchdog]',e);});
+  });
+}
+
 function nuevaOrden(){
+  if(window._integridadWatchRef){try{window._integridadWatchRef.off();}catch(e){} window._integridadWatchRef=null;}
   pedido = []; MESA_SEL = null; _notaCocina = '';
   // Reset FIRE & PAX
   _paxAprobado = false;
@@ -6862,7 +7088,6 @@ function deducirItemsDeOrdenPrincipal() {
       toast('Error al liberar mesa: ' + err.message, 'err');
     });
   } else {
-    updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/items'] = nuevosItems;
     updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/subtotal'] = nuevoSub.toFixed(2);
     updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/total'] = nuevoSub.toFixed(2);
 
@@ -6878,7 +7103,13 @@ function deducirItemsDeOrdenPrincipal() {
     
     updates['negocios/' + negocioID + '/pedidos/' + _originalOrdenId + '/split_tickets'] = _splitTickets;
 
-    db.ref().update(updates).then(function() {
+    escribirItemsMaestrosSeguro(_originalOrdenId,nuevosItems,'split_parcial',{
+      permitirReducir:true,
+      subtotal:nuevoSub.toFixed(2),
+      total:nuevoSub.toFixed(2)
+    }).then(function(){
+      return db.ref().update(updates);
+    }).then(function() {
       toast('✅ Ticket cobrado. Mesa sigue abierta con saldo restante.', 'ok');
       
       _originalPedido = nuevosItems;
