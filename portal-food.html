@@ -5122,6 +5122,7 @@
         modulos = {
           menu: true,
           inventario: true,
+          pos: true,
           mapa_mesas: true,
           dte: true
         };
@@ -5519,6 +5520,19 @@
           if (el) el.style.setProperty('display', 'none', 'important');
         });
 
+        // Terminal POS principal SIEMPRE disponible en la EXE.
+        var posPrincipal = document.getElementById('link-pos');
+        if (posPrincipal) {
+          posPrincipal.style.setProperty('display', 'flex', 'important');
+          posPrincipal.href = 'pos-food.html?negocio=elparche';
+          posPrincipal.innerHTML = '<i class="fa-solid fa-cash-register"></i> ABRIR POS';
+          posPrincipal.style.fontWeight = '900';
+        }
+
+        // RRHH no pertenece al menú operativo de esta EXE.
+        var rrhhElectron = document.getElementById('link-empleados');
+        if (rrhhElectron) rrhhElectron.style.setProperty('display', 'none', 'important');
+
         // 2. Remover del DOM los paneles prohibidos por seguridad
         var forbiddenPanels = ['panel-dashboard', 'panel-reportes', 'panel-config'];
         forbiddenPanels.forEach(function(id) {
@@ -5694,5 +5708,48 @@ function imprimirTodosQR(){
   </div>
 </div>
 
+
+<script>
+(function(){
+  function reforzarAccesoPosElectron(){
+    var isElectron = ((window.electronAPI && window.electronAPI.isElectron) ||
+                      navigator.userAgent.toLowerCase().includes('electron')) &&
+                     !(window.electronAPI && window.electronAPI.isAdminApp);
+    if(!isElectron) return;
+
+    var link=document.getElementById('link-pos');
+    if(link){
+      link.style.setProperty('display','flex','important');
+      link.href='pos-food.html?negocio=elparche';
+    }
+
+    var emp=document.getElementById('link-empleados');
+    if(emp) emp.style.setProperty('display','none','important');
+
+    if(document.getElementById('electron-pos-launch')) return;
+    var content=document.getElementById('content');
+    if(!content) return;
+
+    var box=document.createElement('div');
+    box.id='electron-pos-launch';
+    box.style.cssText='position:fixed;right:22px;bottom:22px;z-index:9998';
+    box.innerHTML='<a href="pos-food.html?negocio=elparche" '+
+      'style="display:flex;align-items:center;gap:10px;padding:14px 20px;border-radius:14px;'+
+      'background:#f97316;color:white;text-decoration:none;font-weight:950;box-shadow:0 12px 30px rgba(249,115,22,.35)">'+
+      '<i class="fa-solid fa-cash-register"></i> ABRIR TERMINAL POS</a>';
+    document.body.appendChild(box);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){
+      reforzarAccesoPosElectron();
+      setTimeout(reforzarAccesoPosElectron,300);
+      setTimeout(reforzarAccesoPosElectron,1200);
+    });
+  }else{
+    reforzarAccesoPosElectron();
+  }
+})();
+</script>
 </body>
 </html>
