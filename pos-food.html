@@ -2285,6 +2285,20 @@ var _esAdmin = !!_usuarioPos.admin;  // sesión actual
 var _esCajero = !!_usuarioPos.cajero; // sesión actual
 var _kaInterval = null; // kitchen alarm interval
 var _CAJERO_CODE = '5061'; // código exclusivo para Mov.Caja
+function _tieneAccesoTotalMesas(){
+  if(_esAdmin || _esCajero) return true;
+  var negocio=new URLSearchParams(location.search).get('negocio')||localStorage.getItem('food_negocioID')||'elparche';
+  var objs=[];
+  ['food_operador_'+negocio,'food_session_'+negocio,'food_session_elparche','modus_emp'].forEach(function(k){
+    try{var o=JSON.parse(localStorage.getItem(k)||'null');if(o)objs.push(o);}catch(e){}
+  });
+  return objs.some(function(o){
+    var r=String(o.rol||'').toLowerCase(),p=String(o.puesto||'').toLowerCase();
+    return o.admin===true||o.tipo==='admin'||r.includes('admin')||r.includes('propietario')||
+      p.includes('admin')||p.includes('propietario')||p.includes('gerente')||p.includes('supervisor');
+  });
+}
+
 
 function clearLocalUnsaved(mesa) {
   if (mesa) {
@@ -3245,7 +3259,7 @@ function renderCanalDetail(){
           var m = entry[1];
           var st = m.estado || 'libre';
           var sel = id == MESA_SEL ? 'seleccionada' : '';
-          var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+          var isOtherMesero = !_tieneAccesoTotalMesas() && st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
           if(_esAdmin || _esCajero) isOtherMesero = false;
           var classOther = isOtherMesero ? 'otro-mesero' : '';
           
@@ -3321,7 +3335,7 @@ function renderCanalDetail(){
           var m = entry[1];
           var st = m.estado || 'libre';
           var sel = MESA_SEL == id ? 'seleccionada' : '';
-          var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+          var isOtherMesero = !_tieneAccesoTotalMesas() && st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
           if(_esAdmin || _esCajero) isOtherMesero = false;
           var classOther = isOtherMesero ? 'otro-mesero' : '';
           var content = '<span class="mesa-num">'+id+'</span>';
@@ -3459,7 +3473,7 @@ function abrirMesaModal(defaultTab){
         var m = entry[1];
         var st = m.estado || 'libre';
         var sel = MESA_SEL == id ? 'seleccionada' : '';
-        var isOtherMesero = st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
+        var isOtherMesero = !_tieneAccesoTotalMesas() && st !== 'libre' && m.mesero && currentMesero && m.mesero.trim().toLowerCase() !== currentMesero.trim().toLowerCase();
         if(_esAdmin || _esCajero) isOtherMesero = false;
         var classOther = isOtherMesero ? 'otro-mesero' : '';
         var isPendingSend = (MESA_SEL == id && pedido.some(function(i) { return !i.enviado; }));
@@ -3891,7 +3905,7 @@ function selMesa(n) {
       esNuestra = (meseroNombre.trim().toLowerCase() === _loggedMesero.trim().toLowerCase());
     }
     
-    if (esNuestra || _esAdmin || _esCajero) {
+    if (esNuestra || _tieneAccesoTotalMesas()) {
       document.getElementById('mesa-apertura-ocupada-nuestra').style.display = 'block';
       document.getElementById('mesa-apertura-ocupada-ajena').style.display = 'none';
       
@@ -3913,7 +3927,7 @@ function selMesa(n) {
 function ejecutarSelMesa(n){
   checkUserRoles();
   // Admin y cajero pueden acceder a todas las mesas
-  if (_isTablet && !_esAdmin && !_esCajero && _loggedMesero && _mesas[n]) {
+  if (_isTablet && !_tieneAccesoTotalMesas() && _loggedMesero && _mesas[n]) {
     var m = _mesas[n];
     if (m.estado && m.estado !== 'libre' && m.mesero && m.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()) {
       toast('🔒 Mesa de ' + m.mesero + ' — Solo el admin puede acceder a mesas de otros meseros', 'err');
@@ -4810,7 +4824,7 @@ function abrirCheckout(){
   if(CANAL==='mesa' && !MESA_SEL){ toast('Selecciona una mesa','err'); if(onError)onError(new Error('Mesa no seleccionada')); return; }
 
   // Verificar que el mesero puede cobrar esta mesa
-  if(_isTablet && !_esAdmin && !_esCajero && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
+  if(_isTablet && !_tieneAccesoTotalMesas() && CANAL==='mesa' && MESA_SEL && _mesas[MESA_SEL]){
     var mesaInfo = _mesas[MESA_SEL];
     if(mesaInfo.mesero && _loggedMesero && mesaInfo.mesero.trim().toLowerCase() !== _loggedMesero.trim().toLowerCase()){
       toast('🔒 Solo el admin o '+mesaInfo.mesero+' puede cobrar esta mesa','err');
