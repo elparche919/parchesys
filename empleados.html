@@ -1197,8 +1197,12 @@ textarea.fi{resize:vertical;min-height:72px}
 </script>
 <script>
 // ── ESTADO GLOBAL ──
-// negocioID and db are already inherited from firebase-config.js
-if(!negocioID){ window.location.href='index.html'; }
+// PARCHE EMERGENCIA EL PARCHE:
+// RRHH debe trabajar sobre negocios/elparche/empleados.
+// Si esta página se abre sin ?negocio=, reingresa de inmediato con el tenant correcto.
+if (typeof negocioID === 'undefined' || !negocioID) {
+  window.location.replace('empleados.html?negocio=elparche');
+}
 // ── MODUS RETURN: registrar sesión activa y cablear botón volver ──
 if(typeof ModusReturn!=='undefined'){
   ModusReturn.init(negocioID);
