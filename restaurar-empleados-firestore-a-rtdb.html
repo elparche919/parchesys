@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ParcheSys · Restaurar empleados</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+
+<style>
+*{box-sizing:border-box}body{margin:0;background:#07111f;color:#eef6ff;font-family:Arial,sans-serif}
+main{max-width:900px;margin:30px auto;padding:18px}.card{background:#0d1b2a;border:1px solid #29415b;border-radius:18px;padding:20px;margin-bottom:14px}
+h1{font-size:22px;margin:0 0 8px}.muted{color:#91a7bc;font-size:12px;line-height:1.55}
+button{border:0;border-radius:11px;padding:13px 16px;font-weight:900;cursor:pointer;background:#38bdf8;color:#05263b;margin:8px 8px 0 0}
+button.restore{background:#22c55e;color:#052e16}button:disabled{opacity:.4;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;margin-top:14px}th,td{padding:10px;border-bottom:1px solid #1e3449;text-align:left;font-size:13px}
+.ok{color:#34d399}.err{color:#fb7185}.warn{color:#fbbf24}
+pre{white-space:pre-wrap;word-break:break-word;background:#071522;border:1px solid #243a50;border-radius:10px;padding:12px;font-size:11px;max-height:250px;overflow:auto}
+</style>
+</head>
+<body>
+<main>
+<div class="card">
+  <h1>🛠 Restaurar empleados reales</h1>
+  <div class="muted">
+    Fuente: Firestore del proyecto <b>parche-sys-v2</b>, colección <b>empleados</b>.<br>
+    Destino: Realtime Database <b>negocios/elparche/empleados</b>.<br>
+    Antes de sobrescribir, guarda un respaldo automático de la RTDB actual.
+  </div>
+  <button onclick="cargar()">1. Cargar empleados reales</button>
+  <button class="restore" id="btn-restaurar" onclick="restaurar()" disabled>2. RESTAURAR EN FOOD</button>
+</div>
+
+<div class="card" id="res" style="display:none">
+  <div id="estado"></div>
+  <div style="overflow:auto"><table>
+    <thead><tr><th>Nombre</th><th>PIN</th><th>DUI</th><th>Rol/Puesto</th><th>Estado</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table></div>
+</div>
+
+<div class="card" id="logcard" style="display:none">
+  <h3 style="margin-top:0">Detalle</h3><pre id="log"></pre>
+</div>
+</main>
+
+<script type="module">
+import { initializeApp as initMod } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+const cfg = {
+  apiKey: "AIzaSyC44rgiRq-cdDgcwy93GgzVXncWbugKCyY",
+  authDomain: "parche-sys-v2.firebaseapp.com",
+  databaseURL: "https://parche-sys-v2-default-rtdb.firebaseio.com",
+  projectId: "parche-sys-v2",
+  storageBucket: "parche-sys-v2.firebasestorage.app",
+  messagingSenderId: "367489065915",
+  appId: "1:367489065915:web:300a2bca022c6eb6a41a9e"
+};
+
+const appFs = initMod(cfg, "fsbridge");
+const fs = getFirestore(appFs);
+
+firebase.initializeApp(cfg);
+const rtdb = firebase.database();
+
+let empleadosFs = [];
+
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]))}
+function inferRol(d){
+  const raw = String(d.rol || d.puesto || '').trim().toLowerCase();
+  if(raw.includes('meser')) return 'mesero';
+  if(raw.includes('caj')) return 'cajero';
+  if(raw.includes('repart') || raw.includes('delivery')) return 'delivery';
+  if(raw.includes('prop') || raw.includes('admin')) return 'propietario';
+  return d.rol || d.puesto || 'empleado';
+}
+function normalizar(id,d){
+  const rol = inferRol(d);
+  return {
+    _fsid:id,
+    nombre:d.nombre || '',
+    pin:String(d.pin || '').trim(),
+    pin_app:String(d.pin || '').trim(),
+    dui:d.dui || '',
+    telefono:d.telefono || d.tel || '',
+    salario:d.salarioBase ?? d.salario ?? 0,
+    salarioBase:d.salarioBase ?? d.salario ?? 0,
+    valor_hora_extra:d.valorHoraExtra ?? d.valor_hora_extra ?? 0,
+    valorHoraExtra:d.valorHoraExtra ?? d.valor_hora_extra ?? 0,
+    aplica_ley:d.aplicaLey ?? d.aplica_ley ?? false,
+    activo:d.estado === 'Inactivo' ? false : (d.activo !== false),
+    estado:d.estado || (d.activo === false ? 'Inactivo' : 'Activo'),
+    rol:rol,
+    puesto:d.puesto || rol,
+    deviceId:d.deviceId || null,
+    ultimoRegistro:d.ultimoRegistro || '',
+    origen_restauracion:'firestore_v3',
+    firestore_id:id
+  };
+}
+
+window.cargar = async function(){
+  const res=document.getElementById('res'),estado=document.getElementById('estado'),tb=document.getElementById('tbody'),btn=document.getElementById('btn-restaurar');
+  res.style.display='block'; btn.disabled=true; estado.innerHTML='⏳ Leyendo Firestore...'; tb.innerHTML='';
+  try{
+    const snap = await getDocs(collection(fs,"empleados"));
+    empleadosFs=[];
+    snap.forEach(docu=>{
+      const n=normalizar(docu.id,docu.data()||{});
+      if(n.nombre && n.pin) empleadosFs.push(n);
+    });
+    empleadosFs.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+    if(!empleadosFs.length) throw new Error('Firestore no devolvió empleados con nombre y PIN.');
+
+    tb.innerHTML=empleadosFs.map(e=>`<tr>
+      <td>${esc(e.nombre)}</td><td><b>${esc(e.pin)}</b></td><td>${esc(e.dui)}</td>
+      <td>${esc(e.rol||e.puesto)}</td><td>${esc(e.estado)}</td>
+    </tr>`).join('');
+
+    estado.innerHTML=`<div class="ok"><b>✅ ${empleadosFs.length} empleados reales encontrados.</b></div>
+    <div class="muted">Revisa rápidamente nombres y PIN. Si coinciden, pulsa RESTAURAR EN FOOD.</div>`;
+    btn.disabled=false;
+    document.getElementById('logcard').style.display='block';
+    document.getElementById('log').textContent=JSON.stringify(empleadosFs,null,2);
+  }catch(e){
+    estado.innerHTML='<div class="err">⛔ '+e.message+'</div>';
+  }
+}
+
+window.restaurar = async function(){
+  if(!empleadosFs.length) return;
+  const btn=document.getElementById('btn-restaurar'),estado=document.getElementById('estado');
+  if(!confirm('Se reemplazará negocios/elparche/empleados con los empleados reales de Firestore. Se hará respaldo automático antes. ¿Continuar?')) return;
+
+  btn.disabled=true; btn.textContent='⏳ RESTAURANDO...';
+  try{
+    const ref = rtdb.ref('negocios/elparche/empleados');
+    const actualSnap = await ref.once('value');
+    const actual = actualSnap.val() || {};
+    const ts = Date.now();
+
+    await rtdb.ref('negocios/elparche/auditoria/restauracion_empleados/'+ts).set({
+      origen:'firestore_v3',
+      destino:'negocios/elparche/empleados',
+      empleados_antes:actual,
+      ts:ts
+    });
+
+    const destino = {};
+    empleadosFs.forEach((e,i)=>{
+      const key = e._fsid || ('emp_'+String(i+1).padStart(3,'0'));
+      const clean = {...e};
+      delete clean._fsid;
+      destino[key]=clean;
+    });
+
+    await ref.set(destino);
+
+    estado.innerHTML=`<div class="ok"><b>✅ RESTAURACIÓN COMPLETA.</b><br>
+      ${empleadosFs.length} empleados escritos en negocios/elparche/empleados.<br><br>
+      Reinicia POS y vuelve a abrir RR.HH. para recargar nombres y PIN.</div>`;
+    btn.textContent='✅ RESTAURADO';
+    document.getElementById('log').textContent=
+      'Backup: negocios/elparche/auditoria/restauracion_empleados/'+ts+
+      '\nEmpleados restaurados: '+empleadosFs.length;
+  }catch(e){
+    btn.disabled=false; btn.textContent='2. RESTAURAR EN FOOD';
+    estado.innerHTML='<div class="err">⛔ Error: '+e.message+'</div>';
+  }
+}
+</script>
+</body>
+</html>
