@@ -2285,8 +2285,10 @@ var _esAdmin = !!_usuarioPos.admin;  // sesión actual
 var _esCajero = !!_usuarioPos.cajero; // sesión actual
 var _kaInterval = null; // kitchen alarm interval
 var _CAJERO_CODE = '5061'; // código exclusivo para Mov.Caja
+var _accesoTotalFirebase = false; // propietario/admin/cajero confirmado en Firebase
+
 function _tieneAccesoTotalMesas(){
-  if(_esAdmin || _esCajero) return true;
+  if(_accesoTotalFirebase || _esAdmin || _esCajero) return true;
   var negocio=new URLSearchParams(location.search).get('negocio')||localStorage.getItem('food_negocioID')||'elparche';
   var objs=[];
   ['food_operador_'+negocio,'food_session_'+negocio,'food_session_elparche','modus_emp'].forEach(function(k){
@@ -2327,7 +2329,7 @@ function checkUserRoles() {
       var pin = String(emp.pin || emp.pin_app || '').trim();
       var empCod = String(emp.codigo || emp.code || emp.id_empleado || emp.pin_app || emp.pin || '').trim();
       
-      if (rol.includes('admin') || rol.includes('propietario') || puesto.includes('admin') || puesto.includes('gerente') || puesto.includes('supervisor') || emp.admin === true) {
+      if (rol.includes('admin') || rol.includes('propietario') || puesto.includes('admin') || puesto.includes('propietario') || puesto.includes('gerente') || puesto.includes('supervisor') || emp.admin === true) {
         _esAdmin = true;
       }
       if (pin === _CAJERO_CODE || empCod === _CAJERO_CODE || rol.includes('cajero') || rol.includes('cajera') || rol.includes('caja') || puesto.includes('cajero') || puesto.includes('cajera') || puesto.includes('caja')) {
@@ -2339,7 +2341,7 @@ function checkUserRoles() {
       var sesRol = (ses.rol || '').toLowerCase();
       var sesPuesto = (ses.puesto || '').toLowerCase();
       var sesEmpKey = String(ses.empKey || '').trim();
-      if (sesRol.includes('admin') || sesRol.includes('propietario') || sesPuesto.includes('admin') || sesPuesto.includes('gerente') || sesPuesto.includes('supervisor') || ses.tipo === 'admin') {
+      if (sesRol.includes('admin') || sesRol.includes('propietario') || sesPuesto.includes('admin') || sesPuesto.includes('propietario') || sesPuesto.includes('gerente') || sesPuesto.includes('supervisor') || ses.tipo === 'admin') {
         _esAdmin = true;
       }
       if (sesEmpKey === _CAJERO_CODE || sesRol.includes('cajero') || sesRol.includes('cajera') || sesRol.includes('caja') || sesPuesto.includes('cajero') || sesPuesto.includes('cajera') || sesPuesto.includes('caja')) {
@@ -3112,13 +3114,59 @@ function setCanal(c){
 function cargarMeseros(){
   db.ref('negocios/'+negocioID+'/empleados').on('value', function(snap){
     _empleados = [];
+    _accesoTotalFirebase = false;
+
+    var sesEmpKey = '';
+    var sesNombre = String(_loggedMesero || '').trim().toLowerCase();
+    try {
+      var ses = JSON.parse(localStorage.getItem('food_session_'+negocioID) || localStorage.getItem('food_session_elparche') || 'null');
+      if(ses){
+        sesEmpKey = String(ses.empKey || ses.id || '').trim();
+        if(!sesNombre) sesNombre = String(ses.nombre || ses.usuario || '').trim().toLowerCase();
+      }
+    } catch(e){}
+    try {
+      var op = JSON.parse(localStorage.getItem('food_operador_'+negocioID) || 'null');
+      if(op){
+        if(!sesEmpKey) sesEmpKey = String(op.empKey || op.id || '').trim();
+        if(!sesNombre) sesNombre = String(op.nombre || op.usuario || '').trim().toLowerCase();
+      }
+    } catch(e){}
+
     snap.forEach(function(c){
-      var e = c.val();
-      var puesto = (e.puesto || '').toLowerCase();
-      if(puesto.includes('mesero') || puesto.includes('cajero')){
-        _empleados.push({id: c.key, nombre: e.nombre});
+      var e = c.val() || {};
+      var puesto = String(e.puesto || '').toLowerCase();
+      var rol = String(e.rol || '').toLowerCase();
+      var nombre = String(e.nombre || '').trim();
+      var codigo = String(e.codigo || e.code || e.id_empleado || e.pin_app || e.pin || '').trim();
+
+      // Lista seleccionable de atención/caja.
+      if(puesto.includes('mesero') || rol.includes('mesero') ||
+         puesto.includes('cajero') || rol.includes('cajero') || rol.includes('caja')){
+        _empleados.push({id:c.key, nombre:nombre});
+      }
+
+      // Resolver el usuario ACTUAL contra Firebase.
+      var coincideKey = sesEmpKey && String(c.key).trim() === sesEmpKey;
+      var coincideNombre = sesNombre && nombre.toLowerCase() === sesNombre;
+      if(coincideKey || coincideNombre){
+        var esPropietario = rol.includes('propietario') || puesto.includes('propietario');
+        var esAdmin = rol.includes('admin') || puesto.includes('admin') ||
+                      puesto.includes('gerente') || puesto.includes('supervisor') || e.admin === true;
+        var esCajero = rol.includes('cajero') || rol.includes('caja') ||
+                       puesto.includes('cajero') || puesto.includes('caja') ||
+                       codigo === _CAJERO_CODE;
+
+        if(esPropietario || esAdmin || esCajero){
+          _accesoTotalFirebase = true;
+          _esAdmin = esPropietario || esAdmin;
+          _esCajero = esCajero || esPropietario || esAdmin;
+          if(nombre) _loggedMesero = nombre;
+          console.log('[ACCESO MESAS] Acceso total confirmado:', nombre, rol, puesto);
+        }
       }
     });
+
     actualizarDropdownMeseros();
   });
 }
@@ -3915,8 +3963,54 @@ function selMesa(n) {
         ejecutarSelMesa(_mesaAperturaId);
       };
     } else {
-      document.getElementById('mesa-apertura-ocupada-nuestra').style.display = 'none';
-      document.getElementById('mesa-apertura-ocupada-ajena').style.display = 'block';
+      // Última verificación directamente en Firebase para propietario/admin/cajero.
+      // Evita bloquear si la sesión abrió antes de que cargarMeseros terminara.
+      db.ref('negocios/'+negocioID+'/empleados').once('value').then(function(esnap){
+        var permitido = false;
+        var sesNombre = String(_loggedMesero || '').trim().toLowerCase();
+        var sesKey = '';
+        try{
+          var s=JSON.parse(localStorage.getItem('food_session_'+negocioID)||localStorage.getItem('food_session_elparche')||'null');
+          if(s){
+            sesKey=String(s.empKey||s.id||'').trim();
+            if(!sesNombre)sesNombre=String(s.nombre||s.usuario||'').trim().toLowerCase();
+          }
+        }catch(e){}
+        try{
+          var o=JSON.parse(localStorage.getItem('food_operador_'+negocioID)||'null');
+          if(o){
+            if(!sesKey)sesKey=String(o.empKey||o.id||'').trim();
+            if(!sesNombre)sesNombre=String(o.nombre||o.usuario||'').trim().toLowerCase();
+          }
+        }catch(e){}
+
+        esnap.forEach(function(c){
+          if(permitido)return;
+          var e=c.val()||{};
+          var nombre=String(e.nombre||'').trim().toLowerCase();
+          var coincide=(sesKey&&String(c.key).trim()===sesKey)||(sesNombre&&nombre===sesNombre);
+          if(!coincide)return;
+          var r=String(e.rol||'').toLowerCase(),p=String(e.puesto||'').toLowerCase();
+          var cod=String(e.codigo||e.code||e.id_empleado||e.pin_app||e.pin||'').trim();
+          permitido = r.includes('propietario')||p.includes('propietario')||
+                      r.includes('admin')||p.includes('admin')||p.includes('gerente')||p.includes('supervisor')||
+                      r.includes('cajero')||r.includes('caja')||p.includes('cajero')||p.includes('caja')||
+                      cod===_CAJERO_CODE||e.admin===true;
+        });
+
+        if(permitido){
+          _accesoTotalFirebase=true; _esAdmin=true; _esCajero=true;
+          document.getElementById('mesa-apertura-ocupada-nuestra').style.display='block';
+          document.getElementById('mesa-apertura-ocupada-ajena').style.display='none';
+          document.getElementById('btn-mesa-apertura-abrir-ocupada').onclick=function(){
+            cerrarMesaAperturaModal();
+            ejecutarSelMesa(_mesaAperturaId);
+          };
+        }else{
+          document.getElementById('mesa-apertura-ocupada-nuestra').style.display='none';
+          document.getElementById('mesa-apertura-ocupada-ajena').style.display='block';
+        }
+      });
     }
     
     // Abrir el modal
