@@ -443,12 +443,33 @@ function pedirCuenta(id){
 }
 
 function liberarMesa(id){
+  var m=_mesas[id]||{};
+  var orden=m.pedido_activo_id||'';
+  if(orden){
+    var p=_pedidos[orden]||null;
+    if(p && p.estado!=='pagado'){
+      toast('🔒 Mesa '+id+' tiene la orden activa '+orden+'. Debe cobrarse/cerrarse desde POS antes de liberarla.','err');
+      return;
+    }
+    if(!p){
+      db.ref('negocios/'+negocioID+'/pedidos/'+orden).once('value').then(function(ps){
+        var pv=ps.val();
+        if(pv&&pv.estado!=='pagado'){
+          toast('🔒 Orden '+orden+' sigue activa. No se liberó la mesa.','err');
+          return;
+        }
+        db.ref('negocios/'+negocioID+'/mesas/'+id).update({estado:'libre',pedido_activo_id:null,mesero:null,timestamp:0});
+        toast('✓ Mesa '+id+' liberada','ok');
+      });
+      return;
+    }
+  }
   db.ref('negocios/'+negocioID+'/mesas/'+id).update({estado:'libre',pedido_activo_id:null,mesero:null,timestamp:0});
-  toast('âœ“ Mesa '+id+' liberada','ok');
+  toast('✓ Mesa '+id+' liberada','ok');
 }
 
 function confirmarLiberarMesa(id,force){
-  if(!confirm('Â¿Liberar y limpiar mesa '+id+'? Se quitarÃ¡ el pedido activo.'))return;
+  if(!confirm('¿Liberar la mesa '+id+'? Una orden activa no podrá eliminarse desde aquí.'))return;
   liberarMesa(id);
 }
 

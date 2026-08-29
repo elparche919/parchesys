@@ -731,7 +731,7 @@ function renderBoard(){
               + (it.nota ? '<div class="item-note" style="text-decoration:line-through;opacity:0.5;">-- '+it.nota+'</div>' : '');
           }
 
-          var ck=id+'_'+idx, isOk=it.listo || _itemChecks[ck];
+          var isOk=!!it.listo;
           var nuevoBadge = (it.esNuevo && !isOk) ? '<span style="background:#f59e0b;color:#000;font-size:9px;font-weight:900;padding:1px 6px;border-radius:4px;margin-left:6px;letter-spacing:0.05em;text-transform:uppercase;">NUEVO</span>' : '';
           var cantStyle = isOk ? 'opacity:0.4;' : 'color:#fff;font-weight:900;';
           var nameStyle = isOk ? 'cursor:pointer;text-decoration:line-through;opacity:0.45;color:#9ca3af;' : 'cursor:pointer;text-decoration:none;opacity:1;color:#fff;font-weight:700;';
@@ -753,76 +753,98 @@ function renderBoard(){
 }
 
 
+
+function _kdsItemsArray(items){
+  if(Array.isArray(items))return items.filter(function(x){return x!==null&&x!==undefined;});
+  if(items&&typeof items==='object')return Object.keys(items).sort(function(a,b){
+    var na=Number(a),nb=Number(b);if(!isNaN(na)&&!isNaN(nb))return na-nb;return String(a).localeCompare(String(b));
+  }).map(function(k){return items[k];}).filter(function(x){return x!==null&&x!==undefined;});
+  return [];
+}
+function _kdsMismoItem(a,b){
+  if(!a||!b)return false;
+  if(a.linea_id&&b.linea_id)return String(a.linea_id)===String(b.linea_id);
+  var aid=a.id||'',bid=b.id||'';
+  if(aid&&bid&&String(aid)!==String(bid))return false;
+  var an=String(a.desc||a.nombre||'').trim().toLowerCase();
+  var bn=String(b.desc||b.nombre||'').trim().toLowerCase();
+  return !!an&&an===bn;
+}
+function _kdsFindItem(arr,target,fallbackIdx){
+  if(target&&target.linea_id){
+    for(var i=0;i<arr.length;i++)if(arr[i]&&arr[i].linea_id===target.linea_id)return i;
+  }
+  if(fallbackIdx>=0&&arr[fallbackIdx]&&_kdsMismoItem(arr[fallbackIdx],target))return fallbackIdx;
+  for(var j=0;j<arr.length;j++)if(_kdsMismoItem(arr[j],target))return j;
+  return -1;
+}
+
 function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
-  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items/'+itemIdx);
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items');
   return ref.transaction(function(cur){
-    // CRÍTICO: update() sobre una ruta inexistente crea {listo:true}.
-    // Si el ítem maestro no existe o ya está corrupto, NO escribir nada.
-    if(!cur || typeof cur!=='object') return;
-    var tieneIdentidad = !!(cur.id || cur.desc || cur.nombre);
-    if(!tieneIdentidad) return;
-
-    // Evitar que un índice desfasado marque otro producto.
-    var kId=kdsItem&&(kdsItem.id||'');
-    var cId=cur.id||'';
-    var kNom=String((kdsItem&&(kdsItem.desc||kdsItem.nombre))||'').trim().toLowerCase();
-    var cNom=String(cur.desc||cur.nombre||'').trim().toLowerCase();
-    if(kId && cId && String(kId)!==String(cId)) return;
-    if(!kId && kNom && cNom && kNom!==cNom) return;
-
-    cur.listo=!!newVal;
-    return cur;
-  },function(err,committed){
-    if(err){
-      console.error('['+origen+'] Error sincronizando listo con pedido maestro:',err);
-      return;
-    }
-    if(!committed){
-      console.warn('['+origen+'] Se evitó crear/corromper item maestro',orderId,itemIdx);
-      // Auditoría: deja evidencia sin alterar la orden.
-      db.ref('negocios/'+negocioID+'/auditoria/kds_integridad').push({
-        orden:orderId,item_index:itemIdx,origen:origen,
-        motivo:'item_maestro_inexistente_o_desfasado',
-        kds_id:(kdsItem&&kdsItem.id)||null,
-        kds_desc:(kdsItem&&(kdsItem.desc||kdsItem.nombre))||null,
+    var arr=_kdsItemsArray(cur);
+    var ix=_kdsFindItem(arr,kdsItem,itemIdx);
+    if(ix<0)return;
+    arr[ix]=Object.assign({},arr[ix],{listo:!!newVal});
+    return arr;
+  }).then(function(res){
+    if(!res.committed){
+      console.warn('['+origen+'] Se evitó marcar un ítem maestro desfasado',orderId,itemIdx);
+      return db.ref('negocios/'+negocioID+'/auditoria/kds_integridad').push({
+        orden:orderId,item_index:itemIdx,linea_id:kdsItem&&kdsItem.linea_id||null,
+        origen:origen,motivo:'linea_no_encontrada_en_pedido_maestro',
+        kds_id:kdsItem&&kdsItem.id||null,kds_desc:kdsItem&&(kdsItem.desc||kdsItem.nombre)||null,
         intento_listo:!!newVal,ts:Date.now()
       }).catch(function(){});
     }
-  },false);
+  });
 }
 
 function toggleCheck(orderId,itemIdx){
-  var o = _orders[orderId];
-  if(!o || !o.items || !o.items[itemIdx]) return;
-  if(o.items[itemIdx].eliminado) return;
+  var o=_orders[orderId];
+  if(!o||!o.items||!o.items[itemIdx]||o.items[itemIdx].eliminado)return;
   var itemKds=o.items[itemIdx];
-  var currentVal = !!itemKds.listo;
-  var newVal = !currentVal;
+  var currentVal=!!itemKds.listo;
+  var newVal=!currentVal;
+  var refItems=db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items');
 
-  var k = orderId+'_'+itemIdx;
-  _itemChecks[k] = newVal;
-
-  // La copia KDS sí puede actualizarse directamente porque sabemos que existe.
-  db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items/'+itemIdx).update({
-    listo:newVal
-  });
-
-  // El pedido maestro se modifica SOLO si el ítem ya existe y corresponde al mismo producto.
-  actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'COCINA');
-
-  if(newVal){
-    var mesero = o.tomada_por || o.mesero;
-    if(mesero){
-      var channel = o.tipo || o.canal || 'mesa';
-      var mesaText = channel === 'mesa' ? ('Mesa ' + (o.mesa_num || '?')) : (channel === 'llevar' ? 'Para Llevar' : 'Domicilio');
-      var itemName = itemKds.desc || itemKds.nombre || 'Ítem';
-      db.ref('negocios/'+negocioID+'/notificaciones/' + mesero.toLowerCase().trim()).push({
-        tipo: 'item_listo',
-        mensaje: '🍳 Cocina ya preparó ' + (itemKds.cant||1) + 'x ' + itemName + ' de ' + mesaText,
-        timestamp: Date.now()
-      });
+  refItems.transaction(function(cur){
+    var arr=_kdsItemsArray(cur);
+    var ix=_kdsFindItem(arr,itemKds,itemIdx);
+    if(ix<0)return;
+    arr[ix]=Object.assign({},arr[ix],{listo:newVal,listo_at:newVal?Date.now():null,listo_origen:'COCINA'});
+    return arr;
+  }).then(function(res){
+    if(!res.committed){
+      toast('No se pudo actualizar: la línea cambió. La pantalla se sincronizará sola.','err');
+      return;
     }
-  }
+    db.ref('negocios/'+negocioID+'/auditoria/kds_checks').push({
+      orden:orderId,
+      linea_id:itemKds.linea_id||null,
+      item_index_original:itemIdx,
+      producto:itemKds.desc||itemKds.nombre||'Ítem',
+      nuevo_estado_listo:!!newVal,
+      origen:'COCINA',
+      ts:Date.now()
+    }).catch(function(){});
+    return actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'COCINA');
+  }).then(function(){
+    if(!newVal)return;
+    var mesero=o.tomada_por||o.mesero;
+    if(!mesero)return;
+    var channel=o.tipo||o.canal||'mesa';
+    var mesaText=channel==='mesa'?('Mesa '+(o.mesa_num||'?')):(channel==='llevar'?'Para Llevar':'Domicilio');
+    var itemName=itemKds.desc||itemKds.nombre||'Ítem';
+    return db.ref('negocios/'+negocioID+'/notificaciones/'+mesero.toLowerCase().trim()).push({
+      tipo:'item_listo',
+      mensaje:'🍳 Cocina ya preparó '+(itemKds.cant||1)+'x '+itemName+' de '+mesaText,
+      timestamp:Date.now()
+    });
+  }).catch(function(err){
+    console.error('[COCINA] Error toggle listo:',err);
+    toast('Error sincronizando el estado del ítem','err');
+  });
 }
 
 function cambiarEstado(id,nestado){
@@ -834,7 +856,7 @@ function cambiarEstado(id,nestado){
     var tienePendientes = (o.items || []).some(function(it, idx) {
       if (it.eliminado) return false; // ítem anulado no cuenta como pendiente
       var ck = id + '_' + idx;
-      var isOk = it.listo || _itemChecks[ck];
+      var isOk = !!it.listo;
       return !_esBarCat(it.cat) && !isOk;
     });
     if (tienePendientes) {

@@ -4072,7 +4072,7 @@ function ejecutarSelMesa(n){
         if (MESA_SEL !== n || CANAL !== 'mesa') return;
         
         if(pd && pd.items && pd.estado !== 'pagado'){
-          var loadedItems = (pd.items || []).map(function(item) {
+          var loadedItems = asegurarLineasPedido(pd.items || [], m.pedido_activo_id).map(function(item) {
             item.enviado = true;
             return item;
           });
@@ -4476,6 +4476,151 @@ function renderProds(prods){
   }).join('');
 }
 
+
+/* ═══════════════════════════════════════
+   PARCHESYS — INTEGRIDAD MULTIDISPOSITIVO
+═══════════════════════════════════════ */
+function _psHashLinea(s){
+  s=String(s||''); var h=2166136261;
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h+=(h<<1)+(h<<4)+(h<<7)+(h<<8)+(h<<24); }
+  return (h>>>0).toString(36);
+}
+function _psClientId(){
+  var k='parchesys_client_id', v=localStorage.getItem(k);
+  if(!v){ v='DEV-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8); localStorage.setItem(k,v); }
+  return v;
+}
+function nuevaLineaId(){
+  return 'LN-'+_psClientId()+'-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,7);
+}
+function normalizarItemsArray(items){
+  if(Array.isArray(items)) return items.filter(function(x){return x!==null&&x!==undefined;});
+  if(items&&typeof items==='object') return Object.keys(items).sort(function(a,b){
+    var na=Number(a),nb=Number(b);
+    if(!isNaN(na)&&!isNaN(nb)) return na-nb;
+    return String(a).localeCompare(String(b));
+  }).map(function(k){return items[k];}).filter(function(x){return x!==null&&x!==undefined;});
+  return [];
+}
+function asegurarLineasPedido(items,ordenId){
+  return normalizarItemsArray(items).map(function(it,idx){
+    var x=Object.assign({},it||{});
+    if(!x.linea_id){
+      var base=[ordenId||'ORD',idx,x.id||'',x.desc||x.nombre||'',x.precio||0,x.variante?JSON.stringify(x.variante):''].join('|');
+      x.linea_id='LEG-'+_psHashLinea(base);
+    }
+    return x;
+  });
+}
+function fusionarItemsConcurrentes(serverItems,localItems,ordenId){
+  var server=asegurarLineasPedido(serverItems,ordenId), local=asegurarLineasPedido(localItems,ordenId);
+  var lm={}, usados={}, out=[];
+  local.forEach(function(x){lm[x.linea_id]=x;});
+  server.forEach(function(s){
+    var l=lm[s.linea_id];
+    if(!l){out.push(Object.assign({},s));return;}
+    usados[s.linea_id]=true;
+    var m=Object.assign({},s,l);
+    if(s.listo===true&&!l.eliminado)m.listo=true;
+    m.linea_id=s.linea_id;
+    out.push(m);
+  });
+  local.forEach(function(l){if(!usados[l.linea_id])out.push(Object.assign({},l));});
+  return out;
+}
+function firmaContenidoItems(items,ordenId){
+  return asegurarLineasPedido(items,ordenId).map(function(x){
+    return [x.linea_id,x.id||'',x.desc||x.nombre||'',Number(x.cant||1),Number(x.precio||0),!!x.eliminado].join('~');
+  }).sort().join('||');
+}
+function recalcularTotalesOrden(obj){
+  var sub=normalizarItemsArray(obj.items).reduce(function(a,i){
+    return i&&i.eliminado?a:a+(Number(i.cant||1)*Number(i.precio||0));
+  },0);
+  var desc=Number(obj.descuento_monto||0)||0, prop=Number(obj.propina||0)||0;
+  obj.subtotal=sub.toFixed(2);
+  obj.total=Math.max(0,sub-desc+prop).toFixed(2);
+  return obj;
+}
+function guardarPedidoConcurrente(orderId,v,accion,prevItemsEsperados){
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId);
+  var firmaEsperada=firmaContenidoItems(prevItemsEsperados||[],orderId);
+  return ref.transaction(function(cur){
+    if(cur&&cur.estado==='pagado'&&accion!=='cobrar')return;
+    if(accion==='cobrar'&&cur&&firmaContenidoItems(cur.items||[],orderId)!==firmaEsperada)return;
+    var base=Object.assign({},cur||{},v||{});
+    base.items=fusionarItemsConcurrentes(cur&&cur.items||[],v&&v.items||[],orderId);
+    base.revision=Number(cur&&cur.revision||0)+1;
+    base.ultima_escritura_dispositivo=_psClientId();
+    base.ultima_escritura_ts=Date.now();
+    if(cur&&cur.timestamp)base.timestamp=cur.timestamp;
+    if(cur&&cur.cobrado_at&&!base.cobrado_at)base.cobrado_at=cur.cobrado_at;
+    return recalcularTotalesOrden(base);
+  }).then(function(res){
+    if(!res.committed){
+      var e=new Error(accion==='cobrar'?'La orden cambió desde otro dispositivo. Recarga la mesa antes de cobrar.':'La orden ya fue cerrada o cambió de estado.');
+      e.code='PARCHE_CONCURRENCIA'; throw e;
+    }
+    var guardado=res.snapshot.val();
+    // Snapshot liviano del último estado sano: conserva la protección de recuperación.
+    db.ref('negocios/'+negocioID+'/orden_snapshots/'+orderId+'/latest').set({
+      orden:orderId,
+      items:guardado&&guardado.items||[],
+      revision:guardado&&guardado.revision||0,
+      estado:guardado&&guardado.estado||'en_curso',
+      ts:Date.now(),
+      dispositivo:_psClientId()
+    }).catch(function(e){console.warn('Snapshot no disponible:',e);});
+    return guardado;
+  });
+}
+function guardarKdsConcurrente(orderId,kds){
+  var ref=db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId);
+  return ref.transaction(function(cur){
+    if(!cur){
+      var nuevo=Object.assign({},kds);
+      nuevo.items=asegurarLineasPedido(kds.items||[],orderId);
+      nuevo.revision=1;nuevo.ultima_escritura_ts=Date.now();
+      return nuevo;
+    }
+    var out=Object.assign({},cur,kds);
+    out.items=fusionarItemsConcurrentes(cur.items||[],kds.items||[],orderId);
+    var cm={};
+    asegurarLineasPedido(cur.items||[],orderId).forEach(function(x){cm[x.linea_id]=x;});
+    out.items=asegurarLineasPedido(out.items||[],orderId).map(function(x){
+      var c=cm[x.linea_id];
+      if(c&&c.listo===true&&!x.eliminado)x.listo=true;
+      return x;
+    });
+    out.revision=Number(cur.revision||0)+1;
+    out.ultima_escritura_ts=Date.now();
+    return out;
+  }).then(function(r){return r.snapshot&&r.snapshot.val();});
+}
+function eliminarKdsSiFinalizado(orderId){
+  var ref=db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId);
+  return ref.transaction(function(cur){
+    if(!cur)return cur;
+    var pendientes=normalizarItemsArray(cur.items).some(function(i){return i&&!i.eliminado&&!i.listo;});
+    return pendientes?cur:null;
+  });
+}
+function reservarMesaAtomica(mesaNum,ordenPropuesta,extra){
+  var ref=db.ref('negocios/'+negocioID+'/mesas/'+mesaNum);
+  return ref.transaction(function(m){
+    m=m||{};
+    if(m.pedido_activo_id)return m;
+    m.pedido_activo_id=ordenPropuesta;
+    m.estado=m.estado&&m.estado!=='libre'?m.estado:'ocupada';
+    m.timestamp=m.timestamp||Date.now();
+    if(extra)Object.keys(extra).forEach(function(k){if(extra[k]!==undefined)m[k]=extra[k];});
+    return m;
+  }).then(function(r){
+    var m=r.snapshot.val()||{};
+    return m.pedido_activo_id||ordenPropuesta;
+  });
+}
+
 /* ═══════════════════════════════════════
    CART
 ═══════════════════════════════════════ */
@@ -4522,6 +4667,7 @@ function addItem(id, selectedVariant){
   } else {
     // Si no existe, se crea con precio_base
     pedido.push({
+      linea_id: nuevaLineaId(),
       id: id,
       desc: descCompleto,
       cant: 1,
@@ -4582,7 +4728,18 @@ function removeItem(idx){
   
   // Sincronizar inmediatamente el pedido a Firebase
   if (ORDEN) {
-    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/items').set(pedido);
+    var quitarLinea=item.linea_id;
+    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN+'/items').transaction(function(cur){
+      var arr=asegurarLineasPedido(cur||[],ORDEN);
+      for(var ri=0;ri<arr.length;ri++){
+        if((quitarLinea&&arr[ri].linea_id===quitarLinea)||
+           (!quitarLinea&&ri===idx&&(arr[ri].desc===item.desc||arr[ri].nombre===item.desc))){
+          arr[ri]=Object.assign({},arr[ri],{eliminado:true,eliminado_por:meseroName,fecha_eliminacion:item.fecha_eliminacion});
+          break;
+        }
+      }
+      return arr;
+    });
   }
   if (MESA_SEL) {
     db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL+'/pedido').set(pedido);
@@ -4597,11 +4754,16 @@ function removeItem(idx){
       var kItems = kSnap.val();
       // kItems puede ser array o null
       if (!Array.isArray(kItems)) return;
-      // Buscar el ítem en cocina_orders por índice o por desc+cant
+      // Buscar por linea_id antes que por índice: los índices pueden moverse entre dispositivos.
       var targetIdx = -1;
-      if (kItems[idx] && (kItems[idx].desc === item.desc || kItems[idx].nombre === item.desc)) {
+      if(item.linea_id){
+        for(var kli=0;kli<kItems.length;kli++){
+          if(kItems[kli]&&kItems[kli].linea_id===item.linea_id){targetIdx=kli;break;}
+        }
+      }
+      if (targetIdx===-1 && kItems[idx] && (kItems[idx].desc === item.desc || kItems[idx].nombre === item.desc)) {
         targetIdx = idx;
-      } else {
+      } else if(targetIdx===-1) {
         // Buscar por descripción
         for (var ki = 0; ki < kItems.length; ki++) {
           if (kItems[ki] && (kItems[ki].desc === item.desc || kItems[ki].nombre === item.desc) && !kItems[ki].eliminado) {
@@ -4611,10 +4773,18 @@ function removeItem(idx){
         }
       }
       if (targetIdx >= 0) {
-        db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN+'/items/'+targetIdx).update({
-          eliminado: true,
-          eliminado_por: meseroName,
-          fecha_eliminacion: item.fecha_eliminacion
+        db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN+'/items').transaction(function(cur){
+          var arr=asegurarLineasPedido(cur||[],ORDEN);
+          var ix=-1;
+          if(item.linea_id){
+            for(var ai=0;ai<arr.length;ai++){if(arr[ai]&&arr[ai].linea_id===item.linea_id){ix=ai;break;}}
+          }
+          if(ix<0 && arr[targetIdx] && (arr[targetIdx].desc===item.desc || arr[targetIdx].nombre===item.desc)) ix=targetIdx;
+          if(ix<0) return;
+          arr[ix]=Object.assign({},arr[ix],{
+            eliminado:true,eliminado_por:meseroName,fecha_eliminacion:item.fecha_eliminacion
+          });
+          return arr;
         });
       }
     });
@@ -4629,6 +4799,17 @@ function updateCant(idx, val){
   if(idx < 0 || idx >= pedido.length) return;
   var item = pedido[idx];
   if(item.enviado || item.estado_cocina) {
+    if(n > Number(item.cant||1)) {
+      var delta=n-Number(item.cant||1);
+      pedido.push(Object.assign({},item,{
+        linea_id:nuevaLineaId(),cant:delta,total:delta*Number(item.precio||0),
+        enviado:false,listo:false,esNuevo:true,estado_cocina:null,
+        enviado_kds_at:null,ultimo_envio_kds_at:null
+      }));
+      toast('+'+delta+' '+(item.desc||'producto')+' agregado como nueva tanda','ok');
+      renderCart();
+      return;
+    }
     // Si ya está enviado, no permitir reducir la cantidad para evitar inconsistencias
     if(n < item.cant) {
       if(confirm('No puedes reducir la cantidad de un ítem ya enviado. ¿Deseas anularlo por completo?')) {
@@ -4843,6 +5024,7 @@ function confirmarItemLibre(){
   var price = parseFloat(document.getElementById('libre-price').value) || 0;
   
   pedido.push({
+    linea_id: nuevaLineaId(),
     id: 'libre_' + Date.now(),
     desc: name,
     cant: 1,
@@ -4878,29 +5060,30 @@ function calcTotales(){
    ORDEN ID
 ═══════════════════════════════════════ */
 function generarOrden(targetMesa, targetCanal){
-  var startMesa = targetMesa !== undefined ? targetMesa : (CANAL === 'mesa' ? MESA_SEL : null);
-  var startCanal = targetCanal !== undefined ? targetCanal : CANAL;
-
-  db.ref('negocios/'+negocioID+'/contador_food_orders').transaction(function(v){ return (v||0)+1; }, function(e, ok, snap){
-    if(ok){
-      var currentMesa = CANAL === 'mesa' ? MESA_SEL : null;
-      if (CANAL !== startCanal || currentMesa !== startMesa) {
-        console.warn("generarOrden: Cambio de mesa/canal detectado, ignorando ID de orden generado.");
-        return;
-      }
-      var prefix = {mesa:'MESA',llevar:'LLEV',domicilio:'DOM'}[startCanal] || 'FOOD';
-      ORDEN = prefix+'-'+String(snap.val()).padStart(4,'0');
-      document.getElementById('tb-ord').textContent = ORDEN;
-      document.getElementById('ord-num').textContent = ORDEN;
-      
-      // Si es una mesa en canal mesa, asociar el pedido_activo_id en Firebase de inmediato
-      if (startCanal === 'mesa' && startMesa) {
-        db.ref('negocios/'+negocioID+'/mesas/'+startMesa).update({
-          pedido_activo_id: ORDEN,
-          timestamp: Date.now()
-        });
-      }
+  var startMesa=targetMesa!==undefined?targetMesa:(CANAL==='mesa'?MESA_SEL:null);
+  var startCanal=targetCanal!==undefined?targetCanal:CANAL;
+  db.ref('negocios/'+negocioID+'/contador_food_orders').transaction(function(v){return(v||0)+1;}).then(function(r){
+    if(!r.committed)throw new Error('No se pudo generar correlativo');
+    var currentMesa=CANAL==='mesa'?MESA_SEL:null;
+    if(CANAL!==startCanal||currentMesa!==startMesa)return null;
+    var prefix={mesa:'MESA',llevar:'LLEV',domicilio:'DOM'}[startCanal]||'FOOD';
+    var propuesta=prefix+'-'+String(r.snapshot.val()).padStart(4,'0');
+    if(startCanal==='mesa'&&startMesa){
+      return reservarMesaAtomica(startMesa,propuesta,{
+        mesero:(document.getElementById('mesa-mesero')||{value:''}).value||_loggedMesero||'',
+        personas:Number((document.getElementById('mesa-personas')||{value:1}).value||1)
+      });
     }
+    return propuesta;
+  }).then(function(ordenReal){
+    if(!ordenReal)return;
+    if(CANAL!==startCanal||(startCanal==='mesa'&&MESA_SEL!==startMesa))return;
+    ORDEN=ordenReal;
+    document.getElementById('tb-ord').textContent=ORDEN;
+    document.getElementById('ord-num').textContent=ORDEN;
+  }).catch(function(e){
+    console.error('generarOrden:',e);
+    toast('❌ No se pudo reservar la orden/mesa. Intenta de nuevo.','err');
   });
 }
 
@@ -5447,8 +5630,9 @@ function procesarOrden(tipoAccion, onComplete, onError){
     if (orderSnap.exists()) {
       var orderVal = orderSnap.val();
       ts = orderVal.timestamp || ts;
-      prevItems = orderVal.items || [];
+      prevItems = asegurarLineasPedido(orderVal.items || [], ORDEN);
     }
+    pedido = asegurarLineasPedido(pedido || [], ORDEN);
     
     // Inventario debe confirmarse ANTES de guardar pedido/KDS.
     // Si no hay stock o falla la transacción, la orden no continúa.
@@ -5604,15 +5788,12 @@ function procesarOrden(tipoAccion, onComplete, onError){
         return copy;
       }
 
-      // Intentar heredar estado de preparación previo de cocina_orders
+      // Heredar estado SOLO de la misma línea lógica.
+      // Nunca por descripción: dos platos iguales pueden ser tandas distintas.
       var foundIdx = pool.findIndex(function(ci) {
-        return ci && !ci.eliminado && (ci.desc === iDesc || ci.nombre === iDesc) && ci.cant === copy.cant;
+        return ci && !ci.eliminado && copy.linea_id && ci.linea_id &&
+               String(ci.linea_id) === String(copy.linea_id);
       });
-      if (foundIdx === -1) {
-        foundIdx = pool.findIndex(function(ci) {
-          return ci && !ci.eliminado && (ci.desc === iDesc || ci.nombre === iDesc);
-        });
-      }
 
       if (foundIdx !== -1) {
         if (pool[foundIdx].listo !== undefined) copy.listo = pool[foundIdx].listo;
@@ -5747,14 +5928,23 @@ function procesarOrden(tipoAccion, onComplete, onError){
 
     var saves = [];
     try {
-      saves.push(db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update(v));
+      var masterSavePromise=guardarPedidoConcurrente(saveOrden,v,tipoAccion,prevItems).then(function(merged){
+        if(merged){
+          v.items=merged.items||v.items;
+          v.subtotal=merged.subtotal||v.subtotal;
+          v.total=merged.total||v.total;
+          v.revision=merged.revision||v.revision;
+        }
+        return merged;
+      });
+      saves.push(masterSavePromise);
 
       if (tipoAccion === 'cobrar') {
         // Al cobrar la orden en caja:
         // Si tanto cocina como bar ya habían marcado entregado (o no aplican), retirar orden de cocina_orders
         var ambosEntregados = (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado');
         if (ambosEntregados) {
-          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
+          saves.push(eliminarKdsSiFinalizado(saveOrden));
         } else {
           // Si hay trabajo operativo pendiente, la comanda debe existir aunque haya sido cobrada.
           // Esto cubre también el caso en que una tanda anterior fue retirada del KDS y luego
@@ -5763,22 +5953,25 @@ function procesarOrden(tipoAccion, onComplete, onError){
           cocinaOrderUpdate.estado_servicio = 'en_proceso';
           cocinaOrderUpdate.estado_cocina = finalEstadoCocina;
           cocinaOrderUpdate.estado_bar = finalEstadoBar;
-          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
+          saves.push(guardarKdsConcurrente(saveOrden,cocinaOrderUpdate));
         }
       } else {
         // Al guardar / enviar comanda: SOLO mantener/recrear el KDS si existe trabajo real pendiente.
         // Una mesa puede seguir abierta después de haber sido servida; eso NO debe revivir la comanda.
         var hayTrabajoKdsPendiente = tieneComidaPendiente || tieneBebidasPendientes;
         if (hayTrabajoKdsPendiente) {
-          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).set(cocinaOrderUpdate));
+          saves.push(guardarKdsConcurrente(saveOrden,cocinaOrderUpdate));
         } else if (existeEnCocina) {
           // Autocuración: si quedó una tarjeta residual pero todos los ítems ya están listos/entregados,
           // retirarla del KDS en vez de volver a escribirla.
-          saves.push(db.ref('negocios/'+negocioID+'/cocina_orders/'+ORDEN).remove());
+          saves.push(eliminarKdsSiFinalizado(saveOrden));
         }
       }
       if(tipoAccion==='cobrar'){
-        saves.push(db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(v));
+        saves.push(masterSavePromise.then(function(merged){
+          var ventaFinal=Object.assign({},v,merged||{});
+          return db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(ventaFinal);
+        }));
         // Registrar payload fiscal en dte_pendientes via DteEngine
         if(typeof DteEngine !== 'undefined' && _dteModalActual !== 'CCF'){
           var cfNombre = (document.getElementById('ck-cf-nombre')||{value:''}).value || null;
@@ -8446,7 +8639,14 @@ async function qrTomar(id){
     if(!ordenId){
       var ct=await db.ref('negocios/'+negocioID+'/contador_food_orders').transaction(function(v){return(v||0)+1;});
       if(!ct.committed)throw new Error('No se pudo generar la orden');
-      ordenId='MESA-'+String(ct.snapshot.val()).padStart(4,'0');
+      var propuestaQr='MESA-'+String(ct.snapshot.val()).padStart(4,'0');
+      ordenId=await reservarMesaAtomica(n,propuestaQr,{
+        mesero:mesero,mesero_id:meseroId,personas:Number(s.comensales||1),
+        cliente_nombre:s.nombre_cliente||'Cliente QR',qr_bloqueada:true,
+        qr_estado:'procesando',qr_solicitud_id:id
+      });
+      var ms2=await mesaRef.once('value');
+      mesa=ms2.val()||mesa;
     }
 
     var rawItems=Array.isArray(s.items) ? s.items : Object.keys(s.items||{}).sort().map(function(k){return s.items[k];});
@@ -8463,10 +8663,11 @@ async function qrTomar(id){
 
     var ps=await db.ref('negocios/'+negocioID+'/pedidos/'+ordenId).once('value');
     var pd=ps.val()||{};
-    var prev=Array.isArray(pd.items)?pd.items:(pd.items?Object.keys(pd.items).sort().map(function(k){return pd.items[k];}):[]);
+    var prev=asegurarLineasPedido(pd.items||[],ordenId);
 
     var nuevos=rawItems.map(function(i){
       return {
+        linea_id:nuevaLineaId(),
         id:i.id||'',
         desc:i.desc||i.nombre||'Producto',
         nombre:i.nombre||i.desc||'Producto',

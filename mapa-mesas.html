@@ -627,19 +627,45 @@
       });
     }
 
+
+    function verificarSinOrdenesActivasAntesDeMantenimiento() {
+      var refs = Object.keys(_mesas || {}).map(function(id){
+        var m=_mesas[id]||{};
+        return m.pedido_activo_id ? {mesa:id,orden:m.pedido_activo_id} : null;
+      }).filter(Boolean);
+      if(!refs.length) return Promise.resolve(true);
+      return Promise.all(refs.map(function(x){
+        return db.ref('negocios/'+negocioID+'/pedidos/'+x.orden).once('value').then(function(ps){
+          var p=ps.val();
+          return {mesa:x.mesa,orden:x.orden,bloquea:!!(p&&p.estado!=='pagado')};
+        });
+      })).then(function(rows){
+        var activos=rows.filter(function(x){return x.bloquea;});
+        if(activos.length){
+          alert('Operación bloqueada por seguridad. Hay '+activos.length+' mesa(s) con órdenes activas: '+activos.map(function(x){return 'Mesa '+x.mesa+' ('+x.orden+')';}).join(', ')+'.');
+          return false;
+        }
+        return true;
+      });
+    }
+
      // Función manual para el botón de restablecer en modo editor
     function confirmarRestablecerDefectos() {
-      if (confirm('¿Estás seguro de que deseas restablecer el plano de mesas por defecto? Se eliminarán todas las mesas existentes y se recrearán las zonas predefinidas.')) {
+      if (!confirm('¿Estás seguro de que deseas restablecer el plano de mesas por defecto?')) return;
+      verificarSinOrdenesActivasAntesDeMantenimiento().then(function(ok){
+        if(!ok) return;
         db.ref(`negocios/${negocioID}/mesas`).remove().then(() => {
           inicializarMapaMesasPorDefecto();
           closeEditor();
           toast('Plano restablecido correctamente', 'ok');
         });
-      }
+      });
     }
 
     function liberarTodasLasMesas() {
-      if (confirm('¿Estás seguro de que deseas liberar todas las mesas? Esto establecerá su estado como "libre" y removerá los meseros y pedidos activos vinculados.')) {
+      if (!confirm('¿Liberar todas las mesas que NO tengan una orden activa?')) return;
+      verificarSinOrdenesActivasAntesDeMantenimiento().then(function(ok){
+        if(!ok) return;
         const updates = {};
         Object.keys(_mesas).forEach(id => {
           updates[`${id}/estado`] = 'libre';
@@ -648,12 +674,12 @@
           updates[`${id}/personas`] = 1;
         });
         db.ref(`negocios/${negocioID}/mesas`).update(updates).then(() => {
-          toast('Todas las mesas han sido liberadas', 'ok');
+          toast('Todas las mesas sin órdenes activas han sido liberadas', 'ok');
         }).catch(err => {
           console.error(err);
           toast('Error al liberar mesas', 'err');
         });
-      }
+      });
     }
 
     function toggleEditMode() {
