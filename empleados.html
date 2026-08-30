@@ -1197,12 +1197,8 @@ textarea.fi{resize:vertical;min-height:72px}
 </script>
 <script>
 // ── ESTADO GLOBAL ──
-// PARCHE EMERGENCIA EL PARCHE:
-// RRHH debe trabajar sobre negocios/elparche/empleados.
-// Si esta página se abre sin ?negocio=, reingresa de inmediato con el tenant correcto.
-if (typeof negocioID === 'undefined' || !negocioID) {
-  window.location.replace('empleados.html?negocio=elparche');
-}
+// negocioID and db are already inherited from firebase-config.js
+if(!negocioID){ window.location.href='index.html'; }
 // ── MODUS RETURN: registrar sesión activa y cablear botón volver ──
 if(typeof ModusReturn!=='undefined'){
   ModusReturn.init(negocioID);
@@ -1232,6 +1228,89 @@ let asistenciaHoy={};
 let turnos={};
 let permisos={};
 let notificaciones_emp=[];
+
+// ═══════════════════════════════════════════════════════════════
+// PARCHESYS RRHH — ESCUDO ANTIPÉRDIDA DE EMPLEADOS (2026-08-30)
+// ═══════════════════════════════════════════════════════════════
+const _RRHH_BACKUP_BASE = `negocios/${negocioID}/empleados_backups`;
+let _rrhhRestaurando = false;
+
+function _rrhhEsDemoContaminado(data){
+  data = data || {};
+  const vals = Object.values(data);
+  const nombres = vals.map(e=>String((e&&e.nombre)||'').trim().toLowerCase());
+  const demoNombres = ['maría garcía','carlos morales','ana rodríguez','roberto flores','lucía martínez'];
+  const keys = Object.keys(data);
+  const keysDemo = keys.length===5 && ['emp_001','emp_002','emp_003','emp_004','emp_005'].every(k=>keys.includes(k));
+  const nombresDemo = vals.length===5 && demoNombres.every(n=>nombres.includes(n));
+  return keysDemo || nombresDemo;
+}
+
+function _rrhhEsSnapshotSano(data){
+  if(!data || typeof data!=='object') return false;
+  const vals=Object.values(data).filter(Boolean);
+  if(!vals.length || _rrhhEsDemoContaminado(data)) return false;
+  // Debe existir al menos un perfil real con PIN o identificación/rol útil.
+  return vals.some(e => String(e.pin_app||e.pin||'').trim() ||
+                        String(e.dui||'').trim() ||
+                        String(e.rol||e.puesto||'').trim());
+}
+
+async function _rrhhAuditar(tipo, detalle){
+  try{
+    await db.ref(`negocios/${negocioID}/auditoria/rrhh_integridad`).push({
+      tipo, detalle: detalle||'', ts: firebase.database.ServerValue.TIMESTAMP,
+      dispositivo: (navigator.userAgent||'').slice(0,180),
+      origen:'empleados.html'
+    });
+  }catch(_){}
+}
+
+async function _rrhhGuardarBackup(origen){
+  try{
+    const s=await db.ref(`negocios/${negocioID}/empleados`).once('value');
+    const data=s.val()||{};
+    if(!_rrhhEsSnapshotSano(data)) return false;
+    const payload={ts:Date.now(),origen:origen||'automatico',empleados:data};
+    await db.ref(`${_RRHH_BACKUP_BASE}/ultimo_bueno`).set(payload);
+    return true;
+  }catch(e){
+    console.error('[RRHH] Error creando respaldo',e);
+    return false;
+  }
+}
+
+async function _rrhhIntentarRestaurarSiCorrupto(data, motivo){
+  if(_rrhhRestaurando) return false;
+  const corrupto = !data || Object.keys(data).length===0 || _rrhhEsDemoContaminado(data);
+  if(!corrupto) return false;
+  try{
+    const b=await db.ref(`${_RRHH_BACKUP_BASE}/ultimo_bueno`).once('value');
+    const bp=b.val();
+    if(!bp || !_rrhhEsSnapshotSano(bp.empleados)) {
+      await _rrhhAuditar('ALERTA_SIN_BACKUP', motivo||'Nodo empleados vacío/demo y no existe respaldo sano');
+      return false;
+    }
+    _rrhhRestaurando=true;
+    const ref=db.ref(`negocios/${negocioID}/empleados`);
+    const tx=await ref.transaction(current=>{
+      const cur=current||{};
+      if(Object.keys(cur).length===0 || _rrhhEsDemoContaminado(cur)) return bp.empleados;
+      return; // alguien ya restauró/corrigió: abortar
+    });
+    if(tx.committed){
+      await _rrhhAuditar('RESTAURACION_AUTOMATICA', `Restaurado desde ultimo_bueno. Motivo: ${motivo||'detección de corrupción'}`);
+      console.error('[PARCHESYS RRHH] Se restauró automáticamente el último respaldo sano.');
+    }
+    return !!tx.committed;
+  }catch(e){
+    console.error('[RRHH] Error intentando restauración automática',e);
+    return false;
+  }finally{
+    _rrhhRestaurando=false;
+  }
+}
+
 let ultimoCorteFecha='';
 
 // ── INIT ──
@@ -1276,6 +1355,11 @@ function init(){
 
   db.ref(`negocios/${negocioID}/empleados`).on('value',s=>{
     empleados=s.val()||{};
+    if(_rrhhEsSnapshotSano(empleados)){
+      _rrhhGuardarBackup('listener_estado_sano');
+    } else {
+      _rrhhIntentarRestaurarSiCorrupto(empleados, _rrhhEsDemoContaminado(empleados)?'Se detectaron los 5 empleados demo':'Nodo empleados vacío');
+    }
     renderEmpleados();
     renderAsistencia();
     renderPlanilla();
@@ -1310,48 +1394,14 @@ function init(){
     renderNotificaciones();
   });
 
-  cargarDatosDemo();
+  // PARCHESYS EMERGENCIA RRHH: datos demo DESACTIVADOS permanentemente.
   // Iniciar módulos nuevos después de cargar empleados
   setTimeout(initNuevosModulos, 800);
 }
 
-// ── DEMO DATA (si no hay empleados en BD) ──
+// ── DEMO DATA DESACTIVADA EN PRODUCCIÓN ──
 function cargarDatosDemo(){
-  setTimeout(()=>{
-    if(Object.keys(empleados).length===0){
-      const demo={
-        'emp_001':{nombre:'María García',dui:'01234567-8',tel:'7123-4567',email:'maria@empresa.com',puesto:'Vendedora',dept:'Ventas',tipo:'Tiempo completo',salario:450,fecha:'2023-03-15',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#1B4E8B'},
-        'emp_002':{nombre:'Carlos Morales',dui:'02345678-9',tel:'7234-5678',email:'carlos@empresa.com',puesto:'Supervisor de Producción',dept:'Producción',tipo:'Tiempo completo',salario:600,fecha:'2022-08-01',hora_in:'07:00',hora_out:'16:00',rol:'supervisor',color:'#10b981'},
-        'emp_003':{nombre:'Ana Rodríguez',dui:'03456789-0',tel:'7345-6789',email:'ana@empresa.com',puesto:'Asistente Administrativa',dept:'Administración',tipo:'Tiempo completo',salario:400,fecha:'2024-01-10',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#f59e0b'},
-        'emp_004':{nombre:'Roberto Flores',dui:'04567890-1',tel:'7456-7890',email:'roberto@empresa.com',puesto:'Bodeguero',dept:'Bodega',tipo:'Tiempo parcial',salario:300,fecha:'2023-11-05',hora_in:'06:00',hora_out:'14:00',rol:'empleado',color:'#ec4899'},
-        'emp_005':{nombre:'Lucía Martínez',dui:'05678901-2',tel:'7567-8901',email:'lucia@empresa.com',puesto:'Atención al Cliente',dept:'Servicio al Cliente',tipo:'Tiempo completo',salario:380,fecha:'2024-02-20',hora_in:'09:00',hora_out:'18:00',rol:'empleado',color:'#1B4E8B'},
-      };
-      db.ref(`negocios/${negocioID}/empleados`).set(demo);
-
-      const hoy=new Date().toISOString().split('T')[0];
-      const asistDemo={
-        'emp_001':{hora_entrada:'08:05',hora_salida:'',estado:'presente',tardanza:false},
-        'emp_002':{hora_entrada:'07:00',hora_salida:'',estado:'presente',tardanza:false},
-        'emp_003':{hora_entrada:'08:22',hora_salida:'',estado:'tardanza',tardanza:true,minutos_tarde:22},
-        'emp_004':{hora_entrada:'',hora_salida:'',estado:'ausente',tardanza:false},
-        'emp_005':{hora_entrada:'09:00',hora_salida:'',estado:'presente',tardanza:false},
-      };
-      db.ref(`negocios/${negocioID}/asistencia_hoy`).set(asistDemo);
-
-      const permDemo={
-        'perm_001':{emp_id:'emp_001',emp_nombre:'María García',tipo:'Vacaciones',inicio:'2026-03-20',fin:'2026-03-24',dias:5,motivo:'Vacaciones anuales',estado:'pendiente',fecha_sol:new Date().toISOString()},
-        'perm_002':{emp_id:'emp_003',emp_nombre:'Ana Rodríguez',tipo:'Permiso médico',inicio:'2026-03-18',fin:'2026-03-18',dias:1,motivo:'Cita médica',estado:'aprobado',fecha_sol:new Date().toISOString()},
-      };
-      db.ref(`negocios/${negocioID}/permisos_emp`).set(permDemo);
-
-      const notifDemo=[
-        {titulo:'Cambio de turno',mensaje:'Mañana entras a las 8:00 am, Carlos',tipo:'turno',empleado:'Carlos Morales',fecha:new Date().toISOString()},
-        {titulo:'Pago procesado',mensaje:'Tu salario de marzo fue depositado 💰',tipo:'pago',empleado:'Todos',fecha:new Date(Date.now()-86400000).toISOString()},
-        {titulo:'Recordatorio',mensaje:'Reunión de equipo el viernes a las 3pm',tipo:'recordatorio',empleado:'Todos',fecha:new Date(Date.now()-172800000).toISOString()},
-      ];
-      notifDemo.forEach(n=>db.ref(`negocios/${negocioID}/notificaciones_emp`).push(n));
-    }
-  },1500);
+  console.warn('[PARCHESYS RRHH] cargarDatosDemo() bloqueado: nunca se escribirán empleados demo en producción.');
 }
 
 // ── TABS ──
@@ -2624,6 +2674,8 @@ function guardarEmpleado(){
     modulos_custom: mPerms
   };
   const fotoFile=document.getElementById('emp-foto-file').files[0];
+  // Respaldo preventivo antes de cualquier alta/edición.
+  _rrhhGuardarBackup(editId?'antes_editar_empleado':'antes_crear_empleado');
   const btn=document.querySelector('#modal-emp .btn-primary');
   if(btn){btn.textContent='Guardando...';btn.disabled=true;}
   const doSave=(fotoUrl)=>{
@@ -2657,8 +2709,22 @@ function guardarEmpleado(){
   } else doSave(null);
 }
 
-function eliminarEmp(id){
-  db.ref(`negocios/${negocioID}/empleados/${id}`).remove().then(()=>toast('🗑️ Empleado eliminado','ok'));
+async function eliminarEmp(id){
+  const actual=empleados[id]||{};
+  const total=Object.keys(empleados||{}).length;
+  if(total<=1){
+    toast('⛔ Protección RRHH: no se puede eliminar el último empleado.','err');
+    return;
+  }
+  if(!confirm(`¿Eliminar a ${actual.nombre||'este empleado'}? Esta acción quedará auditada y se creará un respaldo previo.`)) return;
+  await _rrhhGuardarBackup('antes_eliminar_empleado');
+  try{
+    await db.ref(`negocios/${negocioID}/empleados/${id}`).remove();
+    await _rrhhAuditar('ELIMINAR_EMPLEADO', `ID: ${id} · Nombre: ${actual.nombre||''}`);
+    toast('🗑️ Empleado eliminado','ok');
+  }catch(e){
+    toast('Error al eliminar: '+e.message,'err');
+  }
 }
 
 function toggleAllModulos(val){
@@ -3926,7 +3992,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     iniciarSyncAsistencia();
   }, 1000);
 });
-\n</script>
+</script>
 
 
 

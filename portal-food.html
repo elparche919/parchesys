@@ -1598,6 +1598,78 @@
     if (!negocioID) negocioID = (typeof NEGOCIO_ID !== 'undefined' ? NEGOCIO_ID : 'elparche');
     if(!negocioID) location.href = '../index.html';
 
+    // ═══════════════════════════════════════════════════════════════
+    // PARCHESYS — GUARDIÁN RRHH GLOBAL (2026-08-30)
+    // Mantiene un último respaldo sano y restaura si empleados queda
+    // vacío o es reemplazado por los 5 perfiles demo heredados.
+    // ═══════════════════════════════════════════════════════════════
+    (function iniciarGuardianRRHH(){
+      const empPath=`negocios/${negocioID}/empleados`;
+      const backupPath=`negocios/${negocioID}/empleados_backups/ultimo_bueno`;
+      let restaurando=false;
+      let ultimoJsonRespaldado='';
+
+      function esDemo(data){
+        data=data||{};
+        const vals=Object.values(data);
+        const keys=Object.keys(data);
+        const nombres=vals.map(e=>String((e&&e.nombre)||'').trim().toLowerCase());
+        const demos=['maría garcía','carlos morales','ana rodríguez','roberto flores','lucía martínez'];
+        const keysDemo=keys.length===5 && ['emp_001','emp_002','emp_003','emp_004','emp_005'].every(k=>keys.includes(k));
+        const nombresDemo=vals.length===5 && demos.every(n=>nombres.includes(n));
+        return keysDemo || nombresDemo;
+      }
+      function sano(data){
+        if(!data || typeof data!=='object' || esDemo(data)) return false;
+        const vals=Object.values(data).filter(Boolean);
+        return vals.length>0 && vals.some(e=>String(e.pin_app||e.pin||'').trim() ||
+                                              String(e.dui||'').trim() ||
+                                              String(e.rol||e.puesto||'').trim());
+      }
+      function auditar(tipo,detalle){
+        return db.ref(`negocios/${negocioID}/auditoria/rrhh_integridad`).push({
+          tipo,detalle:detalle||'',ts:firebase.database.ServerValue.TIMESTAMP,
+          origen:'portal-food.html',dispositivo:(navigator.userAgent||'').slice(0,180)
+        }).catch(()=>{});
+      }
+      async function respaldar(data){
+        try{
+          const j=JSON.stringify(data);
+          if(j===ultimoJsonRespaldado) return;
+          ultimoJsonRespaldado=j;
+          await db.ref(backupPath).set({ts:Date.now(),origen:'guardian_portal',empleados:data});
+        }catch(e){ console.error('[RRHH Guardian] backup',e); }
+      }
+      async function restaurar(current,motivo){
+        if(restaurando) return;
+        restaurando=true;
+        try{
+          const b=(await db.ref(backupPath).once('value')).val();
+          if(!b || !sano(b.empleados)){
+            await auditar('ALERTA_SIN_BACKUP',motivo);
+            return;
+          }
+          const tx=await db.ref(empPath).transaction(cur=>{
+            cur=cur||{};
+            if(Object.keys(cur).length===0 || esDemo(cur)) return b.empleados;
+            return;
+          });
+          if(tx.committed) await auditar('RESTAURACION_AUTOMATICA',motivo);
+        }catch(e){
+          console.error('[RRHH Guardian] restore',e);
+        }finally{
+          restaurando=false;
+        }
+      }
+      db.ref(empPath).on('value',snap=>{
+        const data=snap.val()||{};
+        if(sano(data)) respaldar(data);
+        else if(Object.keys(data).length===0) restaurar(data,'Nodo empleados quedó vacío');
+        else if(esDemo(data)) restaurar(data,'Nodo empleados fue sustituido por los 5 perfiles demo');
+      });
+    })();
+
+
     // Update Sidebar & Dashboard Links to maintain session persistence
     ['link-pos', 'link-pos-tablet', 'link-cocina', 'link-bar', 'link-mapa', 'link-finanzas', 'link-empleados', 'link-dte', 'link-conta', 'link-movil'].forEach(id => {
       if(document.getElementById(id)) document.getElementById(id).href += negocioID;
