@@ -3413,9 +3413,9 @@ function renderCanalDetail(){
       cVal = m.cliente_nombre || '';
     }
     html += '</div><div class="cd-row cd-row-3" style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:8px;">'+
-      '<div><label class="fl">Mesero</label><select class="fi" id="mesa-mesero" onchange="guardarDatosMesa()"><option value="">Seleccionar...</option></select></div>'+
-      '<div><label class="fl">Comensales</label><input class="fi" id="mesa-personas" type="number" min="1" placeholder="2" value="'+pVal+'" oninput="guardarDatosMesa()"></div>'+
-      '<div><label class="fl">Nombre Cliente</label><input class="fi" id="mesa-cliente-nombre" placeholder="Nombre/Apellido" value="'+cVal+'" oninput="guardarDatosMesa()"></div>'+
+      '<div><label class="fl">Mesero</label><select class="fi" id="mesa-mesero" onchange="reasignarMeseroMesaDesdeUI()"><option value="">Seleccionar...</option></select></div>'+
+      '<div><label class="fl">Comensales</label><input class="fi" id="mesa-personas" type="number" min="1" placeholder="2" value="'+pVal+'" oninput="guardarDatosMesaSinMesero()"></div>'+
+      '<div><label class="fl">Nombre Cliente</label><input class="fi" id="mesa-cliente-nombre" placeholder="Nombre/Apellido" value="'+cVal+'" oninput="guardarDatosMesaSinMesero()"></div>'+
       '</div>';
     d.innerHTML = html;
     actualizarDropdownMeseros();
@@ -3550,9 +3550,9 @@ function abrirMesaModal(defaultTab){
   
   html += '</div>'+
     '<div class="cd-row" style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr 1.5fr; gap:16px; border-top:1px solid var(--border); padding-top:16px;">'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Mesero Asignado</label><select class="fi" id="mesa-mesero-modal" onchange="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"><option value="">Seleccionar...</option></select></div>'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Comensales</label><input class="fi" id="mesa-personas-modal" type="number" min="1" placeholder="2" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
-    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Nombre / Apellido</label><input class="fi" id="mesa-cliente-nombre-modal" type="text" placeholder="Ej: Pérez" oninput="guardarDatosMesaModal()" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Mesero Asignado</label><select class="fi" id="mesa-mesero-modal" onchange="reasignarMeseroMesaDesdeUI(true)" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"><option value="">Seleccionar...</option></select></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Comensales</label><input class="fi" id="mesa-personas-modal" type="number" min="1" placeholder="2" oninput="guardarDatosMesaSinMesero(true)" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
+    '<div><label class="fl" style="font-size:11px; color:var(--text-sub);">Nombre / Apellido</label><input class="fi" id="mesa-cliente-nombre-modal" type="text" placeholder="Ej: Pérez" oninput="guardarDatosMesaSinMesero(true)" style="height:46px; font-size:14px; background:var(--surface-light); border:1px solid var(--border); color:white; border-radius:10px; width:100%; padding:0 10px;"></div>'+
     '</div>'+
     '<div style="margin-top:20px; display:flex; justify-content:flex-end;">'+
     '<button class="checkout-trigger" style="padding:12px 24px; font-size:14px; border-radius:10px;" onclick="cerrarMesaModal()">Confirmar y Cerrar</button>'+
@@ -3813,59 +3813,136 @@ function actualizarTabletOrdenesBadge(count) {
   }
 }
 
-function guardarDatosMesaModal(){
-  if(!MESA_SEL) return;
-  var mesero = document.getElementById('mesa-mesero-modal').value;
-  var personas = document.getElementById('mesa-personas-modal').value;
-  var clienteNombre = document.getElementById('mesa-cliente-nombre-modal') ? document.getElementById('mesa-cliente-nombre-modal').value : '';
-  
-  // update hidden inputs inside #canal-detail
-  var hMesero = document.getElementById('mesa-mesero');
-  var hPersonas = document.getElementById('mesa-personas');
-  var hCliente = document.getElementById('mesa-cliente-nombre');
-  if(hMesero) hMesero.value = mesero;
-  if(hPersonas) hPersonas.value = personas;
-  if(hCliente) hCliente.value = clienteNombre;
-  
-  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-    mesero: mesero,
-    personas: personas,
-    cliente_nombre: clienteNombre
-  });
-  
-  if (ORDEN) {
-    db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update({
-      mesero: mesero,
-      personas: personas,
-      cliente: 'Mesa ' + MESA_SEL + (clienteNombre ? ' (' + clienteNombre + ')' : '')
-    });
-  }
-  
-  renderCanalDetail();
+function _meseroIdPorNombre(nombre){
+  var n=String(nombre||'').trim().toLowerCase();
+  var hit=(_empleados||[]).find(function(e){return String(e.nombre||'').trim().toLowerCase()===n;});
+  return hit ? hit.id : null;
 }
 
-function guardarDatosMesa(){
-  if(!MESA_SEL) return;
-  var mesero = document.getElementById('mesa-mesero') ? document.getElementById('mesa-mesero').value : '';
-  var personas = document.getElementById('mesa-personas') ? document.getElementById('mesa-personas').value : '';
-  var clienteNombre = document.getElementById('mesa-cliente-nombre') ? document.getElementById('mesa-cliente-nombre').value : '';
-  
-  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-    mesero: mesero,
-    personas: personas,
-    cliente_nombre: clienteNombre
+function _actorCambioMesero(){
+  return {
+    id: (typeof _usuarioActivoId==='function' ? _usuarioActivoId() : null),
+    nombre: String(_loggedMesero || localStorage.getItem('meseroId') || 'POS').trim() || 'POS',
+    dispositivo: (typeof _psClientId==='function' ? _psClientId() : 'POS')
+  };
+}
+
+/* ÚNICA ruta autorizada para cambiar el responsable de una mesa/orden.
+   Actualiza Mesa + Pedido + KDS en una sola operación multi-location. */
+function reasignarMeseroMesa(nuevoMesero, mesaId, ordenId){
+  mesaId=mesaId||MESA_SEL;
+  ordenId=ordenId||ORDEN||((_mesas[mesaId]||{}).pedido_activo_id||'');
+  nuevoMesero=String(nuevoMesero||'').trim();
+  if(!mesaId || !nuevoMesero) return Promise.resolve(false);
+
+  var mesaActual=_mesas[mesaId]||{};
+  var anterior=String(mesaActual.mesero||'').trim();
+  if(anterior===nuevoMesero) return Promise.resolve(false);
+
+  var nuevoId=_meseroIdPorNombre(nuevoMesero);
+  var actor=_actorCambioMesero();
+  var ts=Date.now();
+  var base='negocios/'+negocioID+'/';
+
+  // Primero comprobar KDS para no crear una comanda fantasma si ya fue retirada.
+  var kdsCheck=ordenId
+    ? db.ref(base+'cocina_orders/'+ordenId).once('value')
+    : Promise.resolve(null);
+
+  return kdsCheck.then(function(kdsSnap){
+    var updates={};
+
+    updates[base+'mesas/'+mesaId+'/mesero']=nuevoMesero;
+    updates[base+'mesas/'+mesaId+'/mesero_id']=nuevoId;
+    updates[base+'mesas/'+mesaId+'/mesero_reasignado_at']=ts;
+
+    if(ordenId){
+      updates[base+'pedidos/'+ordenId+'/mesero']=nuevoMesero;
+      updates[base+'pedidos/'+ordenId+'/mesero_id']=nuevoId;
+      updates[base+'pedidos/'+ordenId+'/mesero_reasignado_at']=ts;
+
+      // Cocina y Bar leen cocina_orders. Solo tocarlo si la comanda sigue viva.
+      if(kdsSnap && kdsSnap.exists()){
+        updates[base+'cocina_orders/'+ordenId+'/mesero']=nuevoMesero;
+        updates[base+'cocina_orders/'+ordenId+'/mesero_id']=nuevoId;
+        updates[base+'cocina_orders/'+ordenId+'/mesero_reasignado_at']=ts;
+      }
+    }
+
+    var auditKey=db.ref(base+'auditoria/cambio_mesero').push().key;
+    updates[base+'auditoria/cambio_mesero/'+auditKey]={
+      mesa:String(mesaId),
+      orden:ordenId||null,
+      mesero_anterior:anterior||null,
+      mesero_nuevo:nuevoMesero,
+      mesero_nuevo_id:nuevoId,
+      ejecutado_por:actor.nombre,
+      ejecutado_por_id:actor.id,
+      dispositivo:actor.dispositivo,
+      timestamp:ts,
+      origen:'POS_ASIGNAR_MESERO'
+    };
+
+    return db.ref().update(updates).then(function(){
+      if(!_mesas[mesaId]) _mesas[mesaId]={};
+      _mesas[mesaId].mesero=nuevoMesero;
+      _mesas[mesaId].mesero_id=nuevoId;
+      toast('✅ Mesa '+mesaId+' asignada a '+nuevoMesero,'ok');
+      return true;
+    });
   });
-  
-  if (ORDEN) {
+}
+
+function reasignarMeseroMesaDesdeUI(esModal){
+  if(!MESA_SEL) return;
+  var id=esModal?'mesa-mesero-modal':'mesa-mesero';
+  var el=document.getElementById(id);
+  var nuevo=el?el.value:'';
+  var actual=String((_mesas[MESA_SEL]||{}).mesero||'').trim();
+  if(!nuevo || nuevo===actual) return;
+  reasignarMeseroMesa(nuevo,MESA_SEL,ORDEN).then(function(){
+    var h=document.getElementById('mesa-mesero');
+    var m=document.getElementById('mesa-mesero-modal');
+    if(h)h.value=nuevo;
+    if(m)m.value=nuevo;
+    renderCanalDetail();
+  }).catch(function(e){
+    console.error('[CAMBIO MESERO]',e);
+    toast('❌ No se pudo reasignar el mesero','err');
+    if(el)el.value=actual;
+  });
+}
+
+/* Comensales/cliente nunca deben cambiar el mesero por arrastre de un selector viejo. */
+function guardarDatosMesaSinMesero(esModal){
+  if(!MESA_SEL) return;
+  var pId=esModal?'mesa-personas-modal':'mesa-personas';
+  var cId=esModal?'mesa-cliente-nombre-modal':'mesa-cliente-nombre';
+  var personas=(document.getElementById(pId)||{value:''}).value;
+  var clienteNombre=(document.getElementById(cId)||{value:''}).value;
+
+  var hPersonas=document.getElementById('mesa-personas');
+  var hCliente=document.getElementById('mesa-cliente-nombre');
+  if(hPersonas && esModal) hPersonas.value=personas;
+  if(hCliente && esModal) hCliente.value=clienteNombre;
+
+  db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+    personas:personas,
+    cliente_nombre:clienteNombre
+  });
+
+  if(ORDEN){
     db.ref('negocios/'+negocioID+'/pedidos/'+ORDEN).update({
-      mesero: mesero,
-      personas: personas,
-      cliente: 'Mesa ' + MESA_SEL + (clienteNombre ? ' (' + clienteNombre + ')' : '')
+      personas:personas,
+      cliente:'Mesa '+MESA_SEL+(clienteNombre?' ('+clienteNombre+')':'')
     });
   }
-  
   actualizarGuiaMesaBar();
 }
+
+/* Compatibilidad con llamadas antiguas: ya NO cambian responsable. */
+function guardarDatosMesaModal(){ guardarDatosMesaSinMesero(true); }
+function guardarDatosMesa(){ guardarDatosMesaSinMesero(false); }
 
 
 /* ═══════════════════════════════════════
@@ -4549,6 +4626,12 @@ function guardarPedidoConcurrente(orderId,v,accion,prevItemsEsperados){
     if(cur&&cur.estado==='pagado'&&accion!=='cobrar')return;
     if(accion==='cobrar'&&cur&&firmaContenidoItems(cur.items||[],orderId)!==firmaEsperada)return;
     var base=Object.assign({},cur||{},v||{});
+    // El responsable de una orden existente es INMUTABLE durante guardados normales.
+    // Solo reasignarMeseroMesa() puede cambiarlo explícitamente.
+    if(cur&&cur.mesero){
+      base.mesero=cur.mesero;
+      base.mesero_id=(cur.mesero_id!==undefined?cur.mesero_id:base.mesero_id);
+    }
     base.items=fusionarItemsConcurrentes(cur&&cur.items||[],v&&v.items||[],orderId);
     base.revision=Number(cur&&cur.revision||0)+1;
     base.ultima_escritura_dispositivo=_psClientId();
@@ -4568,6 +4651,8 @@ function guardarPedidoConcurrente(orderId,v,accion,prevItemsEsperados){
       items:guardado&&guardado.items||[],
       revision:guardado&&guardado.revision||0,
       estado:guardado&&guardado.estado||'en_curso',
+      mesero:guardado&&guardado.mesero||null,
+      mesero_id:guardado&&guardado.mesero_id||null,
       ts:Date.now(),
       dispositivo:_psClientId()
     }).catch(function(e){console.warn('Snapshot no disponible:',e);});
@@ -4584,6 +4669,11 @@ function guardarKdsConcurrente(orderId,kds){
       return nuevo;
     }
     var out=Object.assign({},cur,kds);
+    // Un reenvío desde otra tablet no puede transferir la comanda a otro mesero.
+    if(cur&&cur.mesero){
+      out.mesero=cur.mesero;
+      out.mesero_id=(cur.mesero_id!==undefined?cur.mesero_id:out.mesero_id);
+    }
     out.items=fusionarItemsConcurrentes(cur.items||[],kds.items||[],orderId);
     var cm={};
     asegurarLineasPedido(cur.items||[],orderId).forEach(function(x){cm[x.linea_id]=x;});
@@ -5650,6 +5740,18 @@ function procesarOrden(tipoAccion, onComplete, onError){
   });
 
   function ejecutarGuardado(ts, existeEnCocina, orderSnap, cocSnap, prevItems){
+    // Responsable autoritativo: si la orden/mesa ya existe, conservar su dueño.
+    // El usuario que pulsa "Enviar" NO se convierte automáticamente en mesero de la mesa.
+    var _ordenExistente = orderSnap && orderSnap.exists() ? (orderSnap.val()||{}) : {};
+    var _mesaExistente = (saveMesa && _mesas[saveMesa]) ? (_mesas[saveMesa]||{}) : {};
+    var _meseroAutoritativo = String(_ordenExistente.mesero || _mesaExistente.mesero || mesero || _loggedMesero || 'Desconocido').trim();
+    var _meseroAutoritativoId = _ordenExistente.mesero_id || _mesaExistente.mesero_id || _meseroIdPorNombre(_meseroAutoritativo) || null;
+    if(CANAL==='mesa'){
+      mesero=_meseroAutoritativo;
+      var _selMes=document.getElementById('mesa-mesero');
+      if(_selMes && _meseroAutoritativo) _selMes.value=_meseroAutoritativo;
+    }
+
     var _BAR_CATS = ['BEBIDAS','CERVEZAS NACIONALES','CERVEZAS EXTRANJERAS','OTRAS BEBIDAS','GASEOSAS','JUGOS','LICORES','COCTELES','TRAGOS','VINOS','AGUAS','REFRESCOS','CALIENTES','CAFETERÍA','CAFETERIA','SODAS','CERVEZAS','BEBIDA','CERVEZA','JUGOS NATURALES','LICOR','COCTEL','VINO','AGUA','SODA','CAFÉ','CAFE'];
     function _esBarCatLocal(cat){
       var c = (cat||'').trim().toUpperCase();
@@ -5872,8 +5974,8 @@ function procesarOrden(tipoAccion, onComplete, onError){
       tipo: CANAL,
       mesa_num: mesa_num,
       cliente: cliente,
-      mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
-      mesero_id: _usuarioActivoId(),
+      mesero: _meseroAutoritativo,
+      mesero_id: _meseroAutoritativoId,
       nota_cocina: _notaCocina,
       timestamp: kdsTimestamp
     };
@@ -5882,7 +5984,7 @@ function procesarOrden(tipoAccion, onComplete, onError){
     var v = {
       orden: ORDEN, canal: CANAL,
       cliente: cliente, telefono: telefono,
-      mesa_num: mesa_num, mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido', mesero_id: _usuarioActivoId(), personas: personas,
+      mesa_num: mesa_num, mesero: _meseroAutoritativo, mesero_id: _meseroAutoritativoId, personas: personas,
       direccion: direccion, repartidor_id: repartidor||null,
       items: cocinaPedido,
       subtotal: sub.toFixed(2),
@@ -6016,7 +6118,8 @@ function procesarOrden(tipoAccion, onComplete, onError){
           saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
             numero: MESA_SEL,
             mesa_num: mesa_num,
-            mesero: mesero || localStorage.getItem('meseroId') || 'Desconocido',
+            mesero: _meseroAutoritativo,
+            mesero_id: _meseroAutoritativoId,
             personas: personas,
             cliente_nombre: cliente_nombre || '',
             estado: 'ocupada',
