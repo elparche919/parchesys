@@ -271,7 +271,7 @@ tbody tr:last-child td{border-bottom:none}
         <span style="font-size:11px;font-weight:700;color:#94a3b8">Período:</span>
         <input type="month" id="mes-global" onchange="onMesCambio()">
       </div>
-      <a class="btn btn-sm" id="btn-ir-dte" href="dte.html" style="background:#fce7f3;color:#be185d;border:none;text-decoration:none"><i class="fa-solid fa-file-circle-plus" style="margin-right:5px"></i>Emitir DTE</a>
+      <a class="btn btn-sm" id="btn-ir-dte" href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" target="_blank" rel="noopener" style="background:#fce7f3;color:#be185d;border:none;text-decoration:none"><i class="fa-solid fa-file-circle-plus" style="margin-right:5px"></i>Emitir DTE</a>
       <button class="btn btn-primary btn-sm" onclick="exportarExcel()"><i class="fa-solid fa-download" style="margin-right:5px"></i>Exportar</button>
     </div>
   </div>
@@ -406,7 +406,7 @@ tbody tr:last-child td{border-bottom:none}
     </div>
     <div class="info-box" style="background:#fdf2ff;border:1px solid #e9d5ff;margin-bottom:16px">
       <i class="fa-solid fa-link" style="color:#7c3aed;margin-right:6px"></i>
-      <strong>¿Quieres emitir un nuevo DTE?</strong> Los DTE generados desde el módulo DTE de PARCHE SYS (bajo licencia de MODUS) se sincronizan automáticamente aquí. <a id="link-ir-dte" href="dte.html" style="color:#7c3aed;font-weight:700">Ir al Módulo DTE →</a>
+      <strong>¿Quieres emitir un nuevo DTE?</strong> Las ventas de El Parche se leen desde el DTE funcional de MODUS. <a id="link-ir-dte" href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" target="_blank" rel="noopener" style="color:#7c3aed;font-weight:700">Ir al Módulo DTE →</a>
     </div>
     <div class="grid2" style="gap:16px;margin-bottom:20px">
       <!-- Drop zone -->
@@ -813,9 +813,9 @@ window.onload = function(){
     }
     // ── Cablear links al módulo DTE con negocioID ──
     var _bd=document.getElementById('btn-ir-dte');
-    if(_bd) _bd.href='dte.html?negocio='+negocioID;
+    if(_bd) _bd.href='https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885';
     var _ld=document.getElementById('link-ir-dte');
-    if(_ld) _ld.href='dte.html?negocio='+negocioID;
+    if(_ld) _ld.href='https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885';
   }
 
   if(negocioID){
@@ -1175,7 +1175,7 @@ function renderDteTabla(){
     </tr>`;
   });
   document.getElementById('dte-tbody').innerHTML = rows.length ? rows.join('') :
-    '<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Sin DTE en este período. <a href="#" onclick="showPage(&quot;importar-dte&quot;)" style="color:#1B4E8B;font-weight:700">Importar DTE</a> o <a href="dte.html" id="link-emitir-dte-tabla" style="color:#be185d;font-weight:700">Emitir desde PARCHE SYS (bajo licencia de MODUS)</a></td></tr>';
+    '<tr><td colspan="8" style="text-align:center;padding:32px;color:#94a3b8">Sin DTE en este período. <a href="#" onclick="showPage(&quot;importar-dte&quot;)" style="color:#1B4E8B;font-weight:700">Importar DTE</a> o <a href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" target="_blank" rel="noopener" id="link-emitir-dte-tabla" style="color:#be185d;font-weight:700">Emitir desde MODUS DTE</a></td></tr>';
 }
 
 function exportarDteExcel(){

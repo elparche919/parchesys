@@ -251,7 +251,7 @@
 
   /** getCCFRedirectUrl - URL de redireccion a dte.html con parametros de la orden */
   function getCCFRedirectUrl(negocioID, ordenId) {
-    return 'dte.html?negocio=' + negocioID + '&orden=' + ordenId + '&tipoDte=03';
+    return 'https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885&orden=' + encodeURIComponent(ordenId || '') + '&tipoDte=03';
   }
 
   // -------------------------------------------------------

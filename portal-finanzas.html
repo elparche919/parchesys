@@ -141,7 +141,7 @@
       <a href="empleados.html?negocio=" id="link-empleados" class="sb-item"><i class="fa-solid fa-users"></i> Equipo / RR.HH.</a>
       
       <div class="sb-nav-sec" id="sec-fiscal">Fiscal / Libros</div>
-      <a href="dte.html?negocio=" id="link-dte" class="sb-item"><i class="fa-solid fa-file-invoice-dollar"></i> Facturación DTE</a>
+      <a href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" id="link-dte" class="sb-item" target="_blank" rel="noopener"><i class="fa-solid fa-file-invoice-dollar"></i> Facturación DTE</a>
       <a href="contabilidad.html?negocio=" id="link-conta" class="sb-item"><i class="fa-solid fa-landmark"></i> Contabilidad SV</a>
       
       <div class="sb-nav-sec" id="sec-sistema">Sistema</div>
@@ -357,7 +357,7 @@
     window.negocioID = negocioID;
 
     // Propagate to all links
-    document.querySelectorAll('a[id^="link-"]').forEach(link => {
+    document.querySelectorAll('a[id^="link-"]:not(#link-dte)').forEach(link => {
       let href = link.getAttribute('href') || '';
       if (href.includes('negocio=')) {
         link.setAttribute('href', href.replace(/negocio=[^&]*/, `negocio=${encodeURIComponent(negocioID)}`));

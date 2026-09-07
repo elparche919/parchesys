@@ -1486,7 +1486,7 @@ body {
     <a class="tbb" href="cocina.html?negocio=" id="link-cocina" target="_blank"><i class="fa-solid fa-fire-burner"></i> Cocina</a>
     <a class="tbb" id="link-menu" href="menu.html" target="_blank" style="border-color:#34d399;color:#34d399;background:rgba(52,211,153,0.1)"><i class="fa-solid fa-book-open"></i> Menú</a>
     <a class="tbb" id="link-mesas" href="mapa-mesas.html" target="_blank" style="border-color:#60a5fa;color:#60a5fa;background:rgba(96,165,250,0.1)"><i class="fa-solid fa-table-cells"></i> Mesas</a>
-    <a class="tbb" id="link-dte" href="dte.html" target="_blank" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
+    <a class="tbb" id="link-dte" href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" target="_blank" rel="noopener" style="border-color:#fbbf24;color:#fbbf24;background:rgba(251,191,36,0.1)"><i class="fa-solid fa-file-invoice"></i> DTE</a>
     <a class="tbb" href="#" id="link-portal"><i class="fa-solid fa-grid-2"></i> Portal</a>
     <span id="tb-clock" style="font-size:10px;font-weight:700;color:var(--muted);min-width:44px;text-align:right">--:--</span>
   </div>
@@ -2465,7 +2465,7 @@ document.addEventListener('DOMContentLoaded', function(){
       var lmesas = document.getElementById('link-mesas');
       if(lmesas && lmesas.href.indexOf('?') === -1) lmesas.href = (_isTablet ? 'mapa-mesas-tablet.html' : 'mapa-mesas.html') + '?negocio=' + negocioID + (_isTablet ? '&tablet=true' : '');
       var ldte = document.getElementById('link-dte');
-      if(ldte && ldte.href.indexOf('?') === -1) ldte.href = 'dte.html?negocio=' + negocioID;
+      if(ldte) ldte.href = 'https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885';
 
       // Restricciones de Electron (Parche)
       var isElectron = (window.electronAPI && window.electronAPI.isElectron) || navigator.userAgent.toLowerCase().includes('electron');
@@ -4710,6 +4710,76 @@ function reservarMesaAtomica(mesaNum,ordenPropuesta,extra){
     return m.pedido_activo_id||ordenPropuesta;
   });
 }
+function actualizarMesaActivaSegura(mesaNum,orderId,datos){
+  return db.ref('negocios/'+negocioID+'/mesas/'+mesaNum).transaction(function(m){
+    m=m||{};
+    if(m.pedido_activo_id&&String(m.pedido_activo_id)!==String(orderId))return;
+    Object.keys(datos||{}).forEach(function(k){if(datos[k]!==undefined)m[k]=datos[k];});
+    m.pedido_activo_id=orderId;
+    m.estado='ocupada';
+    return m;
+  }).then(function(r){
+    if(!r.committed){var e=new Error('La mesa '+mesaNum+' ya pertenece a otra orden. Recarga el mapa.');e.code='MESA_OCUPADA_POR_OTRA_ORDEN';throw e;}
+    return r.snapshot.val();
+  });
+}
+function liberarMesaSegura(mesaNum,orderId){
+  return db.ref('negocios/'+negocioID+'/mesas/'+mesaNum).transaction(function(m){
+    if(!m)return m;
+    if(m.pedido_activo_id&&String(m.pedido_activo_id)!==String(orderId))return;
+    m.numero=String(mesaNum);m.mesa_num=String(mesaNum);m.mesero='';m.mesero_id=null;
+    m.personas=1;m.cliente_nombre='';m.estado='libre';m.pedido_activo_id=null;m.timestamp=0;
+    // El pedido operativo vive en /pedidos. Una mesa libre nunca conserva un carrito viejo.
+    m.pedido=null;
+    return m;
+  }).then(function(r){
+    if(!r.committed){var e=new Error('No se liberó la mesa porque ya tiene otra orden activa.');e.code='MESA_REASIGNADA';throw e;}
+    return r.snapshot.val();
+  });
+}
+function registrarVentaIdempotente(ventaId,venta){
+  var ref=db.ref('negocios/'+negocioID+'/ventas/'+ventaId);
+  return ref.transaction(function(cur){
+    if(cur&&cur.cobro_confirmado===true)return cur;
+    return Object.assign({},cur||{},venta||{}, {
+      ventaId:ventaId,cobro_confirmado:true,pagadoAt:(venta&&venta.pagadoAt)||Date.now(),
+      exportacion_dte_estado:(cur&&cur.exportacion_dte_estado)||'pendiente'
+    });
+  }).then(function(r){
+    var final=r.snapshot.val();
+    return db.ref('negocios/'+negocioID+'/integraciones/dte/ventas_exportables/'+ventaId).transaction(function(cur){
+      if(cur)return cur;
+      return {
+        ventaId:ventaId,ordenId:final.orden||ventaId,origen:/^SV-/i.test(ventaId)?'SV':(/^DTE-/i.test(ventaId)?'DTE':'EST'),
+        fecha:final.fecha_iso||final.fecha||null,pagadoAt:final.pagadoAt||final.cobrado_at||Date.now(),
+        cliente:final.cliente||null,forma_pago:final.forma_pago||final.pago||'efectivo',
+        subtotal:Number(final.subtotal||0),descuento:Number(final.descuento_monto||0),propina:Number(final.propina||0),
+        total:Number(final.total||0),items:normalizarItemsArray(final.items).filter(function(i){return i&&!i.eliminado;}),
+        estado:'pendiente',revision:Number(final.revision||0),creadoAt:Date.now()
+      };
+    }).then(function(){return final;});
+  });
+}
+function aplicarVentaCajaIdempotente(sesionId,ventaId,monto,forma){
+  if(!sesionId)return Promise.resolve(null);
+  var activa=db.ref('negocios/'+negocioID+'/caja_sesion_activa');
+  return activa.transaction(function(s){
+    if(!s||s.estado!=='abierta'||String(s.id)!==String(sesionId))return;
+    s.ventas_aplicadas=s.ventas_aplicadas||{};
+    if(s.ventas_aplicadas[ventaId])return s;
+    var campo=forma==='tarjeta'?'ventas_tarjeta':(forma==='transferencia'?'ventas_transferencia':'ventas_efectivo');
+    s[campo]=Number(s[campo]||0)+Number(monto||0);
+    s.ventas_aplicadas[ventaId]={monto:Number(monto||0),forma:forma||'efectivo',ts:Date.now()};
+    var ingresos=normalizarItemsArray(s.ingresos_efectivo).reduce(function(a,x){return a+Number(x&&x.monto||0);},0);
+    var egresos=normalizarItemsArray(s.egresos_efectivo).reduce(function(a,x){return a+Number(x&&x.monto||0);},0);
+    s.monto_esperado=Number(s.monto_inicial||0)+Number(s.ventas_efectivo||0)+ingresos-egresos;
+    return s;
+  }).then(function(r){
+    if(!r.committed){var e=new Error('La sesión de caja cambió o fue cerrada. No se duplicó el cobro.');e.code='CAJA_SESION_CAMBIO';throw e;}
+    var sesion=r.snapshot.val();
+    return db.ref('negocios/'+negocioID+'/cajas/'+sesionId).set(sesion).then(function(){_cajaSesion=sesion;localStorage.setItem('caja_sesion_'+negocioID,JSON.stringify(sesion));return sesion;});
+  });
+}
 
 /* ═══════════════════════════════════════
    CART
@@ -6009,6 +6079,9 @@ function procesarOrden(tipoAccion, onComplete, onError){
       contingencia: false,
       nota_cocina: _notaCocina,
       estado: estado,
+      ventaId: tipoAccion === 'cobrar' ? ORDEN : null,
+      cajaSesionId: tipoAccion === 'cobrar' && _cajaSesion ? _cajaSesion.id : null,
+      pagadoAt: tipoAccion === 'cobrar' ? Date.now() : null,
       // Estado financiero/cuenta (estado) y estado operativo del servicio quedan separados.
       estado_servicio: (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado') ? 'entregado' : 'en_proceso',
       estado_cocina: finalEstadoCocina,
@@ -6041,12 +6114,30 @@ function procesarOrden(tipoAccion, onComplete, onError){
       });
       saves.push(masterSavePromise);
 
+      // El pedido maestro es la fuente de verdad. El KDS no debe escribirse
+      // en paralelo con el pedido porque una tablet atrasada puede enviar una
+      // colección de líneas distinta y dejar cocina/bar con otra revisión.
+      function guardarKdsDespuesDeMaestro(update){
+        return masterSavePromise.then(function(merged){
+          var seguro=Object.assign({},update||{});
+          seguro.items=(merged&&merged.items)||v.items||[];
+          seguro.revision=(merged&&merged.revision)||v.revision||null;
+          seguro.pedido_revision=(merged&&merged.revision)||null;
+          seguro.pedido_ultima_escritura_ts=(merged&&merged.ultima_escritura_ts)||Date.now();
+          return guardarKdsConcurrente(saveOrden,seguro);
+        });
+      }
+
+      function eliminarKdsDespuesDeMaestro(){
+        return masterSavePromise.then(function(){ return eliminarKdsSiFinalizado(saveOrden); });
+      }
+
       if (tipoAccion === 'cobrar') {
         // Al cobrar la orden en caja:
         // Si tanto cocina como bar ya habían marcado entregado (o no aplican), retirar orden de cocina_orders
         var ambosEntregados = (finalEstadoCocina === 'entregado' && finalEstadoBar === 'entregado');
         if (ambosEntregados) {
-          saves.push(eliminarKdsSiFinalizado(saveOrden));
+          saves.push(eliminarKdsDespuesDeMaestro());
         } else {
           // Si hay trabajo operativo pendiente, la comanda debe existir aunque haya sido cobrada.
           // Esto cubre también el caso en que una tanda anterior fue retirada del KDS y luego
@@ -6055,24 +6146,27 @@ function procesarOrden(tipoAccion, onComplete, onError){
           cocinaOrderUpdate.estado_servicio = 'en_proceso';
           cocinaOrderUpdate.estado_cocina = finalEstadoCocina;
           cocinaOrderUpdate.estado_bar = finalEstadoBar;
-          saves.push(guardarKdsConcurrente(saveOrden,cocinaOrderUpdate));
+          saves.push(guardarKdsDespuesDeMaestro(cocinaOrderUpdate));
         }
       } else {
         // Al guardar / enviar comanda: SOLO mantener/recrear el KDS si existe trabajo real pendiente.
         // Una mesa puede seguir abierta después de haber sido servida; eso NO debe revivir la comanda.
         var hayTrabajoKdsPendiente = tieneComidaPendiente || tieneBebidasPendientes;
         if (hayTrabajoKdsPendiente) {
-          saves.push(guardarKdsConcurrente(saveOrden,cocinaOrderUpdate));
+          saves.push(guardarKdsDespuesDeMaestro(cocinaOrderUpdate));
         } else if (existeEnCocina) {
           // Autocuración: si quedó una tarjeta residual pero todos los ítems ya están listos/entregados,
           // retirarla del KDS en vez de volver a escribirla.
-          saves.push(eliminarKdsSiFinalizado(saveOrden));
+          saves.push(eliminarKdsDespuesDeMaestro());
         }
       }
       if(tipoAccion==='cobrar'){
         saves.push(masterSavePromise.then(function(merged){
           var ventaFinal=Object.assign({},v,merged||{});
-          return db.ref('negocios/'+negocioID+'/ventas/'+ORDEN).set(ventaFinal);
+          ventaFinal.ventaId=ORDEN;
+          ventaFinal.cajaSesionId=_cajaSesion&&_cajaSesion.id||null;
+          ventaFinal.pagadoAt=ventaFinal.pagadoAt||ventaFinal.cobrado_at||Date.now();
+          return registrarVentaIdempotente(ORDEN,ventaFinal);
         }));
         // Registrar payload fiscal en dte_pendientes via DteEngine
         if(typeof DteEngine !== 'undefined' && _dteModalActual !== 'CCF'){
@@ -6090,32 +6184,13 @@ function procesarOrden(tipoAccion, onComplete, onError){
         // ACTUALIZAR TOTALES DE CAJA SESIÓN ACTIVA
         if (_cajaSesion && _cajaSesion.estado === 'abierta') {
           var numTotal = parseFloat(total) || 0;
-          if (_payModalActual === 'efectivo') {
-            _cajaSesion.ventas_efectivo = (_cajaSesion.ventas_efectivo || 0) + numTotal;
-          } else if (_payModalActual === 'tarjeta') {
-            _cajaSesion.ventas_tarjeta = (_cajaSesion.ventas_tarjeta || 0) + numTotal;
-          } else if (_payModalActual === 'transferencia') {
-            _cajaSesion.ventas_transferencia = (_cajaSesion.ventas_transferencia || 0) + numTotal;
-          }
-
-          // Calcular esperado
-          var ingresosSum = 0;
-          if (_cajaSesion.ingresos_efectivo && _cajaSesion.ingresos_efectivo.length) {
-            _cajaSesion.ingresos_efectivo.forEach(function(i) {
-              ingresosSum += parseFloat(i.monto) || 0;
-            });
-          }
-          _cajaSesion.monto_esperado = (_cajaSesion.monto_inicial || 0) + (_cajaSesion.ventas_efectivo || 0) + ingresosSum;
-
-          saves.push(db.ref('negocios/' + negocioID + '/caja_sesion_activa').set(_cajaSesion));
-          saves.push(db.ref('negocios/' + negocioID + '/cajas/' + _cajaSesion.id).set(_cajaSesion));
-          localStorage.setItem('caja_sesion_' + negocioID, JSON.stringify(_cajaSesion));
+          saves.push(aplicarVentaCajaIdempotente(_cajaSesion.id,ORDEN,numTotal,_payModalActual||'efectivo'));
         }
       }
 
       if(CANAL==='mesa' && MESA_SEL){
         if (tipoAccion==='guardar') {
-          saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
+          saves.push(actualizarMesaActivaSegura(MESA_SEL,ORDEN,{
             numero: MESA_SEL,
             mesa_num: mesa_num,
             mesero: _meseroAutoritativo,
@@ -6123,20 +6198,10 @@ function procesarOrden(tipoAccion, onComplete, onError){
             personas: personas,
             cliente_nombre: cliente_nombre || '',
             estado: 'ocupada',
-            pedido_activo_id: ORDEN,
             timestamp: ts
           }));
         } else if (!_procesandoSplit) {
-          saves.push(db.ref('negocios/'+negocioID+'/mesas/'+MESA_SEL).update({
-            numero: MESA_SEL,
-            mesa_num: mesa_num,
-            mesero: '',
-            personas: 1,
-            cliente_nombre: '',
-            estado: 'libre',
-            pedido_activo_id: null,
-            timestamp: 0
-          }));
+          saves.push(liberarMesaSegura(MESA_SEL,ORDEN));
         }
       }
 
@@ -8391,11 +8456,22 @@ function cargarOrdenParaEditar(id){
 }
 
 function eliminarOrdenDefinitivo(id){
-  if(!confirm('\u00bfEliminar permanentemente esta orden de la base de datos?')) return;
-  db.ref('negocios/'+negocioID+'/pedidos/'+id).remove().then(()=>{
+  if(!confirm('\u00bfAnular y archivar esta orden? Se conservará para auditoría.')) return;
+  var ref=db.ref('negocios/'+negocioID+'/pedidos/'+id);
+  ref.transaction(function(cur){
+    if(!cur)return cur;
+    cur.estado='ANULADA';cur.anulada=true;cur.anulada_at=Date.now();
+    cur.anulada_por=_loggedMesero||'administrador';cur.eliminacion_fisica_bloqueada=true;
+    return cur;
+  }).then(function(r){
+    if(!r.committed)throw new Error('La orden no existe o cambió durante la operación.');
+    return db.ref('negocios/'+negocioID+'/ordenes_anuladas/'+id).set(r.snapshot.val());
+  }).then(()=>{
     delete _todasOrdenes[id];
     filtrarHistorial();
-    toast('\U0001f5d1\ufe0f Orden eliminada','ok');
+    toast('\U0001f6ab Orden anulada y archivada','ok');
+  }).catch(function(e){
+    toast('No se pudo anular: '+e.message,'err');
   });
 }
 

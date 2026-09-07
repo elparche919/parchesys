@@ -17,11 +17,12 @@
 (function() {
   'use strict';
 
-  const PARCHE_SYS_DTE_VERSION = '3.0.0';
+  const PARCHE_SYS_DTE_VERSION = '3.1.0-modus-externo';
+  const MODUS_DTE_URL = 'https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885';
   const negocioID = localStorage.getItem('negocioID') || new URLSearchParams(window.location.search).get('negocio');
 
   function dteURL() {
-    return 'dte.html' + (negocioID ? '?negocio=' + negocioID : '');
+    return MODUS_DTE_URL;
   }
 
   /**
@@ -143,12 +144,9 @@
    * parámetro negocio si falta
    */
   function patchExistingLinks() {
-    if (!negocioID) return;
     ['pos-link-dte','pos-top-dte'].forEach(function(id) {
       const el = document.getElementById(id);
-      if (el && el.href && !el.href.includes('negocio=')) {
-        el.href = el.getAttribute('href') + '?negocio=' + negocioID;
-      }
+      if (el) { el.href = MODUS_DTE_URL; el.target = '_blank'; el.rel = 'noopener'; }
     });
   }
 

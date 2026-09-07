@@ -435,20 +435,24 @@ function _kdsMismoItem(a,b){
 }
 function _kdsFindItem(arr,target,fallbackIdx){
   if(target&&target.linea_id){
-    for(var i=0;i<arr.length;i++)if(arr[i]&&arr[i].linea_id===target.linea_id)return i;
+    for(var i=0;i<arr.length;i++)if(arr[i]&&!arr[i].eliminado&&arr[i].linea_id===target.linea_id)return i;
   }
-  if(fallbackIdx>=0&&arr[fallbackIdx]&&_kdsMismoItem(arr[fallbackIdx],target))return fallbackIdx;
-  for(var j=0;j<arr.length;j++)if(_kdsMismoItem(arr[j],target))return j;
+  if(fallbackIdx>=0&&arr[fallbackIdx]&&!arr[fallbackIdx].eliminado&&_kdsMismoItem(arr[fallbackIdx],target))return fallbackIdx;
+  var candidatos=[];
+  for(var j=0;j<arr.length;j++)if(arr[j]&&!arr[j].eliminado&&_kdsMismoItem(arr[j],target))candidatos.push(j);
+  if(candidatos.length===1)return candidatos[0];
   return -1;
 }
 
 function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
   var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items');
+  var lineaResuelta=null;
   return ref.transaction(function(cur){
     var arr=_kdsItemsArray(cur);
     var ix=_kdsFindItem(arr,kdsItem,itemIdx);
     if(ix<0)return;
-    arr[ix]=Object.assign({},arr[ix],{listo:!!newVal});
+    lineaResuelta=arr[ix].linea_id||kdsItem.linea_id||null;
+    arr[ix]=Object.assign({},arr[ix],{listo:!!newVal,listo_at:newVal?Date.now():null,listo_origen:origen});
     return arr;
   }).then(function(res){
     if(!res.committed){
@@ -458,8 +462,9 @@ function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
         origen:origen,motivo:'linea_no_encontrada_en_pedido_maestro',
         kds_id:kdsItem&&kdsItem.id||null,kds_desc:kdsItem&&(kdsItem.desc||kdsItem.nombre)||null,
         intento_listo:!!newVal,ts:Date.now()
-      }).catch(function(){});
+      }).catch(function(){}).then(function(){return {ok:false};});
     }
+    return {ok:true,linea_id:lineaResuelta};
   });
 }
 
@@ -471,17 +476,21 @@ function toggleCheck(orderId,itemIdx){
   var newVal=!currentVal;
   var refItems=db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items');
 
-  refItems.transaction(function(cur){
-    var arr=_kdsItemsArray(cur);
-    var ix=_kdsFindItem(arr,itemKds,itemIdx);
-    if(ix<0)return;
-    arr[ix]=Object.assign({},arr[ix],{listo:newVal,listo_at:newVal?Date.now():null,listo_origen:'BAR'});
-    return arr;
-  }).then(function(res){
-    if(!res.committed){
+  actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'BAR').then(function(sync){
+    if(!sync||!sync.ok){
       toast('No se pudo actualizar: la línea cambió. La pantalla se sincronizará sola.','err');
-      return;
+      return false;
     }
+    var objetivo=Object.assign({},itemKds,{linea_id:sync.linea_id||itemKds.linea_id});
+    return refItems.transaction(function(cur){
+      var arr=_kdsItemsArray(cur);
+      var ix=_kdsFindItem(arr,itemKds,itemIdx);
+      if(ix<0)return;
+      arr[ix]=Object.assign({},arr[ix],{linea_id:objetivo.linea_id,listo:newVal,listo_at:newVal?Date.now():null,listo_origen:'BAR'});
+      return arr;
+    }).then(function(res){if(!res.committed)throw new Error('La comanda cambió mientras se actualizaba.');return true;});
+  }).then(function(aplicado){
+    if(aplicado===false)return false;
     db.ref('negocios/'+negocioID+'/auditoria/kds_checks').push({
       orden:orderId,
       linea_id:itemKds.linea_id||null,
@@ -491,9 +500,9 @@ function toggleCheck(orderId,itemIdx){
       origen:'BAR',
       ts:Date.now()
     }).catch(function(){});
-    return actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'BAR');
-  }).then(function(){
-    if(!newVal)return;
+    return true;
+  }).then(function(aplicado){
+    if(aplicado===false||!newVal)return;
     var mesero=o.tomada_por||o.mesero;
     if(!mesero)return;
     var channel=o.tipo||o.canal||'mesa';
