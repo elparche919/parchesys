@@ -1,0 +1,29 @@
+{
+    "functions":  {
+                      "source":  "functions"
+                  },
+    "database":  {
+                     "rules":  "firebase-rules.json"
+                 },
+    "hosting":  {
+                    "site":  "parche-sys-v2",
+                    "public":  ".",
+                    "ignore":  [
+                                   "firebase.json",
+                                   "**/.*",
+                                   "**/node_modules/**",
+                                   "functions/**",
+                                   "parchesys-app-android/**",
+                                   "parchesys-empleado-android/**",
+                                   "parchesys-inventario-android/**",
+                                   "parchesys-mapa-mesas-android/**",
+                                   "parchesys-v3/**",
+                                   "respaldo-antes-enlaces-modus/**",
+                                   "tests/**",
+                                   "**/*.md",
+                                   "**/*.ps1",
+                                   "**/*.xlsx",
+                                   "**/*.bak"
+                               ]
+                }
+}
