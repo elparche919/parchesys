@@ -802,6 +802,13 @@ function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
       }).catch(function(){}).then(function(){return {ok:false};});
     }
     return {ok:true,linea_id:lineaResuelta};
+  }).catch(function(err){
+    console.warn('['+origen+'] El KDS se actualizó, pero el pedido maestro no pudo sincronizarse',orderId,err);
+    return db.ref('negocios/'+negocioID+'/auditoria/kds_integridad').push({
+      orden:orderId,item_index:itemIdx,linea_id:kdsItem&&kdsItem.linea_id||null,
+      origen:origen,motivo:'error_sincronizando_pedido_maestro',
+      detalle:err&&err.message||String(err),intento_listo:!!newVal,ts:Date.now()
+    }).catch(function(){}).then(function(){return {ok:false,error:true};});
   });
 }
 
@@ -813,20 +820,23 @@ function toggleCheck(orderId,itemIdx){
   var newVal=!currentVal;
   var refItems=db.ref('negocios/'+negocioID+'/cocina_orders/'+orderId+'/items');
 
-  actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'COCINA').then(function(sync){
-    if(!sync||!sync.ok){
-      toast('No se pudo actualizar: la línea cambió. La pantalla se sincronizará sola.','err');
-      return false;
-    }
-    var objetivo=Object.assign({},itemKds,{linea_id:sync.linea_id||itemKds.linea_id});
-    return refItems.transaction(function(cur){
+  // El ítem visible del KDS es la fuente inmediata de esta acción. Se marca primero
+  // y luego se replica al pedido maestro; un maestro antiguo no debe bloquear Cocina.
+  return refItems.transaction(function(cur){
       var arr=_kdsItemsArray(cur);
       var ix=_kdsFindItem(arr,itemKds,itemIdx);
       if(ix<0)return;
-      arr[ix]=Object.assign({},arr[ix],{linea_id:objetivo.linea_id,listo:newVal,listo_at:newVal?Date.now():null,listo_origen:'COCINA'});
+      arr[ix]=Object.assign({},arr[ix],{listo:newVal,listo_at:newVal?Date.now():null,listo_origen:'COCINA'});
       return arr;
-    }).then(function(res){if(!res.committed)throw new Error('La comanda cambió mientras se actualizaba.');return true;});
-  }).then(function(aplicado){
+    }).then(function(res){
+      if(!res.committed){
+        var e=new Error('El ítem ya no existe en la comanda actual.');
+        e.codigo='KDS_LINEA_NO_ENCONTRADA';
+        throw e;
+      }
+      return actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'COCINA');
+    }).then(function(){return true;})
+  .then(function(aplicado){
     if(aplicado===false)return false;
     db.ref('negocios/'+negocioID+'/auditoria/kds_checks').push({
       orden:orderId,
@@ -852,7 +862,9 @@ function toggleCheck(orderId,itemIdx){
     });
   }).catch(function(err){
     console.error('[COCINA] Error toggle listo:',err);
-    toast('Error sincronizando el estado del ítem','err');
+    toast(err&&err.codigo==='KDS_LINEA_NO_ENCONTRADA'
+      ?'El ítem cambió o ya fue retirado. La pantalla se actualizará sola.'
+      :'Error sincronizando el estado del ítem','err');
   });
 }
 
