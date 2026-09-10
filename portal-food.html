@@ -180,7 +180,7 @@
       
       <div class="sb-nav-sec" id="sec-fiscal">Fiscal / Libros</div>
       <a href="https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885" id="link-dte" class="sb-item" target="_blank" rel="noopener"><i class="fa-solid fa-file-invoice-dollar"></i> Facturación DTE</a>
-      <a href="contabilidad.html?negocio=" id="link-conta" class="sb-item"><i class="fa-solid fa-landmark"></i> Contabilidad SV</a>
+      <a href="https://ventas-id-43ff8.web.app/contabilidad.html?negocio=negocio_1787857873885" id="link-conta" class="sb-item" target="_blank" rel="noopener"><i class="fa-solid fa-landmark"></i> Contabilidad SV</a>
       
       <div class="sb-nav-sec" id="sec-sistema">Sistema</div>
       <a href="portal-food-movil.html?negocio=" id="link-movil" class="sb-item"><i class="fa-solid fa-mobile-screen-button"></i> Versión Móvil</a>
@@ -1671,11 +1671,13 @@
 
 
     // Update Sidebar & Dashboard Links to maintain session persistence
-    ['link-pos', 'link-pos-tablet', 'link-cocina', 'link-bar', 'link-mapa', 'link-finanzas', 'link-empleados', 'link-conta', 'link-movil'].forEach(id => {
+    ['link-pos', 'link-pos-tablet', 'link-cocina', 'link-bar', 'link-mapa', 'link-finanzas', 'link-empleados', 'link-movil'].forEach(id => {
       if(document.getElementById(id)) document.getElementById(id).href += negocioID;
     });
     const linkDteModus=document.getElementById('link-dte');
     if(linkDteModus) linkDteModus.href='https://ventas-id-43ff8.web.app/dte.html?negocio=negocio_1787857873885';
+    const linkContaModus=document.getElementById('link-conta');
+    if(linkContaModus) linkContaModus.href='https://ventas-id-43ff8.web.app/contabilidad.html?negocio=negocio_1787857873885';
 
     // Ensure dashboard app cards also have business ID
     document.addEventListener('DOMContentLoaded', () => {
