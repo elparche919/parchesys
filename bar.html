@@ -444,7 +444,8 @@ function _kdsFindItem(arr,target,fallbackIdx){
   return -1;
 }
 
-function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
+function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen,intento){
+  intento=Number(intento||0);
   var ref=db.ref('negocios/'+negocioID+'/pedidos/'+orderId+'/items');
   var lineaResuelta=null;
   return ref.transaction(function(cur){
@@ -456,6 +457,11 @@ function actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen){
     return arr;
   }).then(function(res){
     if(!res.committed){
+      if(intento<3){
+        return new Promise(function(resolve){setTimeout(resolve,180*(intento+1));}).then(function(){
+          return actualizarListoMaestroSeguro(orderId,itemIdx,kdsItem,newVal,origen,intento+1);
+        });
+      }
       console.warn('['+origen+'] Se evitó marcar un ítem maestro desfasado',orderId,itemIdx);
       return db.ref('negocios/'+negocioID+'/auditoria/kds_integridad').push({
         orden:orderId,item_index:itemIdx,linea_id:kdsItem&&kdsItem.linea_id||null,
@@ -498,9 +504,12 @@ function toggleCheck(orderId,itemIdx){
         throw e;
       }
       return actualizarListoMaestroSeguro(orderId,itemIdx,itemKds,newVal,'BAR');
-    }).then(function(){return true;})
+    }).then(function(resultado){return !!(resultado&&resultado.ok);})
   .then(function(aplicado){
-    if(aplicado===false)return false;
+    if(aplicado===false){
+      toast('⚠️ Bar marcó el ítem, pero el pedido aún no confirmó la línea. Quedó registrado para revisión.','err');
+      return false;
+    }
     db.ref('negocios/'+negocioID+'/auditoria/kds_checks').push({
       orden:orderId,
       linea_id:itemKds.linea_id||null,
