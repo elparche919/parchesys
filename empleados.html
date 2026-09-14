@@ -1134,7 +1134,11 @@ if(!negocioID){ window.location.href='index.html'; }
 // login.html sin abrir la página. Se inicializa igual que en portal.html.
 var auth=firebase.auth();
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(e){console.warn('[MODUS] Auth persistence:',e);});
-ModusPlanGuard.require(db,negocioID,'empleados','portal.html?negocio='+encodeURIComponent(negocioID));
+// El guard de planes es opcional en PARCHE SYS. GitHub Pages no incluye
+// modus-plan-guard.js; no se debe detener la carga de los empleados por ello.
+if(typeof ModusPlanGuard!=='undefined' && ModusPlanGuard && typeof ModusPlanGuard.require==='function'){
+  ModusPlanGuard.require(db,negocioID,'empleados','portal.html?negocio='+encodeURIComponent(negocioID));
+}
 // ── MODUS RETURN: registrar sesión activa y cablear botón volver ──
 if(typeof ModusReturn!=='undefined'){ModusReturn.init(negocioID);ModusReturn.wireButton('tb-back-portal');}
 else{var _tbk=document.getElementById('tb-back-portal');if(_tbk){_tbk.href='portal.html?negocio='+negocioID;_tbk.onclick=null;}}
