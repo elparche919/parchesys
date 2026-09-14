@@ -105,6 +105,8 @@ body{font-family:var(--font-body);background:var(--m-bg);color:var(--dark);min-h
 /* ── PAGES ── */
 .page{display:none;padding:20px;max-width:1200px;margin:0 auto;animation:fadeUp .2s ease;position:relative;z-index:1}
 .page.active{display:block}
+/* El Parche utiliza este módulo únicamente para administrar empleados. */
+.tab-bar{display:none!important}
 @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
 /* ── STATS GRID ── */
@@ -339,7 +341,7 @@ textarea.fi{resize:vertical;min-height:72px}
 
   <!-- Dashboard standalone -->
   <div class="tab-standalone">
-    <div class="tab-item active" onclick="showTab('dashboard');closeGroups()" id="tab-btn-dashboard">
+    <div class="tab-item" onclick="showTab('dashboard');closeGroups()" id="tab-btn-dashboard">
       <i class="fa-solid fa-chart-pie"></i> Dashboard
     </div>
   </div>
@@ -422,7 +424,7 @@ textarea.fi{resize:vertical;min-height:72px}
 </div>
 
 <!-- ══════════ DASHBOARD ══════════ -->
-<div class="page active" id="page-dashboard">
+<div class="page" id="page-dashboard">
   
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
     
@@ -453,7 +455,7 @@ textarea.fi{resize:vertical;min-height:72px}
 </div>
 
 <!-- ══════════ EMPLEADOS ══════════ -->
-<div class="page" id="page-empleados">
+<div class="page active" id="page-empleados">
   <div class="bar">
     <div class="search-wrap"><i class="fa-solid fa-search"></i><input type="text" id="emp-search" placeholder="Buscar empleado..." oninput="filtrarEmpleados()"></div>
     <select class="filter-select" id="emp-filter-dept" onchange="filtrarEmpleados()">
@@ -2413,9 +2415,8 @@ function showTab(id){
 }
 
 init();
-// Entrada estable al módulo: mostrar siempre el panel general de RR. HH.
-// Las demás secciones siguen disponibles desde sus pestañas.
-showTab('dashboard');
+// El Parche administra aquí únicamente la ficha y lista de empleados.
+showTab('empleados');
 
 // ══════════════════════════════════════════════
 // NUEVOS MÓDULOS — SOLICITUDES, TAREAS, GPS
