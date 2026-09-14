@@ -1193,49 +1193,13 @@ function init(){
     renderNotificaciones();
   });
 
-  cargarDatosDemo();
   // Iniciar módulos nuevos después de cargar empleados
   setTimeout(initNuevosModulos, 800);
 }
 
-// ── DEMO DATA (si no hay empleados en BD) ──
-function cargarDatosDemo(){
-  setTimeout(()=>{
-    if(Object.keys(empleados).length===0){
-      const demo={
-        'emp_001':{nombre:'María García',dui:'01234567-8',tel:'7123-4567',email:'maria@empresa.com',puesto:'Vendedora',dept:'Ventas',tipo:'Tiempo completo',salario:450,fecha:'2023-03-15',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#1B4E8B'},
-        'emp_002':{nombre:'Carlos Morales',dui:'02345678-9',tel:'7234-5678',email:'carlos@empresa.com',puesto:'Supervisor de Producción',dept:'Producción',tipo:'Tiempo completo',salario:600,fecha:'2022-08-01',hora_in:'07:00',hora_out:'16:00',rol:'supervisor',color:'#10b981'},
-        'emp_003':{nombre:'Ana Rodríguez',dui:'03456789-0',tel:'7345-6789',email:'ana@empresa.com',puesto:'Asistente Administrativa',dept:'Administración',tipo:'Tiempo completo',salario:400,fecha:'2024-01-10',hora_in:'08:00',hora_out:'17:00',rol:'empleado',color:'#f59e0b'},
-        'emp_004':{nombre:'Roberto Flores',dui:'04567890-1',tel:'7456-7890',email:'roberto@empresa.com',puesto:'Bodeguero',dept:'Bodega',tipo:'Tiempo parcial',salario:300,fecha:'2023-11-05',hora_in:'06:00',hora_out:'14:00',rol:'empleado',color:'#ec4899'},
-        'emp_005':{nombre:'Lucía Martínez',dui:'05678901-2',tel:'7567-8901',email:'lucia@empresa.com',puesto:'Atención al Cliente',dept:'Servicio al Cliente',tipo:'Tiempo completo',salario:380,fecha:'2024-02-20',hora_in:'09:00',hora_out:'18:00',rol:'empleado',color:'#1B4E8B'},
-      };
-      db.ref(`negocios/${negocioID}/empleados`).set(demo);
-
-      const hoy=new Date().toISOString().split('T')[0];
-      const asistDemo={
-        'emp_001':{hora_entrada:'08:05',hora_salida:'',estado:'presente',tardanza:false},
-        'emp_002':{hora_entrada:'07:00',hora_salida:'',estado:'presente',tardanza:false},
-        'emp_003':{hora_entrada:'08:22',hora_salida:'',estado:'tardanza',tardanza:true,minutos_tarde:22},
-        'emp_004':{hora_entrada:'',hora_salida:'',estado:'ausente',tardanza:false},
-        'emp_005':{hora_entrada:'09:00',hora_salida:'',estado:'presente',tardanza:false},
-      };
-      db.ref(`negocios/${negocioID}/asistencia_hoy`).set(asistDemo);
-
-      const permDemo={
-        'perm_001':{emp_id:'emp_001',emp_nombre:'María García',tipo:'Vacaciones',inicio:'2026-03-20',fin:'2026-03-24',dias:5,motivo:'Vacaciones anuales',estado:'pendiente',fecha_sol:new Date().toISOString()},
-        'perm_002':{emp_id:'emp_003',emp_nombre:'Ana Rodríguez',tipo:'Permiso médico',inicio:'2026-03-18',fin:'2026-03-18',dias:1,motivo:'Cita médica',estado:'aprobado',fecha_sol:new Date().toISOString()},
-      };
-      db.ref(`negocios/${negocioID}/permisos_emp`).set(permDemo);
-
-      const notifDemo=[
-        {titulo:'Cambio de turno',mensaje:'Mañana entras a las 8:00 am, Carlos',tipo:'turno',empleado:'Carlos Morales',fecha:new Date().toISOString()},
-        {titulo:'Pago procesado',mensaje:'Tu salario de marzo fue depositado 💰',tipo:'pago',empleado:'Todos',fecha:new Date(Date.now()-86400000).toISOString()},
-        {titulo:'Recordatorio',mensaje:'Reunión de equipo el viernes a las 3pm',tipo:'recordatorio',empleado:'Todos',fecha:new Date(Date.now()-172800000).toISOString()},
-      ];
-      notifDemo.forEach(n=>db.ref(`negocios/${negocioID}/notificaciones_emp`).push(n));
-    }
-  },1500);
-}
+// PRODUCCIÓN: esta pantalla nunca crea datos automáticamente. Un nodo vacío,
+// una lectura lenta o una pérdida momentánea de permisos debe mostrarse vacío;
+// jamás debe reemplazarse con información de demostración.
 
 // ── TABS ──
 function showTab(id){
@@ -2449,6 +2413,9 @@ function showTab(id){
 }
 
 init();
+// Entrada estable al módulo: mostrar siempre el panel general de RR. HH.
+// Las demás secciones siguen disponibles desde sus pestañas.
+showTab('dashboard');
 
 // ══════════════════════════════════════════════
 // NUEVOS MÓDULOS — SOLICITUDES, TAREAS, GPS

@@ -24,6 +24,7 @@ for (const name of ['pos-food.html', 'bar.html', 'cocina.html']) {
 const pos = read('pos-food.html');
 const bar = read('bar.html');
 const cocina = read('cocina.html');
+const empleados = read('empleados.html');
 const firebase = JSON.parse(read('firebase.json'));
 
 const confirmar = pos.match(/function confirmarModalComensales\(\)[\s\S]*?\n}/)[0];
@@ -46,5 +47,11 @@ assert(pos.includes("String(oItem.linea_id)===String(pagItem.linea_id)"),
 assert(firebase.hosting.headers.some(h => h.source === '**/*.html' &&
   h.headers.some(x => x.key === 'Cache-Control' && /no-store/.test(x.value))),
   'hosting debe impedir que tablets conserven HTML antiguo');
+assert(!/cargarDatosDemo\s*\(/.test(empleados),
+  'Empleados no debe iniciar datos de demostración automáticamente');
+assert(!/negocios\/\$\{negocioID\}\/empleados`\)\.set\(demo\)/.test(empleados),
+  'Empleados no debe reemplazar la colección con demo');
+assert(/init\(\);\s*\/\/[^\n]*\n(?:\/\/[^\n]*\n)*showTab\('dashboard'\);/.test(empleados),
+  'El módulo de empleados debe iniciar en el Dashboard general');
 
 console.log('OK: controles estáticos de mesas, KDS, Bar/Cocina y caché superados');
